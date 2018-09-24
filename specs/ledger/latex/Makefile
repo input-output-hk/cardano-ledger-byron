@@ -38,6 +38,5 @@ $(DOCNAME).pdf: $(DOCNAME).tex
 watch: $(DOCNAME).tex
 	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
-
 clean:
 	latexmk -CA
