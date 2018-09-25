@@ -7,7 +7,7 @@ stdenv.mkDerivation {
 
                       # libraries
                       stmaryrd lm-math amsmath mathpazo
-                      extarrows cleveref
+                      extarrows cleveref semantic
 
                       # libraries for marginal notes
                       xargs todonotes

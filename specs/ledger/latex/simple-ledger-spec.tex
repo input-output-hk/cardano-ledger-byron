@@ -16,6 +16,13 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
 
@@ -37,8 +44,15 @@
 \newcommand{\verified}[3]{\mathcal{V}_{#1}\llbracket #2 \rrbracket_{#3}}
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\transitionarrow}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
-\newcommand{\listOf}[1]{#1^*}
+\newcommand{\listOf}[1]{#1^{*}}
 
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\text{txins}\ \mathit{#1}}
+\newcommand{\txouts}[1]{\text{txouts}\ \mathit{#1}}
+\newcommand{\balance}[1]{\text{balance}\ \mathit{#1}}
+\newcommand{\unspent}[1]{\text{unspent}\ \mathit{#1}}
 \begin{document}
 
 \title{Simplified Formal Specification of a UTxO Ledger}
@@ -70,7 +84,8 @@ conditions:
 
 \section{Preliminaries}\label{sec:preliminaries}
 
-TODO: explain $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
+TODO: explain  $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
+
 
 \section{Basic definitions}
 \label{sec:basic-definitions}
@@ -78,8 +93,37 @@ TODO: explain $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
 \section{Auxiliary definitions}
 \label{sec:auxil-defin}
 
+\section{State transitions for UTxO}
+\label{sec:state-trans-utxo-1}
+
+
+
 \section{State transitions for basic UTxO transactions}
 \label{sec:state-trans-basic}
+
+
+
+\begin{figure}[h]
+
+  \centering
+  \begin{equation}\label{eq:utxo-base}
+    \inference[UTxO-base]
+    {}
+    {\emptyset}
+  \end{equation}
+  
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \mathit{u}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \cap u)}
+    }
+    {u \transitionarrow{utxo}{tx} (u \setminus \txins{tx}) \cup \unspent{tx}}
+  \end{equation}
+  \caption{State transitions for UTxO transactions}
+  \label{fig:state-trans-utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-base}
 
 \section{State transitions for UTxO transactions with witnesses}
 \label{sec:state-trans-utxo}

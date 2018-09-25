@@ -4,3 +4,4 @@
 *.fdb_latexmk
 *.out
 *.pdf
+*/latex/auto
