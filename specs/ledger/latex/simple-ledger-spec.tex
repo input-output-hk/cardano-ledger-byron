@@ -45,14 +45,22 @@
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\transitionarrow}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\listOf}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+%%
+%% Types
+%%
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Coin}{\type{Coin}}
 
 %%
 %% Functions
 %%
-\newcommand{\txins}[1]{\text{txins}\ \mathit{#1}}
-\newcommand{\txouts}[1]{\text{txouts}\ \mathit{#1}}
-\newcommand{\balance}[1]{\text{balance}\ \mathit{#1}}
-\newcommand{\unspent}[1]{\text{unspent}\ \mathit{#1}}
+\newcommand{\txins}[1]{\text{txins}\ \var{#1}}
+\newcommand{\txouts}[1]{\text{txouts}\ \var{#1}}
+\newcommand{\balance}[1]{\text{balance}\ \var{#1}}
+\newcommand{\unspent}[1]{\text{unspent}\ \var{#1}}
 \begin{document}
 
 \title{Simplified Formal Specification of a UTxO Ledger}
@@ -96,12 +104,44 @@ TODO: explain  $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
 \section{State transitions for UTxO}
 \label{sec:state-trans-utxo-1}
 
+The states of the UTxO transition system, along with their associated functions
+and types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
+\begin{figure*}[h]
+  \emph{UTxO States}
+  %
+  \begin{equation*}
+    \var{u} \in \powerset{\UTxO}
+  \end{equation*}
+  %
+  \emph{UTxO Transitions}
+  \begin{equation*}
+    \var{u} \transitionarrow{utxo}{tx} \var{u'}
+    \in (\powerset{UTxO}) \times \Tx \times (\powerset{\UTxO})
+  \end{equation*}  
+  %
+  \emph{Abstract Types}
+  \begin{align*}
+    & \type{UTxO} & \text{unspent transaction outputs}
+    \nextdef
+    & \type{Tx} & \text{transactions}
+  \end{align*}
+  \emph{Abstract Functions}
+  \begin{align*}
+    & \txins{} \in \Tx \mapsto \UTxO & \text{transaction spent inputs}
+    \nextdef
+    & \txouts{} \in \Tx \mapsto \UTxO & \text{transaction outputs}
+    \nextdef
+    & \balance{} \in \UTxO \mapsto \Coin & \text{unspent balance}
+  \end{align*}
+  \emph{Constraints}
+  \begin{align*}
+    & (\Coin, \leq)~\text{is a total order} & \text{total order on }\Coin
+  \end{align*}
+  \caption{Definitions associated to the UTxO transition system}
+  \label{fig:state-trans-utxo-defs}
+\end{figure*}
 
-
-\section{State transitions for basic UTxO transactions}
-\label{sec:state-trans-basic}
-
-
+The transition rules for unspent outputs are presented in Figure~\ref{fig:state-trans-utxo}.
 
 \begin{figure}[h]
 
@@ -115,7 +155,7 @@ TODO: explain  $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
     { \txins{tx} \subseteq \mathit{u}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \cap u)}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx})}
     }
     {u \transitionarrow{utxo}{tx} (u \setminus \txins{tx}) \cup \unspent{tx}}
   \end{equation}
@@ -123,118 +163,24 @@ TODO: explain  $\powerset{\type{X}}$, $\listOf{\type{X}}$, etc.
   \label{fig:state-trans-utxo}
 \end{figure}
 
-Rule~\ref{eq:utxo-base}
+Rule~\ref{eq:utxo-base} simply states that the empty set is a valid set of
+unspent outputs.
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output changes
+with a transaction:
+\begin{itemize}
+\item The set spent inputs in the transaction, must be in the set of unspent
+  outputs.
+\item The balance of the unspent outputs in a transaction (i.e. the total
+  amount paid in a transaction) must be less or equal than the spent
+  inputs.
+\end{itemize}
+
+\section{State transitions for basic UTxO transactions}
+\label{sec:state-trans-basic}
 
 \section{State transitions for UTxO transactions with witnesses}
 \label{sec:state-trans-utxo}
-
-\section{Test}
-\label{sec:test}
-
-Delete this in due time....
-
-\begin{figure}[h]
-
-\emph{Primitive types}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}lr}
-  \var{txid}
-& \type{TxId}
-& \text{transaction id}
-\\
-  ix
-& \type{Ix}
-& \text{index}
-\\
-  \var{addr}
-& \type{Addr}
-& \text{address}
-\\
-  c
-& \type{Coin}
-& \text{currency value}
-\end{array}
-\end{equation*}
-%
-\emph{Derived types}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-  \var{tx}
-& \type{Tx}
-& (\var{inputs}, \var{outputs})
-& \powerset{\type{TxIn}} \times (\type{Ix} \mapsto \type{TxOut})
-& \text{transaction}
-\\
-  \var{txin}
-& \type{TxIn}
-& (\var{txid}, \var{ix})
-& \type{TxId} \times \type{Ix}
-& \text{transaction input}
-\\
-  \var{txout}
-& \type{TxOut}
-& (\var{addr}, c)
-& \type{Addr} \times \type{Coin}
-& \text{transaction output}
-\\
-  \var{utxo}
-& \type{UTxO}
-& \var{txin} \mapsto \var{txout}
-& \type{TxIn} \mapsto \type{TxOut}
-& \text{unspent tx outputs}
-\end{array}
-\end{equation*}
-%
-\emph{Functions}
-%
-\begin{equation*}
-\begin{array}{lr}
-  \fun{txid} \in \type{Tx} \to \type{TxId}
-& \text{compute transaction id}
-\end{array}
-\end{equation*}
-
-\caption{Basic Definitions}
-\label{fig:basic_definitions}
-\end{figure}
-
-
-\begin{figure}
-
-
-\begin{equation*}
-\frac{
-}{
-\mathcal{G}_{\fun{utxo}}, \emptyset
-}
-\textsc{genesis}
-\end{equation*}
-%
-\\[1em]
-%
-\begin{equation*}
-\frac{
-  \fun{txins} ~ \var{tx} \subseteq \var{utxo} \qquad
-  \fun{balance}~(\fun{txouts}~\var{tx}) \leq \fun{balance}~(\fun{txins} ~ \var{tx} \restrictdom \var{utxo})
-}{
-  \begin{array}{r}
-    \var{utxo} \\
-    \Lambda
-  \end{array}
-  \transitionarrow{transaction}{\var{tx}}
-  \begin{array}{l}
-  (\fun{txins} ~ \var{tx} \subtractdom \var{utxo}) \union \fun{txouts}~\var{tx} \\
-  \Lambda ; \var{tx}
-  \end{array}
-}
-\end{equation*}
-
-\caption{State transitions for transactions}
-\label{fig:transaction_transitions}
-\end{figure}
-
-
 
 \end{document}
