@@ -175,7 +175,20 @@ with a transaction:
 \item The balance of the unspent outputs in a transaction (i.e. the total
   amount paid in a transaction) must be less or equal than the spent
   inputs.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
 \end{itemize}
+
+\section{Witnesses}
+\label{sec:witnesses}
+
+TODO: can we incorporate witnesses in a orthogonal way?
+
+\section{Delegation}
+\label{sec:delegation}
+
+TODO: model delegation.
 
 \section{State transitions for basic UTxO transactions}
 \label{sec:state-trans-basic}
