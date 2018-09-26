@@ -10,9 +10,21 @@
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage{todonotes}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
 \usepackage[unicode=true,pdftex,pdfa]{hyperref}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\hypersetup{
+  pdftitle={A Simplified Formal Specification of a UTxO Ledger},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
 \usepackage{float}
 \floatstyle{boxed}
 \restylefloat{figure}
@@ -80,33 +92,47 @@
 
 \begin{document}
 
-\title{Simplified Formal Specification of a UTxO Ledger}
+\title{A Simplified Formal Specification of a UTxO Ledger}
 
 \author{}
 
 \date{September 24, 2018}
 
+\maketitle
+
 \begin{abstract}
-TODO.
+This documents defines the rules for extending a ledger with transactions. It
+is intended to serve as the specification for random generators of transactions
+which adhere to the rules presented here.
 \end{abstract}
+
+\tableofcontents
+\listoffigures
 
 \section{Introduction}
 \label{sec:introduction}
 
 This specification models the \textit{conditions} required for the extension of
-a ledger, i.e. a list of transactions. The following aspects are part of such
-conditions:
+a ledger, which is modeled here as a list of transactions. The following
+aspects are part of such conditions:
 
 \begin{description}
 \item[Balances] relationship between the total value of input and outputs
   in a new transaction, and the unspent outputs.
 \item[Witnesses] cryptographic entities needed to validate the expenditure
   of a transaction input.
-\item[Heavyweight-delegation] transfer of staking rights.
 \item[Update validation] voting mechanism which captures the identification of
-  the voters, and the participants that can post update proposals.
+  the voters, and the participants that can post update proposals.\todo{Do we model
+  this and is this the right place for it?}
 \end{description}
 
+Aspects that will not be modeled since they are not part of the legacy-free
+implementation:
+\begin{description}
+\item[Stake] outputs do not have a transfer of stake associated to them.
+\item[Delegation] delegation certificates are posted to the blockchain, and
+  hence they are not part of the ledger.
+\end{description}
 \section{Preliminaries}\label{sec:preliminaries}
 
 TODO: explain  $\powerset{\type{X}}$, $\seqof{\type{X}}$, etc.
@@ -200,14 +226,12 @@ with a transaction:
 \subsection{Properties}
 \label{sec:utxo-properties}
 
-TODO: can we prove properties of the transition system of this section? For
+\todo{Can we prove properties of the transition system of this section? For
 instance I'd like to formalize ``double spending'' and prove that these rules
-prevent it.
+prevent it. Do we want it?}
 
 \section{Witnesses}
 \label{sec:witnesses}
-
-TODO: try to incorporate witnesses in a orthogonal way?
 
 \begin{figure}[h]
   \emph{Abstract types}
@@ -259,11 +283,6 @@ TODO: try to incorporate witnesses in a orthogonal way?
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules-utxo-witnesses}
 \end{figure}
-
-\section{Delegation}
-\label{sec:delegation}
-
-TODO: model delegation.
 
 \section{State transitions for ledgers}
 \label{sec:state-trans-ledg}
