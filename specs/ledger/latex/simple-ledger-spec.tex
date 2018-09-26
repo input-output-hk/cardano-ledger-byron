@@ -42,7 +42,7 @@
 \newcommand{\type}[1]{\mathsf{#1}}
 \newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
 \newcommand{\size}[1]{\left| #1 \right|}
-\newcommand{\transitionarrow}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
 
@@ -75,6 +75,8 @@
 \newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
 \newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}\ #1}
 
 \begin{document}
 
@@ -130,7 +132,7 @@ and types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
   %
   \emph{UTxO Transitions}
   \begin{equation*}
-    \var{u} \transitionarrow{utxo}{tx} \var{u'}
+    \var{u} \trans{utxo}{tx} \var{u'}
     \in (\powerset{\UTxO}) \times \Tx \times (\powerset{\UTxO})
   \end{equation*}
   %
@@ -172,9 +174,9 @@ The transition rules for unspent outputs are presented in Figure~\ref{fig:state-
     { \txins{tx} \subseteq \mathit{u}
       & \balance{(\txouts{tx})} \leq \balance{(\txins{tx})}
     }
-    {u \transitionarrow{utxo}{tx} (u \setminus \txins{tx}) \cup \unspent{tx}}
+    {u \trans{utxo}{tx} (u \setminus \txins{tx}) \cup \unspent{tx}}
   \end{equation}
-  \caption{State transitions for UTxO transactions}
+  \caption{UTxO inference rules}
   \label{fig:state-trans-utxo}
 \end{figure}
 
@@ -248,13 +250,13 @@ TODO: try to incorporate witnesses in a orthogonal way?
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit-inductive]
     {wits = \witnesses{tx} \wedge \inout{i}{u}{o}
-      & u \transitionarrow{}{tx} u'\\
+      & u \trans{}{tx} u'\\
       & \forall i \in \inputs{tx} ~ ~ \exists (\var{vk}, \sigma) \in wits ~ . ~
       \verify{vk}{\serialised{tx}}{\sigma}  \wedge \addr{o} = \hash{vk}
     }
-    {u \transitionarrow{utxow}{tx} u'}
+    {u \trans{utxow}{tx} u'}
   \end{equation}
-  \caption{State transitions for UTxO with witnesses}
+  \caption{UTxO with witnesses inference rules}
   \label{fig:rules-utxo-witnesses}
 \end{figure}
 
@@ -263,10 +265,43 @@ TODO: try to incorporate witnesses in a orthogonal way?
 
 TODO: model delegation.
 
-\section{State transitions for basic UTxO transactions}
-\label{sec:state-trans-basic}
+\section{State transitions for ledgers}
+\label{sec:state-trans-ledg}
 
-\section{State transitions for UTxO transactions with witnesses}
-\label{sec:state-trans-utxo}
+To define the state transition system for ledgers we need the definitions
+shown in Figure~\ref{fig:ledger-rules-defs}.
+
+\begin{figure}[h]
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    & \utxo{} \in \seqof{Tx} \mapsto \UTxO
+      & \text{unspent transactions outputs of a ledger}
+  \end{align*}
+  \caption{Definitions used in ledger rules}
+  \label{fig:ledger-rules-defs}
+\end{figure}
+
+Note that the rules presented in Figure~\ref{fig:ledger-rules} do no specify
+anything about the UTxO transition in the premise. We only need that the
+$\utxo{}$ function can be computed for a list of transactions.
+
+\begin{figure}[h]
+  \begin{equation}
+    \label{eq:ledger-base}
+    \inference[Ledger-base]
+    {}
+    {\epsilon}
+  \end{equation}
+
+  \begin{equation}
+    \label{eq:ledger-indutive}
+    \inference[Ledger-inductive]
+    {\utxo{\Lambda} = u & u \trans{}{tx} u' }
+    {\Lambda \trans{ledger}{tx}{\Lambda; \var{tx}}}
+  \end{equation}
+  \caption{Ledger inference rules}
+  \label{fig:ledger-rules}
+\end{figure}
 
 \end{document}
