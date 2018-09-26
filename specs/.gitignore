@@ -1,9 +1,0 @@
-*.aux
-*.log
-*.fls
-*.fdb_latexmk
-*.out
-*.pdf
-*/latex/auto
-*.lof
-*.toc
