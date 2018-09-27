@@ -10,6 +10,7 @@ import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
 import           UTxO
+import           Numeric.Natural       (Natural)
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -22,7 +23,7 @@ newtype TxId = TxId { getTxId :: Hash }
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn = TxIn TxId Int deriving (Show, Eq, Ord)
+data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
 data TxOut = TxOut Addr Coin deriving (Show, Eq)
@@ -51,7 +52,7 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Int deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
 -- |Signing Key.
 newtype SKey = SKey Owner deriving (Show, Eq, Ord)
@@ -80,10 +81,6 @@ data TxWits = TxWits
               { body     :: Tx
               , witneses :: Set Wit
               } deriving (Show, Eq)
-
-
--- |A ledger
-type Ledger = [TxWits]
 
 -- |Produce a digital signature
 sign :: SKey -> a -> Sig a

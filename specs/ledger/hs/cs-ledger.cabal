@@ -16,20 +16,28 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 cabal-version:       >= 2.0
 
-library ledger-sig
+library utxo-sig
   signatures:          UTxO
   exposed-modules:     Ledger.Abstract
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.11 && <5
                      , bytestring
                      , containers
                      , cryptonite
                      , memory
-  hs-source-dirs:      src/sig
+                     , text
+  hs-source-dirs:      src/sig/utxo
   default-language:    Haskell2010
 
-library utxo-simple
+library extension-sig
+  signatures:          Extension
+  exposed-modules:     Ledger.Transition
+  build-depends:       base >=4.11 && <5
+                     , bytestring
+                     , text
+  hs-source-dirs:      src/sig/extension
+  default-language:    Haskell2010
+
+library utxo-impl-simple
   hs-source-dirs:      src/simple/utxo
   exposed-modules:     UTxO
   default-language:    Haskell2010
@@ -37,13 +45,25 @@ library utxo-simple
                      , cryptonite
                      , memory
 
+library extension-impl-simple
+  hs-source-dirs:      src/simple/extension
+  exposed-modules:     Extension
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <5
+                     , cryptonite
+                     , memory
+                     , utxo-sig
+
 library ledger-simple
   hs-source-dirs:      src/simple/ledger
   exposed-modules:     Ledger
   default-language:    Haskell2010
   build-depends:       base >=4.11 && <5
                      , bytestring
+                     , containers
                      , cryptonite
-                     , ledger-sig
                      , memory
-                     , utxo-simple
+                     , utxo-sig
+                     , utxo-impl-simple
+                     , extension-sig
+                     , extension-impl-simple

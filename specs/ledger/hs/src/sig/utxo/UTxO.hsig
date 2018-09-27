@@ -8,6 +8,10 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 signature UTxO where
 
+---------------------------------------------------------------------------------
+-- Core UTxO primitives
+---------------------------------------------------------------------------------
+
 -- | An encoded hash of part of the system.
 data Hash
 
