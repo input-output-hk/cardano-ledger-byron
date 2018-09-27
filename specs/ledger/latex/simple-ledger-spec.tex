@@ -155,18 +155,36 @@ implementation:
 \label{sec:state-trans-utxo-1}
 
 The states of the UTxO transition system, along with their associated functions
-and types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
+and types are defined in Figure~\ref{fig:state-trans-utxo-defs}. In particular,
+we leave the definition of $\UTxO$ and $\Coin$ abstract, and place constraints
+on the choice of these types.
+
+Regarding $\UTxO$, we require that $(\UTxO, \cup, \cap)$ is a group, where
+$\cup$ is the addition operation, $\cap$ is the multiplication operation, and
+$\emptyset$ is the additive identity. Given $u \in \UTxO$ we will write
+$\overline{u}$ for the inverse element of $u$. Given $u, v \in \UTxO$, we write
+$u \setminus v$ as a shorthand for $\overline{\overline{u} \cup v}$.
+
+Additionally, we require that the elements in $\UTxO$ form a preorder w.r.t. a
+relation $\subseteq$.
+
+Note that the notation chosen suggests that $\UTxO$ is a set, however this does not
+necessarily has to be the case.
+
+As for $\Coin$ the only requirement in these rules is that the elements of this
+set form a total order w.r.t a relation $\leq$.
+
 \begin{figure*}[h]
   \emph{UTxO States}
   %
   \begin{equation*}
-    \var{u} \in \powerset{\UTxO}
+    \var{u} \in \UTxO
   \end{equation*}
   %
   \emph{UTxO Transitions}
   \begin{equation*}
     \var{u} \trans{utxo}{tx} \var{u'}
-    \in (\powerset{\UTxO}) \times \Tx \times (\powerset{\UTxO})
+    \in \UTxO \times \Tx \times \UTxO
   \end{equation*}
   %
   \emph{Abstract Types}
@@ -185,7 +203,9 @@ and types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
   \end{align*}
   \emph{Constraints}
   \begin{align*}
-    & (\Coin, \leq)~\text{is a total order} & \text{total order on }\Coin
+    & (\Coin, \leq)~\text{is a total order} & \text{total order on }\Coin\\
+    & (\UTxO, \subseteq)~\text{is a total order} & \text{total order on }\UTxO\\
+    & (\UTxO, \cup, \emptyset) & \text{is a group}
   \end{align*}
   \caption{Definitions associated to the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
