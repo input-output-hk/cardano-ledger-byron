@@ -8,8 +8,8 @@ synopsis:            Executable specification of Cardano ledger
 homepage:            https://github.com/input-output-hk/cardano-chain
 license:             MIT
 license-file:        LICENSE
-author:              Nicholas Clarke
-maintainer:          nicholas.clarke@iohk.io
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
 -- copyright:
 category:            Testing
 build-type:          Simple
