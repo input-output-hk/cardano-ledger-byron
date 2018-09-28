@@ -26,7 +26,7 @@ newtype TxId = TxId { getTxId :: Hash }
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
-data TxOut = TxOut Addr Coin deriving (Show, Eq)
+data TxOut = TxOut Addr Value deriving (Show, Eq)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq)
@@ -115,6 +115,6 @@ union :: UTxO -> UTxO -> UTxO
 union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO -> Coin
-balance (UTxO utxo) = foldr addCoins mempty utxo
-  where addCoins (TxOut _ a) b = a <> b
+balance :: UTxO -> Value
+balance (UTxO utxo) = foldr addValues mempty utxo
+  where addValues (TxOut _ a) b = a <> b
