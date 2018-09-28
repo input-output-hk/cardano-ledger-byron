@@ -63,7 +63,7 @@
 %%
 \newcommand{\Tx}{\type{Tx}}
 \newcommand{\UTxO}{\type{UTxO}}
-\newcommand{\Coin}{\type{Coin}}
+\newcommand{\Value}{\type{Value}}
 % Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -77,8 +77,8 @@
 %%
 \newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
 \newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
+\newcommand{\values}[1]{\fun{values}\ #1}
 \newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
-\newcommand{\unspent}[1]{\fun{unspent}\ \var{#1}}
 % Adding witnesses...
 \newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
 \newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
@@ -117,21 +117,20 @@ a ledger, which is modeled here as a list of transactions. The following
 aspects are part of such conditions:
 
 \begin{description}
-\item[Balances] relationship between the total value of input and outputs
+\item[Preservation of value] relationship between the total value of input and outputs
   in a new transaction, and the unspent outputs.
-\item[Witnesses] cryptographic entities needed to validate the expenditure
+\item[Witnesses] cryptographic entities needed to validate the spending
   of a transaction input.
 \item[Update validation] voting mechanism which captures the identification of
   the voters, and the participants that can post update proposals.\todo{Do we model
-  this and is this the right place for it?}
+    this and is this the right place for it?}
+\item[Delegation] heavyweight delegation certificates.  
 \end{description}
 
 Aspects that will not be modeled since they are not part of the legacy-free
 implementation:
 \begin{description}
 \item[Stake] outputs do not have a transfer of stake associated to them.
-\item[Delegation] delegation certificates are posted to the blockchain, and
-  hence they are not part of the ledger.
 \end{description}
 \section{Preliminaries}\label{sec:preliminaries}
 
@@ -156,23 +155,29 @@ implementation:
 
 The states of the UTxO transition system, along with their associated functions
 and types are defined in Figure~\ref{fig:state-trans-utxo-defs}. In particular,
-we leave the definition of $\UTxO$ and $\Coin$ abstract, and place constraints
+we leave the definition of $\UTxO$ and $\Value$ abstract, and place constraints
 on the choice of these types.
 
-Regarding $\UTxO$, we require that $(\UTxO, \cup, \cap)$ is a group, where
-$\cup$ is the addition operation, $\cap$ is the multiplication operation, and
-$\emptyset$ is the additive identity. Given $u \in \UTxO$ we will write
-$\overline{u}$ for the inverse element of $u$. Given $u, v \in \UTxO$, we write
-$u \setminus v$ as a shorthand for $\overline{\overline{u} \cup v}$.
+Regarding $\UTxO$, we require that $(\UTxO, \cup, \emptyset)$ is a commutative
+\textit{monoid} where $\cup$ is the addition operation and $\emptyset$ the
+neutral element, with a relation $\subseteq$ and a binary operator $\setminus$
+(called \textit{monus}) where:
 
-Additionally, we require that the elements in $\UTxO$ form a preorder w.r.t. a
-relation $\subseteq$.
+\begin{itemize}
+\item $\var{u} \subseteq \var{v}$ iff there exists another element $\var{w}$
+  such that $\var{u} \cup \var{w} = \var{v}$.
+\item $\var{u} \setminus \var{v}$ is the \textbf{unique} smallest element
+  $\var{w}$ such that $\var{u} \subseteq \var{v} + \var{w}$.
+\end{itemize}
 
 Note that the notation chosen suggests that $\UTxO$ is a set, however this does not
-necessarily has to be the case.
+necessarily have to be the case.
 
-As for $\Coin$ the only requirement in these rules is that the elements of this
-set form a total order w.r.t a relation $\leq$.
+As for $\Value$ the only requirement in these rules is that it forms a
+\textit{monoid} w.r.t. a binary operation $+$, and a neutral element $0$. Given
+a sequence of elements $\var{vs} = v_0, \ldots, v_{n-1}$, such that $v_i \in \Value$, we
+write $\sum_{v \in \var{vs}} v$ for the sum of all elements in $\var{vs}$ using
+the $+$ operation.
 
 \begin{figure*}[h]
   \emph{UTxO States}
@@ -199,19 +204,25 @@ set form a total order w.r.t a relation $\leq$.
     \nextdef
     & \txouts{} \in \Tx \mapsto \UTxO & \text{transaction outputs}
     \nextdef
-    & \balance{} \in \UTxO \mapsto \Coin & \text{unspent balance}
+    & \values{} \in \UTxO \mapsto \seqof{\Value} & \text{values in an UTxO}
   \end{align*}
   \emph{Constraints}
   \begin{align*}
-    & (\Coin, \leq)~\text{is a total order} & \text{total order on }\Coin\\
-    & (\UTxO, \subseteq)~\text{is a total order} & \text{total order on }\UTxO\\
-    & (\UTxO, \cup, \emptyset) & \text{is a group}
+    & (\Value, +) & \text{monoid}\\
+    & (\UTxO, \cup, \emptyset, \cap, \subseteq) & \text{commutative monoid with monus}
   \end{align*}
   \caption{Definitions associated to the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
 \end{figure*}
 
-The transition rules for unspent outputs are presented in Figure~\ref{fig:state-trans-utxo}.
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:state-trans-utxo}. We make use of function $\balance$, which is
+defined below:
+
+\begin{align*}
+  & \balance{} \in \UTxO \mapsto \Value\\
+  & \balance{u} = \sum_{v \in \values{u}} v
+\end{align*}
 
 \begin{figure}[h]
 
@@ -219,22 +230,22 @@ The transition rules for unspent outputs are presented in Figure~\ref{fig:state-
   \begin{equation}\label{eq:utxo-base}
     \inference[UTxO-base]
     {}
-    {\emptyset}
+    {\var{u}}
   \end{equation}
 
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
     { \txins{tx} \subseteq \mathit{u}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx})}
+      & \balance{(\txouts{tx})} = \balance{(\txins{tx})}
     }
-    {u \trans{utxo}{tx} (u \setminus \txins{tx}) \cup \unspent{tx}}
+    {u \trans{utxo}{tx} (u \setminus \txins{tx}) \cup \txouts{tx}}
   \end{equation}
   \caption{UTxO inference rules}
   \label{fig:state-trans-utxo}
 \end{figure}
 
-Rule~\ref{eq:utxo-base} simply states that the empty set is a valid set of
-unspent outputs.
+Rule~\ref{eq:utxo-base} simply states that we can start with any arbitrary
+value for unspent outputs ($\UTxO$).
 
 Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
 be applied to a set of unspent outputs, and how the set of unspent output changes
@@ -243,8 +254,9 @@ with a transaction:
 \item The set spent inputs in the transaction, must be in the set of unspent
   outputs.
 \item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be less or equal than the spent
-  inputs.
+  amount paid in a transaction) must be equal than the spent inputs. If fees
+  and forged value are present in the model, then we assume fees to be part of
+  the outputs, and forged value to be part of the inputs.
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
@@ -295,6 +307,12 @@ prevent it. Do we want it?}
   \caption{Definitions associated to the UTxO transition system with witnesses}
   \label{fig:state-trans-utxo-witnesses-defs}
 \end{figure}
+
+The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
+Note that the transition $u \trans{}{tx} u'$ is any arbitrary transition on
+$\UTxO \times \Tx \times \UTxO$, which means that we're defining a family of
+operational rules. This is what allow us to compose operational rules as
+needed.
 
 \begin{figure}[h]
   \begin{equation}
