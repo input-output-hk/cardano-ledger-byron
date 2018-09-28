@@ -1,0 +1,168 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{extarrows}
+\usepackage{float}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{latexsym}
+\usepackage{mathpazo} % nice fonts
+\usepackage{mathtools}
+\usepackage{microtype}
+\usepackage[colon]{natbib}
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+\usepackage{slashed}
+\usepackage{stmaryrd}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+
+\hypersetup{
+  pdftitle={A Specification of the Blockchain Layer},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+%% TODO: we should package this
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+%%
+%% Types
+%%
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Value}{\type{Value}}
+% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+\newcommand{\Hash}{\type{Hash}}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
+\newcommand{\values}[1]{\fun{values}\ #1}
+\newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
+% Adding witnesses...
+\newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
+\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
+\newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
+\newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}\ #1}
+
+\begin{document}
+
+\title{A Specification of the Blockchain Layer}
+
+\author{Marko Dimjašević}
+
+\date{September 28, 2018}
+
+\maketitle
+
+\begin{abstract}
+This documents defines a semantics for operations on a blockchain.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\section{Introduction}
+\label{sec:introduction}
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+\section{Basic definitions}
+\label{sec:basic-definitions}
+
+\section{Auxiliary definitions}
+\label{sec:auxil-defin}
+
+\section{State transitions for Blockchain}
+\label{sec:state-trans-chain}
+
+\subsection{Properties}
+\label{sec:chain-properties}
+
+\begin{figure}[h]
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    & \TxIn & \text{transaction input}\\
+    & \TxOut & \text{transaction output}\\
+    & \VKey & \text{verification key}\\
+    & \Sig  & \text{signature}\\
+    & \Data  & \text{data}\\
+    & \Hash  & \text{hash}\\
+  \end{align*}
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    & \witnesses{} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
+    & \text{witnesses of a transaction}\\
+    %
+    & \inputs{} \in \Tx \mapsto \TxIn
+    & \text{transaction inputs}\\
+    %
+    & \verify{}{}{} \in \VKey \times \Data \times \Sig
+    & \text{verification relation}\\
+    %
+    & \addr{} \in \TxOut \mapsto \Hash
+    & \text{output address} \\
+    %
+    & \hash{} \in \VKey \mapsto \Hash
+    & \text{hash function}
+  \end{align*}
+  \caption{Definitions associated with the blockchain transition system}
+  \label{fig:state-trans-abstract}
+\end{figure}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
