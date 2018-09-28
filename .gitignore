@@ -26,3 +26,6 @@
 /specs/ledger/hs/.ghc.environment.x86_64-linux-8.6.0.20180810
 **/*~
 **/dist-newstyle
+
+# Emacs auto-generated Emacs-lisp code
+auto/
