@@ -121,9 +121,6 @@ aspects are part of such conditions:
   in a new transaction, and the unspent outputs.
 \item[Witnesses] cryptographic entities needed to validate the spending
   of a transaction input.
-\item[Update validation] voting mechanism which captures the identification of
-  the voters, and the participants that can post update proposals.\todo{Do we model
-    this and is this the right place for it?}
 \item[Delegation] heavyweight delegation certificates.  
 \end{description}
 
@@ -131,6 +128,8 @@ Aspects that will not be modeled since they are not part of the legacy-free
 implementation:
 \begin{description}
 \item[Stake] outputs do not have a transfer of stake associated to them.
+\item[Update validation] voting mechanism which captures the identification of
+  the voters, and the participants that can post update proposals.
 \end{description}
 \section{Preliminaries}\label{sec:preliminaries}
 
