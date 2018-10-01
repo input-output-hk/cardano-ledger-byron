@@ -9,6 +9,7 @@ import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
+import Data.Foldable (foldl')
 import           UTxO
 import           Numeric.Natural       (Natural)
 
@@ -116,5 +117,5 @@ ins ⋪ (UTxO utxo) =
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO -> Value
-balance (UTxO utxo) = foldr addValues mempty utxo
-  where addValues (TxOut _ a) b = a <> b
+balance (UTxO utxo) = foldl' addValues mempty utxo
+  where addValues b (TxOut _ a) = b <> a
