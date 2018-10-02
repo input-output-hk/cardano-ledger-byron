@@ -208,14 +208,14 @@ the $+$ operation.
   \emph{Constraints}
   \begin{align*}
     & (\Value, +) & \text{monoid}\\
-    & (\UTxO, \cup, \emptyset, \cap, \subseteq) & \text{commutative monoid with monus}
+    & (\UTxO, \cup, \emptyset, \setminus, \subseteq) & \text{commutative monoid with monus}
   \end{align*}
   \caption{Definitions associated to the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
 \end{figure*}
 
 The transition rules for unspent outputs are presented in
-Figure~\ref{fig:state-trans-utxo}. We make use of function $\balance$, which is
+Figure~\ref{fig:state-trans-utxo}. We make use of function $\balance{}$, which is
 defined below:
 
 \begin{align*}
@@ -327,6 +327,21 @@ needed.
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules-utxo-witnesses}
 \end{figure}
+
+\section{Delegation}
+\label{sec:delegation}
+
+This is related to delegation of rights to sign blocks.
+
+Requirements on the delegation certificate:
+- Certificate must be signed.
+
+Do we need to keep into account the seven bootstrap keys from the genesis
+block.
+
+Why do we need to include the certificate in the chain? Why not including it
+when signing a block? This is related to the question about the fundamental
+difference between heavyweight and lightweight delegation certificates.
 
 \section{State transitions for ledgers}
 \label{sec:state-trans-ledg}
