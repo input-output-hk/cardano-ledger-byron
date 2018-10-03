@@ -63,36 +63,57 @@
 %%
 %% Types
 %%
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\Hash}{\type{Hash}}    % addresses as verification key hashes
+\newcommand{\BHash}{\type{BHash}}  % block hashes
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\HCert}{\type{HCert}}
+
 \newcommand{\Tx}{\type{Tx}}
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Value}{\type{Value}}
 % Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\SKey}{\type{SKey}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\Hash}{\type{Hash}}
+\newcommand{\Wit}{\type{Wit}}
 
 %%
+%% Function and relation names
+%%
+\newcommand{\hashname}{hash}
+\newcommand{\signname}{sign}
+\newcommand{\verifyname}{verify}
+\newcommand{\delegatename}{delegate}
+%% 
 %% Functions
 %%
 \newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
 \newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
 \newcommand{\values}[1]{\fun{values}\ #1}
 \newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
-% Adding witnesses...
 \newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
 \newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
-\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{\signname}\ \var{#1} \times \var{#2}}
+\newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
-\newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
+\newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
+\newcommand{\delegate}[2]{\fun{\delegatename} ~ #1 ~ #2}
 \newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
-% Adding ledgers...
 \newcommand{\utxo}[1]{\fun{utxo}\ #1}
 
+% \newcommand{\ChainBZBl}{\var{B_0}\var{B_1}\cdots\var{B_l}}
+% \newcommand{\ChainBZBlp1}{\var{B_0}\var{B_1}\cdots\var{B_l}\var{B_{l+1}}}
+
 \begin{document}
+
 
 \title{Specification of the Blockchain Layer}
 
@@ -128,38 +149,75 @@ This documents defines a semantics for operations on a blockchain.
 \label{sec:chain-properties}
 
 \begin{figure}[h]
-  \emph{Abstract types}
+  \emph{Primitive types}
   %
   \begin{align*}
-    & \TxIn & \text{transaction input}\\
-    & \TxOut & \text{transaction output}\\
-    & \VKey & \text{verification key}\\
-    & \Sig  & \text{signature}\\
-    & \Data  & \text{data}\\
-    & \Hash  & \text{hash}\\
+    % & txid \in \TxId & \text{transaction id}\\
+    % & ix \in \Ix & \text{index}\\
+    & sl \in \Slot & \text{slot time-stamp}\\
+    & \Addr = \Hash,\quad hk \in \Addr & \text{address as a key hash}\\
+    & sk \in \SKey & \text{signing key}\\
+    & vk \in \VKey & \text{verification key}
   \end{align*}
-  \emph{Abstract functions}
+  %
+  \emph{Derived types}
   %
   \begin{align*}
-    & \witnesses{} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
-    & \text{witnesses of a transaction}\\
+    % & txin \in \TxIn & \text{transaction input}\\
+    % & \TxOut & \text{transaction output}\\
+    & \BHash & \text{block hash}\\
+    & hcert \in \HCert & \text{heavyweight delegation certificate}\\
+    & sig \in \Sig  & \text{signature}\\
+    & data \in \Data  & \text{data}\\
+    & (h, sl, d, \sigma) \in \BHash \times \Slot \times \Data \times \Sig
+      & \text{block}
+  \end{align*}
+  %
+  \emph{Functions and relations}
+  %
+  \begin{align*}
+    % & \witnesses{} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
+    % & \text{witnesses of a transaction}\\
     %
-    & \inputs{} \in \Tx \mapsto \TxIn
-    & \text{transaction inputs}\\
+    % & \inputs{} \in \Tx \mapsto \TxIn
+    % & \text{transaction inputs}\\
     %
-    & \verify{}{}{} \in \VKey \times \Data \times \Sig
-    & \text{verification relation}\\
+    \text{\signname} & \in \SKey \times \Data \mapsto \Sig
+      & \text{signature function}\\
+    \text{\verifyname} & \in \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
     %
-    & \addr{} \in \TxOut \mapsto \Hash
-    & \text{output address} \\
+    % & \addr{} \in \TxOut \mapsto \Hash
+    % & \text{output address} \\
     %
-    & \hash{} \in \VKey \mapsto \Hash
-    & \text{hash function}
+    \text{\hashname} & \in \VKey \mapsto \Hash
+      & \text{verification key hash function}\\
+    \text{\delegatename} & \in \SKey \times \HCert
+      & \text{delegation relation}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
 \end{figure}
 
+\subsubsection{Block Validity}
+\label{sec:block-valid}
+A block is valid if:
+\begin{enumerate}
+\item it is signed by any key for which a current valid heavyweight delegation
+  certificate exists that is signed by any key from the genesis block, and
+\item in the rolling window of the last K blocks the number of blocks signed
+  by the key signing this block is no more than a threshold K/t where t is a
+  constant that we will pick in the range $1/5 \leq t \leq 1/4$.
+\end{enumerate}
+
+
+\begin{equation}
+  \label{eq:block-valid}
+  \inference[Chain-extension]
+  {\var{B_0}\var{B_1}\cdots\var{B_l} & \text{block valid} \var{B_{l+1}}
+  }
+  {{\var{B_0}\var{B_1}\cdots\var{B_l}} \trans{}{\var{B_{l+1}}} {\var{B_0}\var{B_1}\cdots\var{B_l}\var{B_{l+1}}}}
+\end{equation}
 \end{document}
 
 %%% Local Variables:
