@@ -91,6 +91,7 @@
 \newcommand{\signname}{sign}
 \newcommand{\verifyname}{verify}
 \newcommand{\delegatename}{delegate}
+\newcommand{\validname}{valid}
 %% 
 %% Functions
 %%
@@ -100,12 +101,13 @@
 \newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
 \newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
 \newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
-\newcommand{\sign}[2]{\fun{\signname}\ \var{#1} \times \var{#2}}
+\newcommand{\sign}[2]{\fun{\signname}\ \var{#1} ~ \var{#2}}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
-\newcommand{\delegate}[2]{\fun{\delegatename} ~ #1 ~ #2}
+\newcommand{\delegate}[2]{\fun{\delegatename}\ \var{#1} \times \var{#2}}
+\newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
 \newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
 \newcommand{\utxo}[1]{\fun{utxo}\ #1}
 
@@ -169,7 +171,8 @@ This documents defines a semantics for operations on a blockchain.
     & hcert \in \HCert & \text{heavyweight delegation certificate}\\
     & sig \in \Sig  & \text{signature}\\
     & data \in \Data  & \text{data}\\
-    & (h, sl, d, \sigma) \in \BHash \times \Slot \times \Data \times \Sig
+    & \Block = \BHash \times \Slot \times \Data \times \Sig & \\
+    & (h, sl, d, \sigma) \in \Block
       & \text{block}
   \end{align*}
   %
@@ -192,8 +195,10 @@ This documents defines a semantics for operations on a blockchain.
     %
     \text{\hashname} & \in \VKey \mapsto \Hash
       & \text{verification key hash function}\\
-    \text{\delegatename} & \in \SKey \times \HCert
-      & \text{delegation relation}
+    \text{\delegatename} & \in \SKey \mapsto \HCert
+      & \text{delegation function}\\
+    \text{\validname} & \in \Block \times \VKey \times \HCert
+      & \text{block validity relation}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
@@ -205,19 +210,26 @@ A block is valid if:
 \begin{enumerate}
 \item it is signed by any key for which a current valid heavyweight delegation
   certificate exists that is signed by any key from the genesis block, and
-\item in the rolling window of the last K blocks the number of blocks signed
-  by the key signing this block is no more than a threshold K/t where t is a
-  constant that we will pick in the range $1/5 \leq t \leq 1/4$.
+\item in the rolling window of the last $K$ blocks the number of blocks signed
+  by the key signing this block is no more than a threshold $K \cdot t$, where
+  $t$ is a constant that we will pick in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
-
 
 \begin{equation}
   \label{eq:block-valid}
+  \forall (sk, vk), m \in \Data, \sigma \in \Sig.\\
+  \nextdef
+  \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+\end{equation}
+
+\begin{equation}
+  \label{eq:chain-extension}
   \inference[Chain-extension]
-  {\var{B_0}\var{B_1}\cdots\var{B_l} & \text{block valid} \var{B_{l+1}}
+  {\var{B_0}\var{B_1}\cdots\var{B_l} & \valid{\var{B_{l+1}}}{vk}{hcert}
   }
   {{\var{B_0}\var{B_1}\cdots\var{B_l}} \trans{}{\var{B_{l+1}}} {\var{B_0}\var{B_1}\cdots\var{B_l}\var{B_{l+1}}}}
 \end{equation}
+
 \end{document}
 
 %%% Local Variables:
