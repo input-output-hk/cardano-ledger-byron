@@ -37,10 +37,7 @@ utxoInductive = Transition
       { _pName = "predInsuffcientWitness"
       , _pValidate = \st sig -> case sig of
           NoSignal -> Passed
-          TxSignal (TxWits tx sig) -> if txins tx `Set.isSubsetOf` unspentInputs (getUtxo st)
-              then Passed
-              else Failed InsufficientWitnesses
-            where unspentInputs (UTxO utxo) = Map.keysSet utxo
+          TxSignal tw -> witnessed tw st
       }
     predValidInputs :: Predicate
     predValidInputs = Predicate
