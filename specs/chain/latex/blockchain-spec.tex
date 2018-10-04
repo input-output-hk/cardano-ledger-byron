@@ -43,6 +43,7 @@
 
 %%
 \newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand\Set[2]{\{\,#1\mid#2\,\}}
 \newcommand{\restrictdom}{\lhd}
 \newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
 \newcommand{\restrictrange}{\rhd}
@@ -86,6 +87,7 @@
 \newcommand{\hashname}{hash}
 \newcommand{\signname}{sign}
 \newcommand{\signedname}{signed}
+\newcommand{\signedseq}{signedc}
 \newcommand{\verifyname}{verify}
 \newcommand{\delegatename}{delegate}
 \newcommand{\validname}{valid}
@@ -96,6 +98,7 @@
 \newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
 \newcommand{\sign}[4]{\fun{\signname}\ \var{#1} ~ \var{#2} ~ \var{#3} ~ \var{#4}}
 \newcommand{\signed}[2]{\fun{\signedname}\ \var{#1} ~ \var{#2}}
+\newcommand{\signedwindow}[2]{\fun{\signedseq}\ \var{#1} ~ \var{#2}}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
@@ -168,6 +171,9 @@ This documents defines a semantics for operations on a blockchain.
     \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
     \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
       & \text{signature function}\\
+    \text{\signedname} & \in \SKey \times \Block & \text{signature relation}\\
+    \text{\signedseq} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
+      & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
     \text{\hashname} & \in \VKey \mapsto \Hash
@@ -192,6 +198,7 @@ A block is valid if:
   $t$ is a constant that we will pick in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
 
+
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \ref{eq:sign-verify}:
 
@@ -202,16 +209,20 @@ $\text{\verifyname}$ relation is given by \ref{eq:sign-verify}:
   \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma.
 \end{equation}
 
-%\begin{equation}
-  \begin{align*}
+\begin{equation}
+  \label{eq:signed-window}
+  \signedwindow{sk}{s} = \Set{b}{b \in s \wedge \signed{sk}{b}}
+\end{equation}
+
+\begin{align}
   \label{eq:valid-block}
     \valid{b}{vk}{hcert} \implies &
       \exists sk. (sk, vk) \in \text{\keypairname} \wedge
       \delegate{sk} = hcert \wedge \\
       & \exists h, sl, m, \sigma. (h, sl, m, \sigma) = b \wedge
-        \sign{sk}{h}{sl}{m} = \sigma.
-  \end{align*}
-%\end{equation}
+        \sign{sk}{h}{sl}{m} = \sigma \wedge \\
+      & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
+\end{align}
 
 \begin{equation}
   \label{eq:chain-extension}
