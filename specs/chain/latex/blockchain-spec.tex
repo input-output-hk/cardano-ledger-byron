@@ -218,8 +218,8 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
     \valid{b}{vk}{hcert} \implies &
       \exists sk. (sk, vk) \in \text{\keypairname} \wedge
       \delegate{sk} = hcert \wedge \\
-      & \exists h, sl, m, \sigma. (h, sl, m, \sigma) = b \wedge
-        \sign{sk}{h}{sl}{m} = \sigma \wedge \\
+      & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
+        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
       & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
 \end{align}
 
