@@ -69,6 +69,7 @@
 \newcommand{\HCert}{\type{HCert}}
 
 \newcommand{\SKey}{\type{SKey}}
+\newcommand{\SKeyGen}{\type{SKey_G}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
@@ -145,6 +146,7 @@ This documents defines a semantics for operations on a blockchain.
   \emph{Derived types}
   %
   \begin{align*}
+    & sk_G \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
     & \BHash & \text{block hash}\\
     & hcert \in \HCert & \text{heavyweight delegation certificate}\\
     & sig \in \Sig  & \text{signature}\\
@@ -207,7 +209,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 \begin{align}
   \label{eq:valid-block}
     \valid{b}{vk}{hcert} \implies &
-      \exists sk. (sk, vk) \in \text{\keypairname} \wedge
+      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
       \delegate{sk} = hcert \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
         \sign{sk}{h}{sl}{d} = \sigma \wedge \\
