@@ -27,5 +27,12 @@
 **/*~
 **/dist-newstyle
 
+# Cabal & Stack
+.stack-work/
+*/dist
+
+# Editors
+TAGS
+
 # Emacs auto-generated Emacs-lisp code
 auto/
