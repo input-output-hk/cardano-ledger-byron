@@ -205,7 +205,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 \begin{equation}
   \label{eq:sign-verify}
   \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\\
-  \verify{vk}{m}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
+  \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
 \begin{equation}
