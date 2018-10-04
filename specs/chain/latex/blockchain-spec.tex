@@ -61,8 +61,6 @@
 %%
 %% Types
 %%
-\newcommand{\TxId}{\type{TxId}}
-\newcommand{\Ix}{\type{Ix}}
 \newcommand{\Hash}{\type{Hash}}    % addresses as verification key hashes
 \newcommand{\BHash}{\type{BHash}}  % block hashes
 \newcommand{\Addr}{\type{Addr}}
@@ -70,16 +68,10 @@
 \newcommand{\Block}{\type{Block}}
 \newcommand{\HCert}{\type{HCert}}
 
-\newcommand{\Tx}{\type{Tx}}
-\newcommand{\UTxO}{\type{UTxO}}
-\newcommand{\Value}{\type{Value}}
-\newcommand{\TxIn}{\type{TxIn}}
-\newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\Wit}{\type{Wit}}
 
 %%
 %% Function and relation names
@@ -87,7 +79,7 @@
 \newcommand{\hashname}{hash}
 \newcommand{\signname}{sign}
 \newcommand{\signedname}{signed}
-\newcommand{\signedseq}{signedc}
+\newcommand{\signedseqname}{signedc}
 \newcommand{\verifyname}{verify}
 \newcommand{\delegatename}{delegate}
 \newcommand{\validname}{valid}
@@ -95,13 +87,10 @@
 %% 
 %% Functions and relations
 %%
-\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
 \newcommand{\sign}[4]{\fun{\signname}\ \var{#1} ~ \var{#2} ~ \var{#3} ~ \var{#4}}
 \newcommand{\signed}[2]{\fun{\signedname}\ \var{#1} ~ \var{#2}}
-\newcommand{\signedwindow}[2]{\fun{\signedseq}\ \var{#1} ~ \var{#2}}
+\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ \var{#1} ~ \var{#2}}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
-\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
-\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
 \newcommand{\delegate}[1]{\fun{\delegatename}\ \var{#1}}
 \newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
@@ -172,7 +161,7 @@ This documents defines a semantics for operations on a blockchain.
     \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
       & \text{signature function}\\
     \text{\signedname} & \in \SKey \times \Block & \text{signature relation}\\
-    \text{\signedseq} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
+    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
@@ -192,7 +181,9 @@ This documents defines a semantics for operations on a blockchain.
 A block is valid if:
 \begin{enumerate}
 \item it is signed by any key for which a current valid heavyweight delegation
-  certificate exists that is signed by any key from the genesis block, and
+  certificate exists,
+\item the corresponding certificate is signed by any key from the genesis
+  block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
   by the key signing this block is no more than a threshold $K \cdot t$, where
   $t$ is a constant that we will pick in the range $1/5 \leq t \leq 1/4$.
