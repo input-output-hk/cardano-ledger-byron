@@ -10,8 +10,8 @@
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
 \usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \hypersetup{
   pdftitle={A Simplified Formal Specification of a UTxO Ledger},
@@ -28,7 +28,14 @@
 \usepackage{float}
 \floatstyle{boxed}
 \restylefloat{figure}
-
+% For notes containing warnings, questions, etc.
+\usepackage[tikz]{bclogo}
+\newenvironment{question}
+  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
+  {\end{bclogo}}
+\newenvironment{todo}
+  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
+  {\end{bclogo}}
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -57,6 +64,8 @@
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
+% Delegation relation (ledger delegates...)
+\newcommand{\ldelegates}[3]{#1 \vdash #2 \leadsto #3}
 
 %%
 %% Types
@@ -89,7 +98,9 @@
 \newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
 % Adding ledgers...
 \newcommand{\utxo}[1]{\fun{utxo}\ #1}
-
+% Delegation
+\newcommand{\delegatesName}{\fun{delegates}}
+\newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
 \begin{document}
 
 \title{A Simplified Formal Specification of a UTxO Ledger}
@@ -121,7 +132,7 @@ aspects are part of such conditions:
   in a new transaction, and the unspent outputs.
 \item[Witnesses] cryptographic entities needed to validate the spending
   of a transaction input.
-\item[Delegation] heavyweight delegation certificates.  
+\item[Delegation] heavyweight delegation certificates.
 \end{description}
 
 Aspects that will not be modeled since they are not part of the legacy-free
@@ -264,9 +275,12 @@ with a transaction:
 \subsection{Properties}
 \label{sec:utxo-properties}
 
-\todo{Can we prove properties of the transition system of this section? For
-instance I'd like to formalize ``double spending'' and prove that these rules
-prevent it. Do we want it?}
+
+\begin{todo}
+  Can we prove properties of the transition system of this section? For
+  instance I'd like to formalize ``double spending'' and prove that these rules
+  prevent it. Do we want it?
+\end{todo}
 
 \section{Witnesses}
 \label{sec:witnesses}
@@ -331,22 +345,64 @@ needed.
 \section{Delegation}
 \label{sec:delegation}
 
-We model heavyweight delegation, since heavyweight delegation certificates are included in
-the ledger. Lightweight delegation has to be modeled in the chain model, and it
-outside the scope of this specification.
+An agent owning a key that can sign new blocks can delegate its signing rights
+to another key by means of \textit{delegation certificates}. These
+certificates are included in the ledger, and therefore also included in the
+body of the blocks in the blockchain.
 
-This is related to delegation of rights to sign blocks.
+In the blockchain protocol only a certain number of keys can sign blocks, and
+the signing key part of these keys are maintained in the genesis block. In the
+formalization of delegation in the ledger we don't concern ourselves with this
+set of privileged keys. We only care about establishing, given a ledger
+$\Gamma$ and keys $\var{vk}_s$, $\var{vk}_d$, whether $\var{vk}_s$ delegated
+its rights to $\var{vk}_d$ in the sequence of delegation certificates $\Gamma$.
 
-Requirements on the delegation certificate:
-- Certificate must be signed.
+Note that in previous sections, the ledger consisted of sequence of
+transactions. The ledgers we are considering here consist of sequences of
+delegation certificates. Hence we use a different letter to refer to them
+($\Gamma$ instead of $\Lambda$). The blockchain contains both transactions and
+certificates, however in this document we model transaction and certificates
+ledgers separately since they are orthogonal concepts.
 
-Do we need to keep into account the seven bootstrap keys from the genesis
-block.
+\begin{question}
+  Who can delegate? Anybody to anybody? Or can the delegators be restricted to
+  the owner of the genesis keys? (Actually we shouldn't care about that
+  restriction here)
+\end{question}
 
-Why do we need to include the certificate in the chain? Why not including it
-when signing a block? This is related to the question about the fundamental
-difference between heavyweight and lightweight delegation certificates.
+The rules presented in this section relies on a function $\delegatesName$,
+which models delegation between keys in a certificate.
 
+\begin{figure*}[h]
+  \emph{Delegation certificates}
+  %
+  \begin{equation*}
+    \var{c} \in \VKey \times \VKey \times \Sig
+  \end{equation*}
+  \emph{Functions}
+  \begin{align*}
+    & \delegates{c}{vk_s}{vk_d} ~\dot= ~ c = (vk_s, vk_d, \sigma) \wedge \verify{vk_s}{c}{\sigma}
+  \end{align*}
+\end{figure*}
+
+\begin{figure}[h]
+  \begin{equation}\label{eq:delegation-override}
+    \inference[Delegation-override]
+    {\delegates{c}{\var{vk}_s}{\var{vk}_d}}
+    {\ldelegates{\Gamma; c}{\var{vk_s}}{\var{vk_d}}}
+  \end{equation}
+
+  \begin{equation}\label{eq:delegation-inductive}
+    \inference[Delegation-inductive]
+    {\delegates{c}{\var{vk_s}}{\var{vk_d}} \Rightarrow \var{vk} \neq \var{vk_d}
+      & \ldelegates{\Gamma}{\var{vk_s}}{\var{vk_d}}
+    }
+    {\ldelegates{\Gamma; c}{\var{vk_s}}{\var{vk_d}}}
+  \end{equation}
+
+  \caption{Delegation inference rules}
+  \label{fig:state-trans-delegation}
+\end{figure}
 \section{State transitions for ledgers}
 \label{sec:state-trans-ledg}
 
