@@ -386,6 +386,13 @@ which models delegation between keys in a certificate.
 \end{figure*}
 
 \begin{figure}[h]
+
+  \begin{equation}\label{eq:delegation-base}
+    \inference[Delegation-base]
+    {}
+    {\ldelegates{\epsilon}{\var{vk}}{\var{vk}}}
+  \end{equation}
+  
   \begin{equation}\label{eq:delegation-override}
     \inference[Delegation-override]
     {\delegates{c}{\var{vk}_s}{\var{vk}_d}}
@@ -394,7 +401,7 @@ which models delegation between keys in a certificate.
 
   \begin{equation}\label{eq:delegation-inductive}
     \inference[Delegation-inductive]
-    {\delegates{c}{\var{vk_s}}{\var{vk_d}} \Rightarrow \var{vk} \neq \var{vk_d}
+    {(\delegates{c}{\var{vk_s}}{\var{vk}} \Rightarrow \var{vk} \neq \var{vk_d})
       & \ldelegates{\Gamma}{\var{vk_s}}{\var{vk_d}}
     }
     {\ldelegates{\Gamma; c}{\var{vk_s}}{\var{vk_d}}}
