@@ -126,6 +126,12 @@ This documents defines a semantics for operations on a blockchain.
 
 \section{Auxiliary definitions}
 \label{sec:auxil-defin}
+TODO: Put this note on serialisation somewhere more appropriate.
+
+If $s(\cdot)$ is a function for serialising data and $d(\cdot)$ a function for
+deserialising data, their composition $s \circ d$ is not an identity function:
+this is hard to enforce and it is considered a bad practice in cryptography
+design.
 
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
