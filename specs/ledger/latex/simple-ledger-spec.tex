@@ -370,7 +370,7 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
 
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
-    {c = (vk_s, vk_d, \sigma) & \verify{vk_s}{c}{\sigma}}
+    {c = (vk_s, vk_d)}
     {d \trans{delegates}{\var{c}} d \unionoverride  \{\var{vk}_s \mapsto \var{vk}_d\}}
   \end{equation}
 
@@ -386,7 +386,7 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
   \emph{Delegation certificates}
   %
   \begin{align*}
-    & \Cert = \VKey \times \VKey \times \Sig
+    & \Cert = \VKey \times \VKey
   \end{align*}  
   \emph{Delegation transition}
   \begin{equation*}
