@@ -65,6 +65,8 @@
 \newcommand{\BHash}{\type{BHash}}  % block hashes
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\GBlock}{\type{GBlock}}
+\newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\HCert}{\type{C}}
 
@@ -85,17 +87,19 @@
 \newcommand{\delegatename}{delegate}
 \newcommand{\validname}{valid}
 \newcommand{\keypairname}{pair}
+\newcommand{\precbname}{prec} % preceding block
 %% 
 %% Functions and relations
 %%
-\newcommand{\sign}[4]{\fun{\signname}\ \var{#1} ~ \var{#2} ~ \var{#3} ~ \var{#4}}
-\newcommand{\signed}[2]{\fun{\signedname}\ \var{#1} ~ \var{#2}}
-\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ \var{#1} ~ \var{#2}}
+\newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
+\newcommand{\signed}[2]{\fun{\signedname}\ #1 ~ #2}
+\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ #1 ~ #2}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
-\newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
-\newcommand{\delegate}[1]{\fun{\delegatename}\ \var{#1}}
+\newcommand{\hash}[1]{\fun{\hashname}\ #1}
+\newcommand{\delegate}[1]{\fun{\delegatename}\ #1}
 \newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
+\newcommand{\precb}[1]{\fun{\prevbname} ~ #1}
 
 \begin{document}
 
@@ -152,14 +156,15 @@ design.
   \emph{Derived types}
   %
   \begin{align*}
-    & sk_G \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-    & \BHash & \text{block hash}\\
-    & c \in \HCert & \text{heavyweight delegation certificate}\\
-    & sig \in \Sig  & \text{signature}\\
-    & data \in \Data  & \text{data}\\
-    & \Block = \BHash \times \Slot \times \Data \times \Sig & \\
-    & (h, sl, d, \sigma) \in \Block
-      & \text{block}
+    sk_G & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    h & \in \BHash & \text{block hash}\\
+    c & \in \HCert & \text{heavyweight delegation certificate}\\
+    sig & \in \Sig  & \text{signature}\\
+    data & \in \Data  & \text{data}\\
+    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKey^n & \text{genesis block} \\
+    (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
+      & \text{non-genesis block} \\
+    b & \in \Block = \GBlock + \RBlock & \text{block}
   \end{align*}
   %
   \emph{Functions and relations}
@@ -213,7 +218,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
 \begin{equation}
   \label{eq:signed-window}
-  \signedwindow{sk}{s} = \Set{b}{b \in s \wedge \signed{sk}{b}}
+  \signedwindow{sk}{\beta} = \Set{b}{b \in \beta \wedge \signed{sk}{b}}
 \end{equation}
 
 \begin{align}
