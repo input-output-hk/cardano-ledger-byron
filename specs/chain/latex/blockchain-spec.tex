@@ -87,7 +87,8 @@
 \newcommand{\delegatename}{delegate}
 \newcommand{\validname}{valid}
 \newcommand{\keypairname}{pair}
-\newcommand{\precbname}{prec} % preceding block
+\newcommand{\predbname}{pred} % block predecessor
+\newcommand{\toseqname}{toSeq} % option type to a sequence
 %% 
 %% Functions and relations
 %%
@@ -99,7 +100,8 @@
 \newcommand{\delegate}[1]{\fun{\delegatename}\ #1}
 \newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
-\newcommand{\precb}[1]{\fun{\prevbname} ~ #1}
+\newcommand{\predb}[1]{\fun{\predbname} ~ #1}
+\newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
 
 \begin{document}
 
@@ -124,6 +126,21 @@ This documents defines a semantics for operations on a blockchain.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
+
+\begin{description}
+\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
+  the subsets of $X$.
+\item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
+  sequences having elements taken from $\type{X}$.
+  %
+  The empty sequence is denoted by $\epsilon$, and given a sequence $\Lambda$,
+  $\Lambda; x$ is the sequence that results from appending
+  $x \in \type{X}$ to $\Lambda$.
+  %
+  Furthermore, $\epsilon$ is an identity element for sequence joining:
+  $\epsilon; x = x; \epsilon = x$.
+\item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$.
+\end{description}
 
 \section{Basic definitions}
 \label{sec:basic-definitions}
@@ -173,17 +190,21 @@ design.
     \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
     \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
       & \text{signature function}\\
-    \text{\signedname} & \in \SKey \times \Block & \text{signature relation}\\
-    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
+    \text{\signedname} & \in \SKey \times \RBlock & \text{signature relation}\\
+    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\RBlock}
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\hashname} & \in \VKey \mapsto \Hash
-      & \text{verification key hash function}\\
+    \text{\hashname} & \in \Block \mapsto \BHash
+      & \text{block hash function}\\
     \text{\delegatename} & \in \SKey \mapsto \HCert
       & \text{delegation function}\\
-    \text{\validname} & \in \Block \times \VKey \times \HCert
-      & \text{block validity relation}
+    \text{\validname} & \in \RBlock \times \VKey \times \HCert
+      & \text{block validity relation}\\
+    \text{\predbname} & \in \Block \mapsto \Block^?
+      & \text{block predecessor function} \\
+    \text{\toseqname} & \in \type{A}^? \mapsto \seqof{\type{A}}
+      & \text{option to sequence function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
@@ -194,7 +215,7 @@ design.
 % This definition is adopted from legacy-free-plan.md, which is written by
 % Duncan Coutts
 
-A block $\var{b}$ is valid if:
+A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
 \item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
@@ -218,7 +239,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
 \begin{equation}
   \label{eq:signed-window}
-  \signedwindow{sk}{\beta} = \Set{b}{b \in \beta \wedge \signed{sk}{b}}
+  \signedwindow{sk}{\beta} = \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \signed{sk}{b}}
 \end{equation}
 
 \begin{align}
@@ -230,6 +251,35 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
         \sign{sk}{h}{sl}{d} = \sigma \wedge \\
       & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
 \end{align}
+
+A block has a block preceding it if it is not the genesis block:
+
+\begin{equation}
+  \label{eq:predb}
+  \predb{b} =
+  \begin{cases}
+    1 & \quad \text{if } b \in \GBlock \\
+    b' & \quad \text{if } b = (h, sl, d, \sigma) \in \RBlock \wedge \hash{b'} = h
+  \end{cases}
+\end{equation}
+
+Next, we define a polymorphic function that takes an option type into a
+corresponding sequence, which can also be applied to the $\Block$ type:
+
+\begin{equation}
+  \label{eq:toseq}
+  \toseq{a} =
+  \begin{cases}
+    \epsilon & \quad \text{if } a = 1 \\
+    \epsilon; a & \quad \text{otherwise}
+  \end{cases}
+\end{equation}
+
+The function \predbname\ can be monadically applied $n$ times in a row, which
+is written as $\predb^n{b}$.
+
+% TODO: Define a function that takes a sequence of option types and returns a
+% sequence of basic types containing non-empty values.
 
 \begin{equation}
   \label{eq:chain-extension}
