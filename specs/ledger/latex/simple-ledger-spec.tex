@@ -81,7 +81,6 @@
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\Hash}{\type{Hash}}
 % Adding delegation
 \newcommand{\Cert}{\type{Cert}}
 
@@ -95,12 +94,12 @@
 \newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
 % Adding witnesses
 \newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
-\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}\ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
-\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
+\newcommand{\addr}[2]{\fun{addr}\ \var{#1}\ \var{#2}}
 \newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
-\newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+\newcommand{\txbody}[1]{\fun{txbody}\ \var{#1}}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
 % Adding ledgers...
@@ -178,11 +177,11 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
 
 \begin{figure*}
   \emph{Primitive types}
-  % 
+  %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{txid} & \TxId & \text{transaction id}\\
-      % 
+      %
       ix & \Ix & \text{index}\\
       %
       \var{addr} & \Addr & \text{address}\\
@@ -191,7 +190,7 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
     \end{array}
   \end{equation*}
   \emph{Derived types}
-  % 
+  %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
       \var{tx}
@@ -218,7 +217,7 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
       & \TxIn \mapsto \TxOut
       & \text{unspent tx outputs}
     \end{array}
-  \end{equation*}  
+  \end{equation*}
   \emph{UTxO States}
   %
   \begin{equation*}
@@ -306,7 +305,7 @@ with a transaction:
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
     { \txins{tx} \subseteq \var{utxo}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx})}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
     {\var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
@@ -329,6 +328,28 @@ with a transaction:
 \section{Witnesses}
 \label{sec:witnesses}
 
+The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
+Note that the transition $u \trans{}{tx} u'$ is any arbitrary transition on
+$\UTxO \times \Tx \times \UTxO$, which means that we're defining a family of
+operational rules. This is what allow us to compose operational rules as
+needed. The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given
+in Figure~\ref{fig:state-trans-utxo-witnesses-defs}.
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive}
+    \inference[UTxO-wit]
+    { \var{utxo} \trans{}{tx} \var{utxo'}\\
+      & \forall i \in \txins{tx} \cdot
+           \exists (\var{vk}, \sigma) \in \wits{\var{tx}} \cdot
+              \verify{vk}{\serialised{\txbody{tx}}}{\sigma}  \wedge \addr{i}{utxo} = \hash{vk}
+    }
+    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
+  \end{equation}
+  \caption{UTxO with witnesses inference rules}
+  \label{fig:rules-utxo-witnesses}
+\end{figure}
+
 \begin{figure}
   \emph{Abstract types}
   %
@@ -336,52 +357,30 @@ with a transaction:
     & \VKey & \text{verification key}\\
     & \Sig  & \text{signature}\\
     & \Data  & \text{data}\\
-    & \Hash  & \text{hash}\\
   \end{align*}
   \emph{Abstract functions}
   %
   \begin{align*}
-    & \witnesses{} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
+    & \fun{wits} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
     & \text{witnesses of a transaction}\\
     %
-    & \inout{\_}{\_}{\_} \in \TxIn \times \UTxO \times \TxOut
-    & \text{input maps to output in utxo}\\
-    %
-    & \inputs{} \in \Tx \mapsto \TxIn
-    & \text{transaction inputs}\\
-    %
-    & \verify{}{}{} \in \VKey \times \Data \times \Sig
+    & \fun{verify} \in \VKey \times \Data \times \Sig
     & \text{verification relation}\\
     %
-    & \addr{} \in \TxOut \mapsto \Hash
-    & \text{output address} \\
+    & \hash{} \in \VKey \mapsto \Addr
+    & \text{hash function} \\
     %
-    & \hash{} \in \VKey \mapsto \Hash
-    & \text{hash function}
+    & \fun{txbody} \in \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+    & \text{transaction body}
+  \end{align*}
+  \emph{Functions}
+  %
+  \begin{align*}
+    & \addr{}{} \in \TxIn \mapsto \UTxO \mapsto \Addr\\
+    & \addr{i}{utxo} = \var{hk} ~\mathbf{where} ~ (hk, \wcard) = \var{utxo}~i
   \end{align*}
   \caption{Definitions associated to the UTxO transition system with witnesses}
   \label{fig:state-trans-utxo-witnesses-defs}
-\end{figure}
-
-The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
-Note that the transition $u \trans{}{tx} u'$ is any arbitrary transition on
-$\UTxO \times \Tx \times \UTxO$, which means that we're defining a family of
-operational rules. This is what allow us to compose operational rules as
-needed.
-
-\begin{figure}
-  \begin{equation}
-    \label{eq:utxo-witness-inductive}
-    \inference[UTxO-wit-inductive]
-    {wits = \witnesses{tx} \wedge \inout{i}{u}{o}
-      & u \trans{}{tx} u'\\
-      & \forall i \in \inputs{tx} ~ ~ \exists (\var{vk}, \sigma) \in wits ~ . ~
-      \verify{vk}{\serialised{tx}}{\sigma}  \wedge \addr{o} = \hash{vk}
-    }
-    {u \trans{utxow}{tx} u'}
-  \end{equation}
-  \caption{UTxO with witnesses inference rules}
-  \label{fig:rules-utxo-witnesses}
 \end{figure}
 
 \section{Delegation}
@@ -429,12 +428,12 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
   %
   \begin{align*}
     & \Cert = \VKey \times \VKey
-  \end{align*}  
+  \end{align*}
   \emph{Delegation transition}
   \begin{equation*}
     \_ \trans{delegates}{\_} \_ \in
       \powerset ((\VKey \mapsto \VKey) \times \Cert \times (\VKey \mapsto \VKey))
-  \end{equation*}  
+  \end{equation*}
   \emph{Functions}
   \begin{align*}
     (d_0 \unionoverride d_1)~k=
@@ -442,9 +441,9 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
       d_1~k & k \in \dom d_1\\
       d_0~k & \text{otherwise}\\
     \end{cases}
-  \end{align*}  
+  \end{align*}
   \caption{Delegation definitions}
-  \label{fig:delegation-defs}  
+  \label{fig:delegation-defs}
 \end{figure}
 
 
