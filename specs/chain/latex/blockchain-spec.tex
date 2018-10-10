@@ -99,7 +99,7 @@
 \newcommand{\signedwindow}[2]{\fun{\signedseqname}\ #1 ~ #2}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
-\newcommand{\delegate}[1]{\fun{\delegatename}\ #1}
+\newcommand{\delegate}[2]{\fun{\delegatename}\ #1 ~ #2}
 \newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
 \newcommand{\predb}[1]{\fun{\predbname} ~ #1}
@@ -178,7 +178,7 @@ design.
   \begin{align*}
     sk_G & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
     h & \in \BHash & \text{block hash}\\
-    c & \in \HCert & \text{heavyweight delegation certificate}\\
+    c & \in \HCert = \VKey \times \VKey \times \Sig & \text{heavyweight delegation certificate}\\
     sig & \in \Sig  & \text{signature}\\
     data & \in \Data  & \text{data}\\
     (vk_1, \dotsc, vk_n) & \in \GBlock = \VKey^n & \text{genesis block} \\
@@ -194,20 +194,22 @@ design.
     \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
       & \text{signature function}\\
     \text{\signedname} & \in \SKey \times \RBlock & \text{signature relation}\\
-    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\RBlock}
+    \text{\signedseqname} & \in \SKeyGen \times \seqof{\Block} \mapsto \powerset{\RBlock}
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
     \text{\hashname} & \in \Block \mapsto \BHash
       & \text{block hash function}\\
-    \text{\delegatename} & \in \SKey \mapsto \HCert
+    \text{\delegatename} & \in \SKey \times \VKey \mapsto \HCert
       & \text{delegation function}\\
     \text{\validname} & \in \RBlock \times \VKey \times \HCert
       & \text{block validity relation}\\
     \text{\predbname} & \in \Block \mapsto \Block^?
       & \text{block predecessor function} \\
     \text{\toseqname} & \in \type{A}^? \mapsto \seqof{\type{A}}
-      & \text{option to sequence function}
+      & \text{option to sequence function} \\
+    \text{\predbseqname} & \in \Block \mapsto \seqof{\Block}
+      & \text{block to sequence function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
@@ -222,7 +224,7 @@ A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
 \item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_g, vk_d, \sigma)$ exists,
+  certificate $c = (vk_g, vk_d, \sigma')$ exists,
 \item the corresponding certificate $c$ is signed by a key $sk_g$ from the
   genesis block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
@@ -240,10 +242,13 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
-\begin{equation}
+The \signedseqname\ function computes for a given genesis block singing key $sk_g$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_g$ delegates to in $\beta$:
+
+\begin{align}
   \label{eq:signed-window}
-  \signedwindow{sk}{\beta} = \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \signed{sk}{b}}
-\end{equation}
+  \signedwindow{sk_g}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
+  & \wedge \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \signed{sk_d}{b}}
+\end{align}
 
 A block has a block preceding it if it is not the genesis block:
 
@@ -279,8 +284,7 @@ functions:
   \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
 \end{equation}
 
-Analogously to the \predbname\ function, the \predbseqname\ function can be
-monadically applied $n$ times in a row and it is defined as:
+Analogously to the \predbname\ function, we define $\predbseq^n{b}$ as:
 
 \begin{equation}
   \label{eq:predbseqton}
@@ -292,19 +296,22 @@ Finally, we define the block validity relation as:
 \begin{align}
   \label{eq:valid-block}
     \valid{b}{vk}{c} \implies &
-      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
-      \delegate{sk} = c \wedge \\
+      \exists sk_g. (sk_g, vk_g) \in \SKeyGen \times \VKey \wedge \\
+      & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
+      \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
-        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
-      & | \signedwindow{sk}{(\predbseq^{(K-1)}\var{b})(\predbseq^{(K-2)}\var{b}) \cdots (\predbseq^1{b}) \var{b}} | \leq K \cdot t.
+        \sign{sk_d}{h}{sl}{d} = \sigma \wedge \\
+      & | \signedwindow{sk_g}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
 \end{align}
+
+The chain extension rule is:
 
 \begin{equation}
   \label{eq:chain-extension}
   \inference[Chain-extension]
-  {\var{B_0}\var{B_1}\cdots\var{B_{\ell}} & \valid{\var{B_{\ell+1}}}{vk}{c}
+  {\beta & \valid{\var{b}}{vk}{c}
   }
-  {{\var{B_0}\var{B_1}\cdots\var{B_{\ell}}} \trans{}{\var{B_{\ell+1}}} {\var{B_0}\var{B_1}\cdots\var{B_{\ell}}\var{B_{\ell+1}}}}
+  {\beta \trans{}{\var{b}} {\beta; b}}
 \end{equation}
 
 \end{document}
