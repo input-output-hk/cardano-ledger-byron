@@ -89,6 +89,8 @@
 \newcommand{\keypairname}{pair}
 \newcommand{\predbname}{pred} % block predecessor
 \newcommand{\toseqname}{toSeq} % option type to a sequence
+\newcommand{\predbseqname}{bs} % block predecessor to a sequence
+
 %% 
 %% Functions and relations
 %%
@@ -102,6 +104,7 @@
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
 \newcommand{\predb}[1]{\fun{\predbname} ~ #1}
 \newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
+\newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
 
 \begin{document}
 
@@ -242,16 +245,6 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \signedwindow{sk}{\beta} = \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \signed{sk}{b}}
 \end{equation}
 
-\begin{align}
-  \label{eq:valid-block}
-    \valid{b}{vk}{c} \implies &
-      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
-      \delegate{sk} = c \wedge \\
-      & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
-        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
-      & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
-\end{align}
-
 A block has a block preceding it if it is not the genesis block:
 
 \begin{equation}
@@ -264,7 +257,7 @@ A block has a block preceding it if it is not the genesis block:
 \end{equation}
 
 Next, we define a polymorphic function that takes an option type into a
-corresponding sequence, which can also be applied to the $\Block$ type:
+corresponding sequence, which can be applied to the $\Block$ type as well:
 
 \begin{equation}
   \label{eq:toseq}
@@ -278,8 +271,33 @@ corresponding sequence, which can also be applied to the $\Block$ type:
 The function \predbname\ can be monadically applied $n$ times in a row, which
 is written as $\predb^n{b}$.
 
-% TODO: Define a function that takes a sequence of option types and returns a
-% sequence of basic types containing non-empty values.
+We define a helper function that composes the \predbname\ and the \toseqname\
+functions:
+
+\begin{equation}
+  \label{eq:predbseq}
+  \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
+\end{equation}
+
+Analogously to the \predbname\ function, the \predbseqname\ function can be
+monadically applied $n$ times in a row and it is defined as:
+
+\begin{equation}
+  \label{eq:predbseqton}
+  \predbseq^n{b} = (\text{\toseqname} \circ \text{\predbname}^n)(b)
+\end{equation}
+
+Finally, we define the block validity relation as:
+
+\begin{align}
+  \label{eq:valid-block}
+    \valid{b}{vk}{c} \implies &
+      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
+      \delegate{sk} = c \wedge \\
+      & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
+        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
+      & | \signedwindow{sk}{(\predbseq^{(K-1)}\var{b})(\predbseq^{(K-2)}\var{b}) \cdots (\predbseq^1{b}) \var{b}} | \leq K \cdot t.
+\end{align}
 
 \begin{equation}
   \label{eq:chain-extension}
