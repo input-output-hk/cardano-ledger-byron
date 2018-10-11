@@ -64,6 +64,7 @@
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
+\newcommand{\where}{~ ~ \mathbf{where}~ ~ }
 
 %%
 %% Types
@@ -82,31 +83,38 @@
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 % Adding delegation
-\newcommand{\Cert}{\type{Cert}}
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\Epoch}{\type{Epoch}}
 
 %%
 %% Functions
 %%
-\newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
-\newcommand{\txid}[1]{\fun{txid}\ \var{#1}}
-\newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
-\newcommand{\values}[1]{\fun{values}\ #1}
-\newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
-% Adding witnesses
-\newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
-\newcommand{\wits}[1]{\fun{wits}\ \var{#1}}
+\newcommand{\txins}[1]{\fun{txins}~ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
+\newcommand{\values}[1]{\fun{values}~ #1}
+\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+%% UTxO witnesses
+\newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
-\newcommand{\addr}[2]{\fun{addr}\ \var{#1}\ \var{#2}}
-\newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
-\newcommand{\txbody}[1]{\fun{txbody}\ \var{#1}}
+\newcommand{\addr}[2]{\fun{addr}~ \var{#1}~ \var{#2}}
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
-% Adding ledgers...
-\newcommand{\utxo}[1]{\fun{utxo}\ #1}
-% Delegation
+%% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}~ #1}
+%% Delegation
 \newcommand{\delegatesName}{\fun{delegates}}
 \newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+\newcommand{\dwho}[1]{\fun{dwho}~\var{#1}}
+\newcommand{\depoch}[1]{\fun{depoch}~\var{#1}}
+%% Delegation witnesses
+\newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
+\newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
 
 
 \begin{document}
@@ -176,6 +184,12 @@ Figure~\ref{fig:state-trans-utxo-defs}. Functions on these types are defined in
 Figure~\ref{fig:utxo-auxiliary-ops}.
 
 \begin{figure*}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
+    \end{array}
+  \end{equation*}
   \emph{Primitive types}
   %
   \begin{equation*}
@@ -193,12 +207,6 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-      \var{tx}
-      & \Tx
-      & (\var{inputs}, \var{outputs})
-      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
-      & \text{transaction}
-      \\
       \var{txin}
       & \TxIn
       & (\var{txid}, \var{ix})
@@ -232,7 +240,10 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
   %
   \emph{Abstract Functions}
   \begin{align*}
-    & \txid{} \in \Tx \mapsto \TxId & \text{compute transaction id}
+    & \txid{} \in \Tx \mapsto \TxId & \text{compute transaction id}\\
+    %
+    & \fun{txbody} \in \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+    & \text{transaction body}
   \end{align*}
   \caption{Definitions associated to the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
@@ -242,14 +253,14 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
   \begin{align*}
     & \fun{txins} \in \Tx \to \powerset{\TxIn}
     & \text{transaction inputs} \\
-    & \fun{txins} ~ (\var{inputs}, ~\wcard) = \var{inputs}
+    & \txins{tx} = \var{inputs} \where \txbody{tx} = (\var{inputs}, ~\wcard)
     \nextdef
     & \fun{txouts} \in \Tx \to \UTxO
     & \text{transaction outputs as UTxO} \\
     & \fun{txouts} ~ \var{tx} =
       \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
       \middle| \begin{array}{l@{~}c@{~}l}
-                 (\_, \var{outputs}) & = & \var{tx} \\
+                 (\_, \var{outputs}) & = & \txbody{tx} \\
                  \var{ix} \mapsto \var{txout} & \in & \var{outputs}
                \end{array}
       \right\}
@@ -325,7 +336,7 @@ with a transaction:
   prevent it. Do we want it?
 \end{todo}
 
-\section{Witnesses}
+\subsection{Witnesses}
 \label{sec:witnesses}
 
 The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
@@ -369,15 +380,12 @@ in Figure~\ref{fig:state-trans-utxo-witnesses-defs}.
     %
     & \hash{} \in \VKey \mapsto \Addr
     & \text{hash function} \\
-    %
-    & \fun{txbody} \in \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
-    & \text{transaction body}
   \end{align*}
   \emph{Functions}
   %
   \begin{align*}
     & \addr{}{} \in \TxIn \mapsto \UTxO \mapsto \Addr\\
-    & \addr{i}{utxo} = \var{hk} ~\mathbf{where} ~ (hk, \wcard) = \var{utxo}~i
+    & \addr{i}{utxo} = \var{hk} \where (hk, \wcard) = \var{utxo}~i
   \end{align*}
   \caption{Definitions associated to the UTxO transition system with witnesses}
   \label{fig:state-trans-utxo-witnesses-defs}
@@ -411,29 +419,52 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
 
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
-    {c = (vk_s, vk_d)}
-    {d \trans{delegates}{\var{c}} d \unionoverride  \{\var{vk}_s \mapsto \var{vk}_d\}}
+    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e & \var{vk_s} \notin \var{depoch}~e}
+    {
+      \left(
+      \begin{array}{r}
+        \var{dmap}\\
+        \var{depoch}
+      \end{array}
+      \right)
+      \trans{delegates}{c}
+      \left(
+      \begin{array}{lcl}
+        \var{dmap} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
+        \var{depoch} & \unionoverride & \{e \mapsto (\var{depoch}~e \cup \{\var{vk_s}\})\}
+      \end{array}
+      \right)
+    }
   \end{equation}
-
   \caption{Delegation inference rules}
   \label{fig:state-trans-delegation}
 \end{figure}
 
 \begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      c & \DCert  & \text{delegation certificates}\\
+    \end{array}
+  \end{equation*}
   \emph{Delegation states}
   \begin{equation*}
-    \var{d} \in \VKey \mapsto \VKey
+    \DState =
+    \left(\begin{array}{r@{~\in~}lr}
+      \var{dmap} & \VKey \mapsto \VKey & \text{delegation map}\\
+      \var{depoch} & \Epoch \mapsto \powerset{\VKey} & \text{delegation state}
+    \end{array}\right)
   \end{equation*}
-  \emph{Delegation certificates}
-  %
-  \begin{align*}
-    & \Cert = \VKey \times \VKey
-  \end{align*}
   \emph{Delegation transition}
   \begin{equation*}
     \_ \trans{delegates}{\_} \_ \in
-      \powerset ((\VKey \mapsto \VKey) \times \Cert \times (\VKey \mapsto \VKey))
+      \powerset (\DState \times \DCert \times \DState)
   \end{equation*}
+  \emph{Abstract functions}
+  \begin{align*}
+    & \fun{dwho} \in \DCert \mapsto (\VKey \times \VKey) & \text{who delegates to who in the certificate}
+  \end{align*}
   \emph{Functions}
   \begin{align*}
     (d_0 \unionoverride d_1)~k=
@@ -446,6 +477,41 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
   \label{fig:delegation-defs}
 \end{figure}
 
+\subsection{Witnesses}
+\label{sec:delegation-witnesses}
+
+The rule for certificate witnesses is given in
+Figure~\ref{fig:deleg-witnesses}. The new definitions introduced in this rule
+are given in Figure~\ref{fig:delegation-witnesses-defs}.
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:deleg-witnesses}
+    \inference[deleg-wit]
+    { \dwit{dlg} = (\var{vk_s}, \sigma) & \var{dlg} \trans{}{c} \var{dlg'} \\
+      \verify{vk_s}{\serialised{\dbody{c}}}{\sigma}
+    }
+    {\var{dlg} \trans{delegw}{c} \var{dlg'}}
+  \end{equation}
+  \caption{Delegation witnesses inference rules}
+  \label{fig:deleg-witnesses}
+\end{figure}
+
+\begin{figure}
+  \emph{Primitive types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{epoch} & \Epoch & \text{epoch}
+    \end{array}
+  \end{equation*}
+    \emph{Abstract functions}
+  \begin{align*}
+      & \fun{dbody} \in \DCert \mapsto \VKey \times \Epoch & \text{body of the delegation certificate}\\
+      & \fun{dwit} \in \DCert \mapsto (\VKey \times \Sig) & \text{witness for the delegation certificate}
+  \end{align*}
+  \caption{Delegation witnesses definitions}
+  \label{fig:delegation-witnesses-defs}
+\end{figure}
 
 \section{State transitions for ledgers}
 \label{sec:state-trans-ledg}
