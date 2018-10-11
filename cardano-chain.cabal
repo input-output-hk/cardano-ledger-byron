@@ -24,6 +24,8 @@ library
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
+                       Cardano.Chain.Epoch.File
+                       Cardano.Chain.Epoch.Index
                        Cardano.Chain.Genesis
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
@@ -108,6 +110,7 @@ library
                      , base16-bytestring
                      , base58-bytestring
                      , base64-bytestring-type
+                     , binary
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -124,6 +127,7 @@ library
                      , mtl
                      , plutus-prototype
                      , servant
+                     , streaming
                      , text
                      , time
 
