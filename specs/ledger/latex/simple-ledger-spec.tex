@@ -488,10 +488,10 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \begin{equation}
     \label{eq:deleg-witnesses}
     \inference[deleg-wit]
-    { \dwit{dlg} = (\var{vk_s}, \sigma) & \var{dlg} \trans{}{c} \var{dlg'} \\
+    { \dwit{c} = (\var{vk_s}, \sigma) & \var{dmap} \trans{}{c} \var{dmap'} \\
       \verify{vk_s}{\serialised{\dbody{c}}}{\sigma}
     }
-    {\var{dlg} \trans{delegw}{c} \var{dlg'}}
+    {\var{dmap} \trans{delegw}{c} \var{dmap'}}
   \end{equation}
   \caption{Delegation witnesses inference rules}
   \label{fig:deleg-witnesses}
@@ -511,45 +511,6 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \end{align*}
   \caption{Delegation witnesses definitions}
   \label{fig:delegation-witnesses-defs}
-\end{figure}
-
-\section{State transitions for ledgers}
-\label{sec:state-trans-ledg}
-
-To define the state transition system for ledgers we need the definitions
-shown in Figure~\ref{fig:ledger-rules-defs}.
-
-\begin{figure}
-  \emph{Abstract functions}
-  %
-  \begin{align*}
-    & \utxo{} \in \seqof{Tx} \mapsto \UTxO
-      & \text{unspent transactions outputs of a ledger}
-  \end{align*}
-  \caption{Definitions used in ledger rules}
-  \label{fig:ledger-rules-defs}
-\end{figure}
-
-Note that the rules presented in Figure~\ref{fig:ledger-rules} do no specify
-anything about the UTxO transition in the premise. We only need that the
-$\utxo{}$ function can be computed for a list of transactions.
-
-\begin{figure}
-  \begin{equation}
-    \label{eq:ledger-base}
-    \inference[Ledger-base]
-    {}
-    {\epsilon}
-  \end{equation}
-
-  \begin{equation}
-    \label{eq:ledger-indutive}
-    \inference[Ledger-inductive]
-    {\utxo{\Lambda} = u & u \trans{}{tx} u' }
-    {\Lambda \trans{ledger}{tx}{\Lambda; \var{tx}}}
-  \end{equation}
-  \caption{Ledger inference rules}
-  \label{fig:ledger-rules}
 \end{figure}
 
 \end{document}
