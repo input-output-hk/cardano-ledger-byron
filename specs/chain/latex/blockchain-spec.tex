@@ -142,7 +142,9 @@ This documents defines a semantics for operations on a blockchain.
   %
   Furthermore, $\epsilon$ is an identity element for sequence joining:
   $\epsilon; x = x; \epsilon = x$.
-\item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$.
+\item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
+  $A$ case corresponds to a case when there is a value of type $A$ and the $1$
+  case corresponds to a case when there is no value.
 \end{description}
 
 \section{Basic definitions}
@@ -238,7 +240,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
 \begin{equation}
   \label{eq:sign-verify}
-  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\\
+  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
@@ -246,7 +248,7 @@ The \signedseqname\ function computes for a given genesis block singing key $sk_
 
 \begin{align}
   \label{eq:signed-window}
-  \signedwindow{sk_g}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
+  \signedwindow{sk_g}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
   & \wedge \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \signed{sk_d}{b}}
 \end{align}
 
@@ -295,8 +297,8 @@ Finally, we define the block validity relation as:
 
 \begin{align}
   \label{eq:valid-block}
-    \valid{b}{vk}{c} \implies &
-      \exists sk_g. (sk_g, vk_g) \in \SKeyGen \times \VKey \wedge \\
+    \valid{b}{vk_d}{c} \implies &
+      \exists sk_g \exists vk_g. (sk_g, vk_g) \in \SKeyGen \times \VKey \wedge \\
       & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
       \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
