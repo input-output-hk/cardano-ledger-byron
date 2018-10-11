@@ -156,8 +156,28 @@ TODO: Put this note on serialisation somewhere more appropriate.
 
 If $s(\cdot)$ is a function for serialising data and $d(\cdot)$ a function for
 deserialising data, their composition $s \circ d$ is not an identity function:
+%
 this is hard to enforce and it is considered a bad practice in cryptography
 design.
+
+\section{Delegation}
+\label{sec:delegation}
+
+The genesis block contains verification keys of $n$ servers.
+%
+Each of $n$ servers keeps its own corresponding signing key locally and does
+not share the signing key with anyone else.
+%
+Only signing keys with their verification counterparts in the genesis block
+have the right to sign blocks.
+%
+However, by the means of delegation certificates, keys from the genesis block
+can delegate signing rights to other keys.
+%
+Delegation is not transitive, i.e., there is no chaining of delegation:
+%
+only genesis block keys can delegate.
+
 
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
