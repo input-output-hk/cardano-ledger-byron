@@ -116,7 +116,6 @@
 \newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
 \newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
 
-
 \begin{document}
 
 \title{A Simplified Formal Specification of a UTxO Ledger}
@@ -140,7 +139,7 @@ which adhere to the rules presented here.
 \label{sec:introduction}
 
 This specification models the \textit{conditions} required for the extension of
-a ledger, which is modeled here as a list of transactions. The following
+a ledger, which is represented here as a list of transactions. The following
 aspects are part of such conditions:
 
 \begin{description}
@@ -148,17 +147,19 @@ aspects are part of such conditions:
   in a new transaction, and the unspent outputs.
 \item[Witnesses] cryptographic entities needed to validate the spending
   of a transaction input.
-\item[Delegation] heavyweight delegation certificates.
+\item[Delegation] delegation certificates, which delegate the block-signing
+  rights from a genesis key to another public key.
 \end{description}
 
-Aspects that will not be modeled since they are not part of the legacy-free
-implementation:
+The following aspects will not be modeled (since they are not part of the legacy-free
+implementation):
 \begin{description}
-\item[Stake] outputs do not have a transfer of stake associated to them.
+\item[Stake] staking rights associated to a addresses.
 \item[Update validation] voting mechanism which captures the identification of
   the voters, and the participants that can post update proposals.
 \end{description}
-\section{Preliminaries}\label{sec:preliminaries}
+
+\section{Notation}\label{sec:notation}
 
 \begin{description}
 \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
@@ -170,18 +171,41 @@ implementation:
   $\Lambda$.
 \end{description}
 
-\section{Basic definitions}
-\label{sec:basic-definitions}
-
-\section{Auxiliary definitions}
-\label{sec:auxil-defin}
-
 \section{State transitions for UTxO}
 \label{sec:state-trans-utxo-1}
 
-The states of the UTxO transition system, along with their types are defined in
-Figure~\ref{fig:state-trans-utxo-defs}. Functions on these types are defined in
-Figure~\ref{fig:utxo-auxiliary-ops}.
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:state-trans-utxo}. The states of the UTxO transition system,
+along with their types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
+Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
+
+\begin{figure}
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \var{utxo}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
+    }
+    {\var{utxo} \trans{utxo}{tx}
+      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:state-trans-utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output
+changes with a transaction:
+\begin{itemize}
+\item The set spent inputs in the transaction, must be in the set of unspent
+  outputs.
+\item The balance of the unspent outputs in a transaction (i.e. the total
+  amount paid in a transaction) must be equal less than the amount of spent
+  inputs.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
 
 \begin{figure*}
   \emph{Abstract types}
@@ -287,70 +311,34 @@ Figure~\ref{fig:utxo-auxiliary-ops}.
   \label{fig:utxo-auxiliary-ops}
 \end{figure}
 
-The transition rules for unspent outputs are presented in
-Figure~\ref{fig:state-trans-utxo}. Rule~\ref{eq:utxo-base} simply states that
-we can start with any arbitrary value for unspent outputs ($\UTxO$).
-Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
-be applied to a set of unspent outputs, and how the set of unspent output changes
-with a transaction:
-\begin{itemize}
-\item The set spent inputs in the transaction, must be in the set of unspent
-  outputs.
-\item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal less than the amount of spent
-  inputs.
-\item If the above conditions hold, then the new state will not have the inputs
-  spent in transaction $\var{tx}$ and it will have the new outputs in
-  $\var{tx}$.
-\end{itemize}
-
-\begin{figure}
-
-  \centering
-  \begin{equation}\label{eq:utxo-base}
-    \inference[UTxO-base]
-    {}
-    {\var{utxo}}
-  \end{equation}
-
-  \begin{equation}\label{eq:utxo-inductive}
-    \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \var{utxo}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
-    }
-    {\var{utxo} \trans{utxo}{tx}
-      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
-    }
-  \end{equation}
-  \caption{UTxO inference rules}
-  \label{fig:state-trans-utxo}
-\end{figure}
-
 \subsection{Properties}
 \label{sec:utxo-properties}
 
 
 \begin{todo}
   Can we prove properties of the transition system of this section? For
-  instance I'd like to formalize ``double spending'' and prove that these rules
-  prevent it. Do we want it?
+  instance we might like to formalize ``double spending'' and prove that these
+  rules prevent it. Do we want it?
 \end{todo}
 
 \subsection{Witnesses}
 \label{sec:witnesses}
 
 The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
-Note that the transition $u \trans{}{tx} u'$ is any arbitrary transition on
-$\UTxO \times \Tx \times \UTxO$, which means that we're defining a family of
-operational rules. This is what allow us to compose operational rules as
-needed. The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given
-in Figure~\ref{fig:state-trans-utxo-witnesses-defs}.
+The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
+Figure~\ref{fig:state-trans-utxo-witnesses-defs}. Note that
+Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
+Figure~\ref{fig:state-trans-utxo}. The main reason for doing this is to define
+the rules incrementally, modeling different aspects in isolation to keep the
+rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
+have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
+different order). The choice here is arbitrary.
 
 \begin{figure}
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit]
-    { \var{utxo} \trans{}{tx} \var{utxo'}\\
+    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot
            \exists (\var{vk}, \sigma) \in \wits{\var{tx}} \cdot
               \verify{vk}{\serialised{\txbody{tx}}}{\sigma}  \wedge \addr{i}{utxo} = \hash{vk}
@@ -371,16 +359,18 @@ in Figure~\ref{fig:state-trans-utxo-witnesses-defs}.
   \end{align*}
   \emph{Abstract functions}
   %
-  \begin{align*}
-    & \fun{wits} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
-    & \text{witnesses of a transaction}\\
-    %
-    & \fun{verify} \in \VKey \times \Data \times \Sig
-    & \text{verification relation}\\
-    %
-    & \hash{} \in \VKey \mapsto \Addr
-    & \text{hash function} \\
-  \end{align*}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{wits} & \Tx \mapsto \powerset{(\VKey \times \Sig)}
+      & \text{witnesses of a transaction}\\
+      %
+      \fun{verify} & \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+      %
+      \hash{} & \VKey \mapsto \Addr
+      & \text{hash function} \\
+    \end{array}
+  \end{equation*}
   \emph{Functions}
   %
   \begin{align*}
@@ -400,38 +390,48 @@ are included in the ledger, and therefore also included in the body of the
 blocks in the blockchain.
 
 In the blockchain protocol only a certain number of keys can sign blocks, and
-the signing key part of these keys are maintained in the genesis block. One
-important restriction on delegation is that only the keys in the genesis
-block can delegate to other keys. However, at the ledger level we do not know
-which are these keys, and thus this is a restriction to be enforced at the
-blockchain level. In this formalization we only care about establishing,
-whether $\var{vk}_s$ delegated its rights to $\var{vk}_d$. To keep track of
-this, we use a map from keys to keys.
+the verifying part of these keys\footnote{Also known as public keys.} are
+maintained in the genesis block. One important restriction on delegation is
+that only the keys in the genesis block can delegate to other keys. However, at
+the ledger level we do not know which are these keys, and thus this is a
+restriction to be enforced at the blockchain level. In this formalization we
+only care about establishing, whether $\var{vk}_s$ delegated its rights to
+$\var{vk}_d$. To keep track of this, we use a map from keys to keys.
 
 The rule for delegation is presented in
 Figure~\ref{fig:state-trans-delegation}. It states that if $\var{c}$ is a valid
 delegation certificate from key $\var{vk}_s$ to key $\var{vk}_d$, then the
 delegation map $d$ is updated to contain the key mapping
 $\var{vk}_s \mapsto \var{vk}_d$. The symbol $\unionoverride$ denotes
-union-override, and is defined in Figure~\ref{fig:delegation-defs}.
+union-override, and is defined in Figure~\ref{fig:delegation-defs}. Another
+condition that is checked in the delegation rule is that only one delegation
+certificate is issued per epoch. To check this, the states of the transitions
+system maintain a map from epochs to set of keys that were delegated on a given
+epoch. Finally, the delegation epoch cannot be older than the current epoch.
+This is what allow us to clean up the maps of keys delegated per epoch. The
+$\vdash$ symbol denotes an \textit{environment} that remains constant in the
+rules. This environment (the current epoch in this case) would be set by the
+(chain) rules that use Rule~\ref{eq:delegation}.
 
 \begin{figure}
-
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
-    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e & \var{vk_s} \notin \var{depoch}~e}
+    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} \leq e_c\\
+      \var{ekeys'} = \{ (e, \var{vks})  \mid (e, \var{vks}) \in \var{ekeys},~  \var{cepoch} \leq e \}
+    }
     {
+      \var{cepoch} \vdash
       \left(
       \begin{array}{r}
         \var{dmap}\\
-        \var{depoch}
+        \var{ekeys}
       \end{array}
       \right)
-      \trans{delegates}{c}
+      \trans{deleg}{c}
       \left(
       \begin{array}{lcl}
         \var{dmap} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
-        \var{depoch} & \unionoverride & \{e \mapsto (\var{depoch}~e \cup \{\var{vk_s}\})\}
+        \var{ekeys'} & \unionoverride & \{e_c \mapsto (\var{ekeys'}~e_c \cup \{\var{vk_s}\})\}
       \end{array}
       \right)
     }
@@ -453,17 +453,18 @@ union-override, and is defined in Figure~\ref{fig:delegation-defs}.
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
       \var{dmap} & \VKey \mapsto \VKey & \text{delegation map}\\
-      \var{depoch} & \Epoch \mapsto \powerset{\VKey} & \text{delegation state}
+      \var{ekeys} & \Epoch \mapsto \powerset{\VKey} & \text{keys delegated per epoch}
     \end{array}\right)
   \end{equation*}
   \emph{Delegation transition}
   \begin{equation*}
-    \_ \trans{delegates}{\_} \_ \in
-      \powerset (\DState \times \DCert \times \DState)
+    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+      \powerset (\Epoch \times \DState \times \DCert \times \DState)
   \end{equation*}
   \emph{Abstract functions}
   \begin{align*}
-    & \fun{dwho} \in \DCert \mapsto (\VKey \times \VKey) & \text{who delegates to who in the certificate}
+    & \fun{dwho} \in \DCert \mapsto (\VKey \times \VKey) & \text{who delegates to who in the certificate}\\
+    & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
   \end{align*}
   \emph{Functions}
   \begin{align*}
@@ -488,10 +489,38 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \begin{equation}
     \label{eq:deleg-witnesses}
     \inference[deleg-wit]
-    { \dwit{c} = (\var{vk_s}, \sigma) & \var{dmap} \trans{}{c} \var{dmap'} \\
+    { \dwit{c} = (\var{vk_s}, \sigma)
+      & \var{cepoch} \vdash
+      {\left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)}
+      \trans{deleg}{c}
+      {\left(
+      \begin{array}{l}
+          \var{dmap}\\
+          \var{ekeys}
+      \end{array}
+      \right)}
+      \\ ~ \\
       \verify{vk_s}{\serialised{\dbody{c}}}{\sigma}
     }
-    {\var{dmap} \trans{delegw}{c} \var{dmap'}}
+    {\var{cepoch} \vdash
+      {\left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)}
+      \trans{delegw}{c}
+      {\left(
+      \begin{array}{l}
+          \var{dmap}\\
+          \var{ekeys}
+      \end{array}
+      \right)}}
   \end{equation}
   \caption{Delegation witnesses inference rules}
   \label{fig:deleg-witnesses}
