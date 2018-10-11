@@ -178,7 +178,7 @@ design.
   \emph{Derived types}
   %
   \begin{align*}
-    sk_G & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
     h & \in \BHash & \text{block hash}\\
     c & \in \HCert = \VKey \times \VKey \times \Sig & \text{heavyweight delegation certificate}\\
     sig & \in \Sig  & \text{signature}\\
@@ -226,11 +226,11 @@ A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
 \item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_g, vk_d, \sigma')$ exists,
-\item the corresponding certificate $c$ is signed by a key $sk_g$ from the
+  certificate $c = (vk_s, vk_d, \sigma')$ exists,
+\item the corresponding certificate $c$ is signed by a key $sk_s$ from the
   genesis block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
-  by keys that $sk_g$ delegated to is no more than a threshold $K \cdot t$,
+  by keys that $sk_s$ delegated to is no more than a threshold $K \cdot t$,
   where $t$ is a constant that we will pick in the range
   $1/5 \leq t \leq 1/4$.
 \end{enumerate}
@@ -244,12 +244,12 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
-The \signedseqname\ function computes for a given genesis block singing key $sk_g$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_g$ delegates to in $\beta$:
+The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
 
 \begin{align}
   \label{eq:signed-window}
-  \signedwindow{sk_g}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
-  & \wedge \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \signed{sk_d}{b}}
+  \signedwindow{sk_s}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
+  & \wedge \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \wedge \signed{sk_d}{b}}
 \end{align}
 
 A block has a block preceding it if it is not the genesis block:
@@ -275,8 +275,8 @@ corresponding sequence, which can be applied to the $\Block$ type as well:
   \end{cases}
 \end{equation}
 
-The function \predbname\ can be monadically applied $n$ times in a row, which
-is written as $\predb^n{b}$.
+The function \predbname\ can be monadically applied $m$ times in a row, which
+is written as $\predb^m{b}$.
 
 We define a helper function that composes the \predbname\ and the \toseqname\
 functions:
@@ -286,11 +286,11 @@ functions:
   \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
 \end{equation}
 
-Analogously to the \predbname\ function, we define $\predbseq^n{b}$ as:
+Analogously to the \predbname\ function, we define $\predbseq^m{b}$ as:
 
 \begin{equation}
   \label{eq:predbseqton}
-  \predbseq^n{b} = (\text{\toseqname} \circ \text{\predbname}^n)(b)
+  \predbseq^m{b} = (\text{\toseqname} \circ \text{\predbname}^m)(b)
 \end{equation}
 
 Finally, we define the block validity relation as:
@@ -298,12 +298,12 @@ Finally, we define the block validity relation as:
 \begin{align}
   \label{eq:valid-block}
     \valid{b}{vk_d}{c} \implies &
-      \exists sk_g \exists vk_g. (sk_g, vk_g) \in \SKeyGen \times \VKey \wedge \\
+      \exists sk_s \exists vk_s. (sk_s, vk_s) \in \SKeyGen \times \VKey \wedge \\
       & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
-      \delegate{sk_g}{vk_d} = (vk_g, vk_d, \sigma') \wedge \\
+      \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
         \sign{sk_d}{h}{sl}{d} = \sigma \wedge \\
-      & | \signedwindow{sk_g}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
+      & | \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
 \end{align}
 
 The chain extension rule is:
@@ -311,7 +311,18 @@ The chain extension rule is:
 \begin{equation}
   \label{eq:chain-extension}
   \inference[Chain-extension]
-  {\beta & \valid{\var{b}}{vk}{c}
+  {
+    {\begin{array}{c}
+       \beta \\
+       b = (h, sl, d, \sigma)
+    \end{array}}
+    &
+    {\begin{array}{c}
+       \sign{sk_d}{h}{sl}{d} = \sigma \\
+       \valid{b}{vk_d}{c} \\
+       \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \\
+       \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t
+    \end{array}}
   }
   {\beta \trans{}{\var{b}} {\beta; b}}
 \end{equation}
