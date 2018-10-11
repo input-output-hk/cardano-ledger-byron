@@ -100,7 +100,7 @@
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
 \newcommand{\delegate}[2]{\fun{\delegatename}\ #1 ~ #2}
-\newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
+\newcommand{\valid}[2]{\fun{\validname} ~ #1 ~ #2}
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
 \newcommand{\predb}[1]{\fun{\predbname} ~ #1}
 \newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
@@ -204,7 +204,7 @@ design.
       & \text{block hash function}\\
     \text{\delegatename} & \in \SKey \times \VKey \mapsto \HCert
       & \text{delegation function}\\
-    \text{\validname} & \in \RBlock \times \VKey \times \HCert
+    \text{\validname} & \in \RBlock \times \VKey
       & \text{block validity relation}\\
     \text{\predbname} & \in \Block \mapsto \Block^?
       & \text{block predecessor function} \\
@@ -297,7 +297,7 @@ Finally, we define the block validity relation as:
 
 \begin{align}
   \label{eq:valid-block}
-    \valid{b}{vk_d}{c} \implies &
+    \valid{b}{vk_d} \implies &
       \exists sk_s \exists vk_s. (sk_s, vk_s) \in \SKeyGen \times \VKey \wedge \\
       & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
       \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \wedge \\
@@ -319,7 +319,7 @@ The chain extension rule is:
     &
     {\begin{array}{c}
        \sign{sk_d}{h}{sl}{d} = \sigma \\
-       \valid{b}{vk_d}{c} \\
+       \valid{b}{vk_d} \\
        \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \\
        \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t
     \end{array}}
