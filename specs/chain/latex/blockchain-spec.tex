@@ -180,6 +180,40 @@ Delegation is not transitive, i.e., there is no chaining of delegation:
 only genesis block keys can delegate.
 
 
+To keep track of active certificates and when they become valid, we use a map
+from genesis block verification keys to a list of certificates.
+%
+A certificate contains an epoch in which it becomes valid.
+%
+Each list is sorted by epochs from certificates in the decreasing order (i.e.,
+a certificate from the first epoch comes last).
+%
+The map is initialised by each genesis block key delegating to itself.
+
+
+If a new certificate is to be posted and added to the map, first it is
+checked.
+%
+The epoch when a certificate becomes valid has to be greater than the epoch of
+the head certificate of the corresponding list.
+%
+The certificate has to have a valid signature.
+%
+If the certificate is valid, it is prepended to the list of the key that is
+delegating.
+%
+This also takes care of the property that no key can delegate
+twice in an epoch.
+%
+Because one key's delegation can be changed only for the next epoch, but not
+for the current epoch or any epoch after the next, checking whom the key
+currently delegates to is a constant-time operation: only the head and
+possibly the second item in the list have to be examined.
+
+This approach also supports certificate revocation: it is done by posting a
+certificate in which a key delegates to itself.
+
+
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
 
