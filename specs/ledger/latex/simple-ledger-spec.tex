@@ -590,7 +590,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
           \epsilon\\
           \var{\emptyset}\\
           \var{\{ (\var{vk}, \var{vk}) \mid \var{vk} \in \Gkeys\}}\\
-          \epsilon\\
+          \emptyset\\
           \var{s_0}\\
           \var{\emptyset}\\
           \var{\emptyset}
@@ -602,12 +602,17 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \begin{equation}
     \label{eq:rule:chain-extension}
     \inference[Chain-ext]
-    {\var{dmap}~\var{vk_g} = vk & \bwit{b} = (\var{vk}, \sigma) & \var{vk_g} \in \Gkeys\\
-      \var{cslot} < \bslot{b} & \size{[k \mid k \in signers,~ k = \var{vk_g}]} \leq K * t &
-      \verify{vk}{\serialised{\bbody{b}}}{\sigma} \\
+    {\var{dmap}~\var{vk_g} = vk_d & \bwit{b} = (\var{vk_d}, \sigma)
+      & \bslot{b} = \var{sid_n} & \var{vk_g} \in \Gkeys\\
+      \var{sid_c} < \var{sid_n} & \size{\{vk_g\} \restrictdom signers} \leq K * t &
+      \verify{vk_d}{\serialised{\bbody{b}}}{\sigma} \\
+      \var{signers'} =
+         \{ (\var{sid}, \var{vk})
+          \mid  (\var{sid}, \var{vk}) \in \var{signers} \cup \{(\var{sid_n}, vk_g)\}
+          , \var{sid_n} - K \leq \var{sid} \}\\
       {\begin{array}{l}
          \var{cepoch}\\
-         \var{cslot}\\
+         \var{sid_c}\\
          d
        \end{array}}
       \vdash
@@ -662,21 +667,21 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
             \var{utxo}\\
             \var{dmap}\\
             \var{signers}\\
-            \var{cslot}\\
+            \var{sid_c}\\
             \var{pdlgs}\\
             \var{ekeys}
           \end{array}
         \right)
       }
-      \trans{bdeleg}{b}
+      \trans{chain}{b}
       {
         \left(
           \begin{array}{l}
             \beta; b\\
             \var{utxo}\\
             \var{dmap'}\\
-            \var{signers} ~\mathbf{;_K}~ \var{vk_g}\\
-            \bslot{b}\\
+            \var{signers'}\\
+            \var{sid_n}
             \var{pdlgs'}\\
             \var{ekeys'}
           \end{array}
@@ -717,7 +722,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
         \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
         \var{signers} & \seqof{VKeyGen} & \text{last $K$ blockchain signers}\\
-        \var{cslot} & \SlotId & \text{current slot}\\
+        \var{sid_c} & \SlotId & \text{current slot}\\
         \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
         \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
       \end{array}
@@ -750,9 +755,9 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
     {
       \var{pdlgs'} = \var{pdlgs} \unionoverride \{(\bslot{b} + d) \mapsto \bdlgs{b} \}\\
       \var{spast} = \{ \var{sid} \mid \var{sid} \in \var \dom ~ \var{pdlgs'}
-                                    ,~ \var{sid} \leq \var{cslot}\}\\
+                                    ,~ \var{sid} \leq \var{sid_c}\}\\
       \Gamma = \fun{concat}~ [ \var{dlgs} \mid (\var{sid}, \var{dlgs}) \in \var{pdlgs}
-                                          ,~ \var{sid} \leq \var{cslot}]\\
+                                          ,~ \var{sid} \leq \var{sid_c}]\\
       \var{cepoch} \vdash
       {
         \left(
@@ -775,7 +780,7 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
     {
       \begin{array}{l}
         \var{cepoch}\\
-        \var{cslot}\\
+        \var{sid_c}\\
         d
       \end{array}
       \vdash
@@ -891,5 +896,9 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
 \label{sec:block-utxo}
 
 
+\begin{todo}
+  Block-UTxO rules will have the same structure as the rules presented in
+  Section~\ref{sec:block-delegation}.
+\end{todo}
 
 \end{document}
