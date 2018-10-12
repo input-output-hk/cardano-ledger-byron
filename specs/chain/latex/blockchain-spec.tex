@@ -73,6 +73,7 @@
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\SKeyGen}{\type{SKey_G}}
 \newcommand{\VKey}{\type{VKey}}
+\newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 
@@ -199,11 +200,12 @@ only genesis block keys can delegate.
   %
   \begin{align*}
     sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
     h & \in \BHash & \text{block hash}\\
-    c & \in \HCert = \VKey \times \VKey \times \Sig & \text{heavyweight delegation certificate}\\
+    c & \in \HCert = \VKeyGen \times \VKey \times \Sig & \text{delegation certificate}\\
     sig & \in \Sig  & \text{signature}\\
     data & \in \Data  & \text{data}\\
-    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKey^n & \text{genesis block} \\
+    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
     (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
       & \text{non-genesis block} \\
     b & \in \Block = \GBlock + \RBlock & \text{block}
@@ -222,7 +224,7 @@ only genesis block keys can delegate.
       & \text{verification relation}\\
     \text{\hashname} & \in \Block \mapsto \BHash
       & \text{block hash function}\\
-    \text{\delegatename} & \in \SKey \times \VKey \mapsto \HCert
+    \text{\delegatename} & \in \SKey \times \VKeyGen \mapsto \HCert
       & \text{delegation function}\\
     \text{\validname} & \in \RBlock \times \VKey
       & \text{block validity relation}\\
