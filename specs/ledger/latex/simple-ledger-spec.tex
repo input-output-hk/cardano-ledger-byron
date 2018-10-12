@@ -126,7 +126,7 @@
 \newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
 \newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
-\newcommand{\filter}[2]{\fun{filter}~ \var{#1}~ \var{#2}}
+\newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
 
 \begin{document}
 
@@ -596,7 +596,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \left(
           \begin{array}{l}
             \var{dmap}\\
-            \var{pdlgs}
+            \var{pdlgs}\\
+            \var{ekeys}            
           \end{array}
         \right)
       }
@@ -605,7 +606,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \left(
           \begin{array}{r}
             \var{dmap'}\\
-            \var{pdlgs'}
+            \var{pdlgs'}\\
+            \var{ekeys'}            
           \end{array}
         \right)
       }
@@ -642,7 +644,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
             \var{dmap}\\
             \var{signers}\\
             \var{cslot}\\
-            \var{pdlgs}
+            \var{pdlgs}\\
+            \var{ekeys}
           \end{array}
         \right)
       }
@@ -655,7 +658,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
             \var{dmap'}\\
             \var{signers} ~\mathbf{;_K}~ \var{vk_g}\\
             \bslot{b}\\
-            \var{pdlgs'}
+            \var{pdlgs'}\\
+            \var{ekeys'}            
           \end{array}
         \right)
       }
@@ -694,7 +698,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
         \var{signers} & \seqof{VKeyGen} & \text{last $K$ blockchain signers}\\
         \var{cslot} & \SlotId & \text{current slot}\\
-        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}
+        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
+        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}        
       \end{array}
     \right)
   \end{equation*}
@@ -708,6 +713,92 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
 
 \subsection{Block delegation}
 \label{sec:block-delegation}
+
+The rule for delegation of certificates in a block is shown in
+Figure~\ref{fig:block-delegation-rules}, and the new definitions used in this
+rule are presented in Figure~\ref{fig:block-delegation-defs}.
+Rule~\ref{eq:rule:block-delegation} relies on an inference rule that models the
+state changes after applying a sequence of delegation certificates. Such rule
+is shown in Figure~\ref{fig:delegation-sequence-rules}.
+
+\begin{figure}
+  \centering
+  \begin{equation}
+    \label{eq:rule:block-delegation}
+    \inference[Block-dlg]
+    {
+      \var{pdlgs'} = \var{pdlgs} \unionoverride \{(\bslot{b} + d) \mapsto \bdlgs{b} \}\\
+      \var{spast} = \{ \var{sid} \mid \var{sid} \in \var \dom ~ \var{pdlgs'}
+                                    ,~ \var{sid} \leq \var{cslot}\}\\
+      \Gamma = \fun{concat}~ [ \var{dlgs} \mid (\var{sid}, \var{dlgs}) \in \var{pdlgs}
+                                          ,~ \var{sid} \leq \var{cslot}]\\
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}\\
+            \var{ekeys}            
+          \end{array}
+        \right)
+      }
+      \trans{delegs}{\Gamma}
+      {
+        \left(
+          \begin{array}{r}
+            \var{dmap'}\\
+            \var{ekeys'}            
+          \end{array}
+        \right)
+      }
+    }
+    {
+      \begin{array}{l}
+        \var{cslot}\\
+        d
+      \end{array}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}\\
+            \var{pdlgs}\\
+            \var{ekeys}            
+          \end{array}
+        \right)
+      }
+      \trans{bdeleg}{b}
+      {
+        \left(
+          \begin{array}{r}
+            \var{dmap'}\\
+            \var{\var{spast} \subtractdom pdlgs'}\\
+            \var{ekeys'}            
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block delegation rules}
+  \label{fig:block-delegation-rules}  
+\end{figure}
+
+\begin{figure}
+  \emph{Abstract functions}
+  \begin{align*}
+    & \fun{bdlgs} \in \Block \mapsto \seqof{\DCert} & \text{delegation certificates in the block}\\
+  \end{align*}
+  \caption{Block delegation definitions}
+  \label{fig:block-delegation-defs}
+\end{figure}
+
+
+\begin{figure}
+  \centering
+  \begin{equation}
+    \label{eq:rule:sequence-delegation}
+  \end{equation}
+  \caption{Delegation sequence rules}    
+  \label{fig:delegation-sequence-rules}  
+\end{figure}
 
 \subsection{Block UTxO}
 \label{sec:block-utxo}
