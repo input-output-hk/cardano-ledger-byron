@@ -507,7 +507,7 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
 \begin{figure}
   \begin{equation}
     \label{eq:deleg-witnesses}
-    \inference[deleg-wit]
+    \inference[Deleg-wit]
     { \dwit{c} = (\var{vk_s}, \sigma)
       & \var{cepoch} \vdash
       {\left(
@@ -582,22 +582,41 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
 \begin{figure}
   \centering
   \begin{equation}
+    \label{eq:rule:chain-base}
+    \inference[Chain-base]
+    {}
+    {\left(
+        \begin{array}{l}
+          \epsilon\\
+          \var{\emptyset}\\
+          \var{\{ (\var{vk}, \var{vk}) \mid \var{vk} \in \Gkeys\}}\\
+          \epsilon\\
+          \var{s_0}\\
+          \var{\emptyset}\\
+          \var{\emptyset}
+        \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \begin{equation}
     \label{eq:rule:chain-extension}
     \inference[Chain-ext]
     {\var{dmap}~\var{vk_g} = vk & \bwit{b} = (\var{vk}, \sigma) & \var{vk_g} \in \Gkeys\\
       \var{cslot} < \bslot{b} & \size{[k \mid k \in signers,~ k = \var{vk_g}]} \leq K * t &
       \verify{vk}{\serialised{\bbody{b}}}{\sigma} \\
       {\begin{array}{l}
-        \var{cslot}\\
-        d
-      \end{array}}
+         \var{cepoch}\\
+         \var{cslot}\\
+         d
+       \end{array}}
       \vdash
       {
         \left(
           \begin{array}{l}
             \var{dmap}\\
             \var{pdlgs}\\
-            \var{ekeys}            
+            \var{ekeys}
           \end{array}
         \right)
       }
@@ -607,7 +626,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
           \begin{array}{r}
             \var{dmap'}\\
             \var{pdlgs'}\\
-            \var{ekeys'}            
+            \var{ekeys'}
           \end{array}
         \right)
       }
@@ -659,7 +678,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
             \var{signers} ~\mathbf{;_K}~ \var{vk_g}\\
             \bslot{b}\\
             \var{pdlgs'}\\
-            \var{ekeys'}            
+            \var{ekeys'}
           \end{array}
         \right)
       }
@@ -674,6 +693,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{b} & \Block & \text{block}\\
+      \var{s} & \SlotId & \text{slot id}\\
     \end{array}
   \end{equation*}
   \emph{Chain extension environment}
@@ -682,12 +702,12 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{\Gkeys} & \powerset{\VKeyGen} & \text{genesis keys}\\
-        \var{K} & \mathbb{N} & \text{number of nodes}\\        
+        \var{K} & \mathbb{N} & \text{number of nodes}\\
         \var{t} & \mathbb{Q} & \text{byzantine nodes ratio}\\
         \var{d} & \Epoch & \text{delegation liveness parameter}\\
       \end{array}
     \right)
-  \end{equation*}  
+  \end{equation*}
   \emph{Chain extension states}
   \begin{equation*}
     \CEState =
@@ -699,13 +719,14 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \var{signers} & \seqof{VKeyGen} & \text{last $K$ blockchain signers}\\
         \var{cslot} & \SlotId & \text{current slot}\\
         \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
-        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}        
+        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
       \end{array}
     \right)
   \end{equation*}
   \emph{Abstract functions}
   \begin{align*}
     & \fun{bwit} \in \Block \mapsto \VKey \times \Sig & \text{block witness}\\
+    & \fun{s_0} \in \SlotId  & \text{slot zero (smallest slot id)}\\
   \end{align*}
   \caption{Blockchain extension definitions}
   \label{fig:chain-extension-defs}
@@ -732,11 +753,12 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
                                     ,~ \var{sid} \leq \var{cslot}\}\\
       \Gamma = \fun{concat}~ [ \var{dlgs} \mid (\var{sid}, \var{dlgs}) \in \var{pdlgs}
                                           ,~ \var{sid} \leq \var{cslot}]\\
+      \var{cepoch} \vdash
       {
         \left(
           \begin{array}{l}
             \var{dmap}\\
-            \var{ekeys}            
+            \var{ekeys}
           \end{array}
         \right)
       }
@@ -745,13 +767,14 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
         \left(
           \begin{array}{r}
             \var{dmap'}\\
-            \var{ekeys'}            
+            \var{ekeys'}
           \end{array}
         \right)
       }
     }
     {
       \begin{array}{l}
+        \var{cepoch}\\
         \var{cslot}\\
         d
       \end{array}
@@ -761,7 +784,7 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
           \begin{array}{l}
             \var{dmap}\\
             \var{pdlgs}\\
-            \var{ekeys}            
+            \var{ekeys}
           \end{array}
         \right)
       }
@@ -771,14 +794,14 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
           \begin{array}{r}
             \var{dmap'}\\
             \var{\var{spast} \subtractdom pdlgs'}\\
-            \var{ekeys'}            
+            \var{ekeys'}
           \end{array}
         \right)
       }
     }
   \end{equation}
   \caption{Block delegation rules}
-  \label{fig:block-delegation-rules}  
+  \label{fig:block-delegation-rules}
 \end{figure}
 
 \begin{figure}
@@ -790,14 +813,78 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
   \label{fig:block-delegation-defs}
 \end{figure}
 
-
 \begin{figure}
   \centering
   \begin{equation}
-    \label{eq:rule:sequence-delegation}
+    \inference[Seq-delg-base]
+    {}
+    { \var{cepoch} \vdash \left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)
+        \trans{delegs}{\epsilon}
+      \left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:sequence-delegation-base}
   \end{equation}
-  \caption{Delegation sequence rules}    
-  \label{fig:delegation-sequence-rules}  
+
+  \begin{equation}
+    \inference[Seq-delg-ind]
+    { \var{cepoch} \vdash
+      {\left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)}
+      \trans{delegs}{\Gamma}
+      {\left(
+        \begin{array}{r}
+          \var{dmap'}\\
+          \var{ekeys'}
+        \end{array}
+      \right)}
+    \\ ~ \\
+    \var{cepoch} \vdash
+    {\left(
+        \begin{array}{r}
+          \var{dmap'}\\
+          \var{ekeys'}
+        \end{array}
+      \right)}
+      \trans{delegw}{c}
+      {\left(
+        \begin{array}{r}
+          \var{dmap''}\\
+          \var{ekeys''}
+        \end{array}
+      \right)}
+    }
+    { \left(
+        \begin{array}{r}
+          \var{dmap}\\
+          \var{ekeys}
+        \end{array}
+      \right)
+      \trans{delegs}{\Gamma; c}
+      \left(
+        \begin{array}{r}
+          \var{dmap''}\\
+          \var{ekeys''}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:sequence-delegation-inductive}
+  \end{equation}
+  \caption{Delegation sequence rules}
+  \label{fig:delegation-sequence-rules}
 \end{figure}
 
 \subsection{Block UTxO}
