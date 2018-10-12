@@ -9,24 +9,22 @@ module Cardano.Chain.Epoch.File
   , parseEpochFile
   ) where
 
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Read as D
+import           Control.Monad (guard, unless)
+import           Control.Monad.Except (runExceptT)
 import           Control.Monad.Trans (MonadTrans (..))
 import qualified Data.Binary as B
 import           Data.Binary.Get (getWord32be)
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Word (Word32)
 import           Streaming.Prelude (Of (..), Stream)
 import qualified Streaming.Prelude as S
 import           System.IO (Handle, IOMode (ReadMode), hIsEOF, withBinaryFile)
 
-import           Cardano.Binary.Class (Bi (..))
+import           Cardano.Binary.Class (DecoderError, decodeFull)
 import           Cardano.Chain.Block.Block (Block)
 import           Cardano.Chain.Block.Undo (Undo)
 import           Cardano.Prelude
-import           Control.Monad (guard, unless)
 
 -- Epoch file format:
 --
@@ -36,28 +34,6 @@ import           Control.Monad (guard, unless)
 -- UndoLength := Word32BE
 -- Block := CBOR
 -- Undo := CBOR
-
-decodeAll :: (forall s. D.Decoder s a) -> LBS.ByteString -> Either D.DeserialiseFailure a
-decodeAll decoder bytes = case D.deserialiseFromBytes decoder bytes of
-  Left err -> Left err
-  Right (remaining, result) ->
-    if LBS.null remaining
-    then Right result
-    else Left (D.DeserialiseFailure 0 "Deserialisation did not consume all input.")
-
-getBlock :: Word32 -> B.Get Block
-getBlock size = do
-  bytes <- B.getLazyByteString (fromIntegral size)
-  case decodeAll (decode @Block) bytes of
-    Left (D.DeserialiseFailure _offset message) -> fail message
-    Right result                                -> pure result
-
-getUndo :: Word32 -> B.Get Undo
-getUndo size = do
-  bytes <- B.getLazyByteString (fromIntegral size)
-  case decodeAll (decode @Undo) bytes of
-    Left (D.DeserialiseFailure _offset message) -> fail message
-    Right result                                -> pure result
 
 data UnexpectedFormat = UnexpectedFormat deriving (Show)
 instance Exception UnexpectedFormat
@@ -84,34 +60,40 @@ readBytes h = go
         S.yield bytes
         go
 
-data ParseFailed = ParseFailed String deriving (Show)
-instance Exception ParseFailed
+data ParseError
+  = ParseErrorDecoder DecoderError
+  | ParseErrorBinary ByteString B.ByteOffset String
+  deriving (Eq, Show)
+instance Exception ParseError
 
-decodeStream :: forall m a r. (MonadThrow m) => B.Get a
+decodeStream :: forall m a r. (MonadThrow m) => B.Get (Either DecoderError a)
            -> Stream (Of BS.ByteString) m r
            -> Stream (Of a) m r
 decodeStream getA stream = loop newDecoder stream
   where
     newDecoder = B.runGetIncremental getA
-    loop :: B.Decoder a -> Stream (Of ByteString) m r -> Stream (Of a) m r
+    loop :: B.Decoder (Either DecoderError a) -> Stream (Of ByteString) m r -> Stream (Of a) m r
     loop decoder s = lift (S.next s) >>= \case
       Left r -> pure r
       Right (chunk, rest) -> push decoder chunk rest
-    push :: B.Decoder a -> ByteString -> Stream (Of ByteString) m r -> Stream (Of a) m r
+    push :: B.Decoder (Either DecoderError a) -> ByteString -> Stream (Of ByteString) m r -> Stream (Of a) m r
     push decoder chunk s = case B.pushChunk decoder chunk of
       decoder'@(B.Partial _) ->  loop decoder' s
-      B.Fail _remaining _offset message -> lift (throwM (ParseFailed message))
-      B.Done remaining _offset result -> S.yield result >> push newDecoder remaining s
+      B.Fail remaining offset message -> lift (throwM (ParseErrorBinary remaining offset message))
+      B.Done remaining _offset binaryResult ->
+        case binaryResult of
+          Left err     -> lift (throwM (ParseErrorDecoder err))
+          Right result -> S.yield result >> push newDecoder remaining s
 
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
 
-slotData :: B.Get (Block, Undo)
-slotData = do
-    header <- B.getLazyByteString (LBS.length slotDataHeader)
-    guard (header == slotDataHeader)
-    blockSize <- getWord32be
-    undoSize <- getWord32be
-    block <- getBlock blockSize
-    undo <- getUndo undoSize
+slotData :: B.Get (Either DecoderError (Block, Undo))
+slotData = runExceptT $ do
+    header <- lift $ B.getLazyByteString (LBS.length slotDataHeader)
+    lift $  guard (header == slotDataHeader)
+    blockSize <- lift getWord32be
+    undoSize <- lift getWord32be
+    block <- ExceptT $ decodeFull <$> B.getLazyByteString (fromIntegral blockSize)
+    undo  <- ExceptT $ decodeFull <$> B.getLazyByteString (fromIntegral undoSize)
     pure $ (block, undo)
