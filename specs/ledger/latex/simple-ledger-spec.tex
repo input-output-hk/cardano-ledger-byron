@@ -89,6 +89,10 @@
 \newcommand{\VKeyGen}{\type{VKeyGen}}
 %% Blockchain
 \newcommand{\Gkeys}{\var{G_{keys}}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
 
 %%
 %% Functions
@@ -179,7 +183,7 @@ implementation):
   $\Lambda$.
 \end{description}
 
-\section{State transitions for UTxO}
+\section{UTxO}
 \label{sec:state-trans-utxo-1}
 
 The transition rules for unspent outputs are presented in
@@ -566,6 +570,15 @@ blockchain ones.
 \subsection{Chain extension}
 \label{sec:chain-extension}
 
+The chain extension rule is given in Figure~\ref{fig:chain-extension-rules},
+and the definitions used in this rule are presented in
+Figure~\ref{fig:chain-extension-defs}. Rule~\ref{eq:rule:chain-extension}
+relies on transitions $\trans{bdeleg}{}$, which specify the delegation
+behavior, and $\trans{butxo}{}$ which models the evolution of unspent outputs
+after applying the transitions in a block. Rules for delegation and unspent
+outputs in the context of a block are given in
+Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
+
 \begin{figure}
   \centering
   \begin{equation}
@@ -616,6 +629,7 @@ blockchain ones.
     {
       {\begin{array}{l}
          \Gkeys\\
+         K\\
          t\\
          d
       \end{array}}
@@ -650,5 +664,54 @@ blockchain ones.
   \caption{Chain extension rules}
   \label{fig:chain-extension-rules}
 \end{figure}
+
+\begin{figure}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{b} & \Block & \text{block}\\
+    \end{array}
+  \end{equation*}
+  \emph{Chain extension environment}
+  \begin{equation*}
+    \CEEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{\Gkeys} & \powerset{\VKeyGen} & \text{genesis keys}\\
+        \var{K} & \mathbb{N} & \text{number of nodes}\\        
+        \var{t} & \mathbb{Q} & \text{byzantine nodes ratio}\\
+        \var{d} & \Epoch & \text{delegation liveness parameter}\\
+      \end{array}
+    \right)
+  \end{equation*}  
+  \emph{Chain extension states}
+  \begin{equation*}
+    \CEState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \beta & \seqof{\Block} & \text{blockchain}\\
+        \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
+        \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
+        \var{signers} & \seqof{VKeyGen} & \text{last $K$ blockchain signers}\\
+        \var{cslot} & \SlotId & \text{current slot}\\
+        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}
+      \end{array}
+    \right)
+  \end{equation*}
+  \emph{Abstract functions}
+  \begin{align*}
+    & \fun{bwit} \in \Block \mapsto \VKey \times \Sig & \text{block witness}\\
+  \end{align*}
+  \caption{Blockchain extension definitions}
+  \label{fig:chain-extension-defs}
+\end{figure}
+
+\subsection{Block delegation}
+\label{sec:block-delegation}
+
+\subsection{Block UTxO}
+\label{sec:block-utxo}
+
+
 
 \end{document}
