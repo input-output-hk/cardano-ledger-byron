@@ -76,17 +76,20 @@
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Value}{\type{Value}}
 \newcommand{\Coin}{\type{Coin}}
-% Adding witnesses
+%% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-% Adding delegation
+%% Adding delegation
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\Epoch}{\type{Epoch}}
 \newcommand{\VKeyGen}{\type{VKeyGen}}
+%% Blockchain
+\newcommand{\Gkeys}{\var{G_{keys}}}
+
 %%
 %% Functions
 %%
@@ -115,6 +118,11 @@
 %% Delegation witnesses
 \newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
 \newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
+%% Blockchain
+\newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
+\newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\filter}[2]{\fun{filter}~ \var{#1}~ \var{#2}}
 
 \begin{document}
 
@@ -547,6 +555,100 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \end{align*}
   \caption{Delegation witnesses definitions}
   \label{fig:delegation-witnesses-defs}
+\end{figure}
+
+\section{Blockchain layer}
+\label{sec:blockchain-layer}
+
+The following section shows how the ledger rules are used to build the
+blockchain ones.
+
+\subsection{Chain extension}
+\label{sec:chain-extension}
+
+\begin{figure}
+  \centering
+  \begin{equation}
+    \label{eq:rule:chain-extension}
+    \inference[Chain-ext]
+    {\var{dmap}~\var{vk_g} = vk & \bwit{b} = (\var{vk}, \sigma) & \var{vk_g} \in \Gkeys\\
+      \var{cslot} < \bslot{b} & \size{[k \mid k \in signers,~ k = \var{vk_g}]} \leq K * t &
+      \verify{vk}{\serialised{\bbody{b}}}{\sigma} \\
+      {\begin{array}{l}
+        \var{cslot}\\
+        d
+      \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}\\
+            \var{pdlgs}
+          \end{array}
+        \right)
+      }
+      \trans{bdeleg}{b}
+      {
+        \left(
+          \begin{array}{r}
+            \var{dmap'}\\
+            \var{pdlgs'}
+          \end{array}
+        \right)
+      }
+      &
+      {
+        \left(
+          \begin{array}{l}
+            \var{utxo}\\
+          \end{array}
+        \right)
+      }
+      \trans{butxo}{b}
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo'}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {\begin{array}{l}
+         \Gkeys\\
+         t\\
+         d
+      \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \beta\\
+            \var{utxo}\\
+            \var{dmap}\\
+            \var{signers}\\
+            \var{cslot}\\
+            \var{pdlgs}
+          \end{array}
+        \right)
+      }
+      \trans{bdeleg}{b}
+      {
+        \left(
+          \begin{array}{l}
+            \beta; b\\
+            \var{utxo}\\
+            \var{dmap'}\\
+            \var{signers} ~\mathbf{;_K}~ \var{vk_g}\\
+            \bslot{b}\\
+            \var{pdlgs'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Chain extension rules}
+  \label{fig:chain-extension-rules}
 \end{figure}
 
 \end{document}
