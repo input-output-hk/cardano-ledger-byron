@@ -423,9 +423,10 @@ issue at most one delegation certificate per epoch. To check this, the states
 of the transitions system maintain a map from epochs to set of keys that were
 delegated on a given epoch. Finally, the delegation epoch cannot be older than
 the current epoch. This is what allow us to clean up the maps of keys delegated
-per epoch. The $\vdash$ symbol denotes an \textit{environment} that remains
-constant in the rules. This environment (the current epoch in this case) would
-be set by the (chain) rules that use Rule~\ref{eq:delegation}.
+per epoch. Variables to the left of the $\vdash$ (turnstile) symbol are the
+\textit{environment} of a rule, which remains constant. This environment (the
+current epoch in this case) would be set by the (chain) rules that use
+Rule~\ref{eq:delegation}.
 
 \begin{figure}
   \begin{equation}\label{eq:delegation}
