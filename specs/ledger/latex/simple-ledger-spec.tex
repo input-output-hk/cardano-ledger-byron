@@ -84,6 +84,7 @@
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\SKey}{\type{SKey}}
+\newcommand{\Hash}{\type{Hash}}
 \newcommand{\SkVk}{\type{SkVk}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
@@ -115,7 +116,7 @@
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
-\newcommand{\addr}[2]{\fun{addr}~ \var{#1}~ \var{#2}}
+\newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 % wildcard parameter
@@ -189,6 +190,13 @@ implementation):
   denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
   the sequence that results from appending $\type{x} \in \type{X}$ to
   $\Lambda$.
+\item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
+  Given a function $f$ we write $f~a$ for the application of $f$ to argument
+  $a$. 
+\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
+    function} from $A$ to $B$, which can be seen as a map (dictionary) with
+  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
+  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
 \end{description}
 
 \section{Cryptographic primitives}
@@ -204,6 +212,7 @@ this document.
     \begin{array}{r@{~\in~}lr}
       \var{vk} & \SKey & \text{signing key}\\            
       \var{vk} & \VKey & \text{verifying key}\\
+      \var{hk} & \Hash & \text{hash of a key}\\      
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
     \end{array}
@@ -218,7 +227,7 @@ this document.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hash{} & \VKey \mapsto \Addr
+      \hash{} & \VKey \to \Hash
       & \text{hash function} \\
       %
       \fun{verify} & \VKey \times \Data \times \Sig
@@ -229,6 +238,12 @@ this document.
   \begin{align*}
     & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
       \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+  \end{align*}
+  \emph{Notation for serialized and verified data}
+  \begin{align*}
+    & \serialised{x} & \text{serialised representation of } x\\
+    & \mathcal{V}_{\var{vk}}{\serialised{m}}_{\sigma} = \verify{vk}{m}{\sigma}
+      & \text{shorthand notation for } \fun{verify}
   \end{align*}
   \caption{Cryptographic definitions}
   \label{fig:crypto-defs}
@@ -289,9 +304,9 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \txid{} & \Tx \mapsto \TxId & \text{compute transaction id}\\
+      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
       %
-      \fun{txbody} & \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+      \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
                                   & \text{transaction body}
     \end{array}
   \end{equation*}
@@ -402,8 +417,10 @@ different order). The choice here is arbitrary.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{wits} & \Tx \mapsto \powerset{(\VKey \times \Sig)}
+      \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
+      \fun{hash_{spend}} & \Addr \mapsto \Hash
+      & \text{hash of a spending key in an address}\\      
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
@@ -412,8 +429,12 @@ different order). The choice here is arbitrary.
 
 \begin{figure}
   \begin{align*}
-    & \addr{}{} \in \TxIn \mapsto \UTxO \mapsto \Addr & \text{address of an input}\\
-    & \addr{i}{utxo} = \var{hk} \where (hk, \wcard) = \var{utxo}~i
+    & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
+    & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
+    \nextdef
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \Hash & \text{hash of an input address}\\
+    & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+      \wedge a \mapsto h \in \fun{hash_{spend}} \}
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:witnesses-ops}
@@ -434,9 +455,10 @@ different order). The choice here is arbitrary.
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit]
     { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
-      & \forall i \in \txins{tx} \cdot
-           \exists (\var{vk}, \sigma) \in \wits{\var{tx}} \cdot
-              \verify{vk}{\serialised{\txbody{tx}}}{\sigma} \wedge \addr{i}{utxo} = \hash{vk}
+      & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \cdot 
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
+      \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
     {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
   \end{equation}
