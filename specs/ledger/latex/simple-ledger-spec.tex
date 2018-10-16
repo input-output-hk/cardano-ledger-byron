@@ -461,7 +461,8 @@ Rule~\ref{eq:delegation}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       c & \DCert  & \text{delegation certificate}\\
-      vk_g & \VKeyGen & \text{genesis verification key}
+      vk_g & \VKeyGen & \text{genesis verification key}\\
+      e & \Epoch & \text{epoch}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
@@ -601,12 +602,12 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     {\left(
         \begin{array}{l}
           \epsilon\\
-          \var{\emptyset}\\
+          \var{utxo}\\
           \var{\{ (\var{vk}, \var{vk}) \mid \var{vk} \in \Gkeys\}}\\
           \emptyset\\
           \var{s_0}\\
-          \var{\emptyset}\\
-          \var{\emptyset}
+          \emptyset\\
+          \emptyset
         \end{array}
       \right)
     }
