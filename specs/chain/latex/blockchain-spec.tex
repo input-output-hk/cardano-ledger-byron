@@ -170,6 +170,8 @@ design.
 
 The genesis block contains verification keys of $n$ servers.
 %
+As of mid-October 2018, $n = 7$.
+%
 Each of $n$ servers keeps its own corresponding signing key locally and does
 not share the signing key with anyone else.
 %
@@ -184,13 +186,16 @@ Delegation is not transitive, i.e., there is no chaining of delegation:
 only genesis block keys can delegate.
 
 
+\subsection{Delegation Design}
+\label{sec:delegation-design}
+
 To keep track of active certificates and when they become valid, we use a map
 from genesis block verification keys to a list of certificates.
 %
 A certificate contains an epoch in which it becomes valid.
 %
 Each list is sorted by epochs from certificates in the decreasing order (i.e.,
-a certificate from the first epoch comes last).
+a certificate with an earlier epoch comes latter in the list).
 %
 The map is initialised by each genesis block key delegating to itself.
 
@@ -203,14 +208,30 @@ the head certificate of the corresponding list.
 %
 The certificate has to have a valid signature.
 %
-If the certificate is valid, it is prepended to the list of the key that is
-delegating.
+If the certificate is valid, it is prepended to the list of the map key that
+is delegating.
 %
 This also takes care of the property that no key can delegate
 twice in an epoch.
+
+
+Each list in the map is trimmed at the beginning of each epoch by keeping only
+the head of the list, i.e., by keeping only one certificate.
 %
-Because one key's delegation can be changed only for the next epoch, but not
-for the current epoch or any epoch after the next, checking whom the key
+This head certificate is either a new certificate that becomes valid in this
+epoch or it is an old certificate that is still valid and it was not replaced
+by any new delegation certificate.
+%
+Due to trimming, each list in the map has at most two certificates at any
+point in time.
+%
+At the beginning of an epoch, a list has only one element and at any other
+point it can have at most two elements (i.e., two certificates) if there was a
+new delegation certificate for the next epoch posted.
+
+
+Because one key's delegation can be changed only for the next epoch, but
+not for the current epoch or any epoch after the next, checking whom the key
 currently delegates to is a constant-time operation: only the head and
 possibly the second item in the list have to be examined.
 
