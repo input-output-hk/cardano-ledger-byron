@@ -275,7 +275,7 @@ certificate in which a key delegates to itself.
     (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
       & \text{non-genesis block} \\
     b & \in \Block = \GBlock + \RBlock & \text{block} \\
-    \delmap & \in \VKeyGen \mapsto \seqof{\HCert}
+    \delmap & \in \VKeyGen \to \seqof{\HCert}
       & \text{key to certificate list mapping}
   \end{align*}
   %
@@ -290,17 +290,17 @@ certificate in which a key delegates to itself.
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\hashname} & \in \Block \mapsto \BHash
+    \text{\hashname} & \in \Block \to \BHash
       & \text{block hash function}\\
-    \text{\delegatename} & \in \SKeyGen \times \VKey \mapsto \HCert
+    \text{\delegatename} & \in \SKeyGen \times \VKey \to \HCert
       & \text{delegation function}\\
     \text{\validname} & \in \RBlock \times \VKey
       & \text{block validity relation}\\
-    \text{\predbname} & \in \Block \mapsto \Block^?
+    \text{\predbname} & \in \Block \to \Block^?
       & \text{block predecessor function} \\
-    \text{\toseqname} & \in \type{A}^? \mapsto \seqof{\type{A}}
+    \text{\toseqname} & \in \type{A}^? \to \seqof{\type{A}}
       & \text{option to sequence function} \\
-    \text{\predbseqname} & \in \Block \mapsto \seqof{\Block}
+    \text{\predbseqname} & \in \Block \to \seqof{\Block}
       & \text{block to sequence function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
