@@ -159,17 +159,19 @@ which adhere to the rules presented here.
 \section{Introduction}
 \label{sec:introduction}
 
-This specification models the \textit{conditions} required for the extension of
-a ledger, which is represented here as a list of transactions. The following
-aspects are part of such conditions:
+This specification models the \textit{conditions} that the different parts of a
+transaction have to fulfill so that they can extend a ledger, which is
+represented here as a list of transactions. In particular, we model the
+following aspects:
 
 \begin{description}
-\item[Preservation of value] relationship between the total value of input and outputs
-  in a new transaction, and the unspent outputs.
-\item[Witnesses] cryptographic entities needed to validate the spending
-  of a transaction input.
-\item[Delegation] delegation certificates, which delegate the block-signing
-  rights from a genesis key to another public key.
+\item[Preservation of value] relationship between the total value of input and
+  outputs in a new transaction, and the unspent outputs.
+\item[Witnesses] authentication of parts of the transaction data by means of
+  cryptographic entities (such as signatures and private keys) contained in
+  these transactions.
+\item[Delegation] validity of delegation certificates, which delegate the
+  block-signing rights from a genesis key to another public key.
 \item[Update validation] voting mechanism which captures the identification of
   the voters, and the participants that can post update proposals.
 \end{description}
@@ -248,6 +250,16 @@ this document.
   \caption{Cryptographic definitions}
   \label{fig:crypto-defs}
 \end{figure}
+
+\section{Serialization}
+\label{sec:serialization}
+
+\begin{todo}
+  Discuss here serialization and
+  \href{https://iohk.myjetbrains.com/youtrack/issue/CDEC-628}{composable
+    serialization}
+\end{todo}
+
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
 
@@ -380,10 +392,10 @@ Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
 be applied to a set of unspent outputs, and how the set of unspent output
 changes with a transaction:
 \begin{itemize}
-\item The set spent inputs in the transaction, must be in the set of unspent
-  outputs.
+\item Each input spent in the transaction must be in the set of unspent
+  outputs.  
 \item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal less than the amount of spent
+  amount paid in a transaction) must be equal or less than the amount of spent
   inputs.
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
@@ -440,15 +452,15 @@ different order). The choice here is arbitrary.
   \label{fig:witnesses-ops}
 \end{figure}
 
-% \begin{figure}
-%   \emph{UTxO with witness transitions type}
-%   \begin{equation*}
-%     \var{\_} \trans{utxow}{\_} \var{\_}
-%     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
-%   \end{equation*}
-%   \caption{UTxO with witness transition-system types}
-%   \label{fig:utxo-witnesses-ts-types}
-% \end{figure}
+\begin{figure}
+  \emph{UTxO with witness transitions}
+  \begin{equation*}
+    \var{\_} \trans{utxow}{\_} \var{\_}
+    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO with witness transition-system types}
+  \label{fig:utxo-witnesses-ts-types}
+\end{figure}
 
 \begin{figure}
   \begin{equation}
