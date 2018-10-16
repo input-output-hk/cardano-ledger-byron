@@ -38,7 +38,7 @@
     {\end{bclogo}}
 \newenvironment{note}
   {\begin{bclogo}[logo=\bcattention, couleur=orange!10, arrondi=0.2]{ NOTE}}
-  {\end{bclogo}}  
+  {\end{bclogo}}
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -96,6 +96,8 @@
 \newcommand{\SlotId}{\type{SlotId}}
 \newcommand{\CEEnv}{\type{CEEnv}}
 \newcommand{\CEState}{\type{CEState}}
+\newcommand{\BDEnv}{\type{BDEnv}}
+\newcommand{\BDState}{\type{BDState}}
 
 %%
 %% Functions
@@ -164,14 +166,14 @@ aspects are part of such conditions:
   of a transaction input.
 \item[Delegation] delegation certificates, which delegate the block-signing
   rights from a genesis key to another public key.
+\item[Update validation] voting mechanism which captures the identification of
+  the voters, and the participants that can post update proposals.
 \end{description}
 
 The following aspects will not be modeled (since they are not part of the legacy-free
 implementation):
 \begin{description}
 \item[Stake] staking rights associated to a addresses.
-\item[Update validation] voting mechanism which captures the identification of
-  the voters, and the participants that can post update proposals.
 \end{description}
 
 \section{Notation}\label{sec:notation}
@@ -194,41 +196,7 @@ Figure~\ref{fig:state-trans-utxo}. The states of the UTxO transition system,
 along with their types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
 Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
 
-\begin{figure}
-  \begin{equation}\label{eq:utxo-inductive}
-    \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \var{utxo}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
-    }
-    {\var{utxo} \trans{utxo}{tx}
-      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
-    }
-  \end{equation}
-  \caption{UTxO inference rules}
-  \label{fig:state-trans-utxo}
-\end{figure}
-
-Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
-be applied to a set of unspent outputs, and how the set of unspent output
-changes with a transaction:
-\begin{itemize}
-\item The set spent inputs in the transaction, must be in the set of unspent
-  outputs.
-\item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal less than the amount of spent
-  inputs.
-\item If the above conditions hold, then the new state will not have the inputs
-  spent in transaction $\var{tx}$ and it will have the new outputs in
-  $\var{tx}$.
-\end{itemize}
-
 \begin{figure*}
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{tx} & \Tx & \text{transaction}\\
-    \end{array}
-  \end{equation*}
   \emph{Primitive types}
   %
   \begin{equation*}
@@ -265,26 +233,24 @@ changes with a transaction:
       & \text{unspent tx outputs}
     \end{array}
   \end{equation*}
-  \emph{UTxO States}
   %
+  \emph{Abstract types}
   \begin{equation*}
-    \var{utxo} \in \UTxO
-  \end{equation*}
-  %
-  \emph{UTxO Transitions}
-  \begin{equation*}
-    \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+    \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
+    \end{array}
   \end{equation*}
   %
   \emph{Abstract Functions}
-  \begin{align*}
-    & \txid{} \in \Tx \mapsto \TxId & \text{compute transaction id}\\
-    %
-    & \fun{txbody} \in \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
-    & \text{transaction body}
-  \end{align*}
-  \caption{Definitions associated to the UTxO transition system}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \txid{} & \Tx \mapsto \TxId & \text{compute transaction id}\\
+      %
+      \fun{txbody} & \Tx \mapsto \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+                                  & \text{transaction body}
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
 \end{figure*}
 
@@ -322,9 +288,47 @@ changes with a transaction:
     & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ o \in \var{outs} \}
     & \text{range restriction}
   \end{align*}
-  \caption{UTxO operations}
+  \caption{Functions used in UTxO rules.}
   \label{fig:utxo-auxiliary-ops}
 \end{figure}
+
+\begin{figure}
+  \emph{UTxO transitions}
+  \begin{equation*}
+    \var{\_} \trans{utxo}{\_} \var{\_}
+    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO transition-system types}
+  \label{fig:utxo-ts-types}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \var{utxo}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
+    }
+    {\var{utxo} \trans{utxo}{tx}
+      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:state-trans-utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output
+changes with a transaction:
+\begin{itemize}
+\item The set spent inputs in the transaction, must be in the set of unspent
+  outputs.
+\item The balance of the unspent outputs in a transaction (i.e. the total
+  amount paid in a transaction) must be equal less than the amount of spent
+  inputs.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
 
 \subsection{Properties}
 \label{sec:utxo-properties}
@@ -349,28 +353,15 @@ have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
 different order). The choice here is arbitrary.
 
 \begin{figure}
-  \begin{equation}
-    \label{eq:utxo-witness-inductive}
-    \inference[UTxO-wit]
-    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
-      & \forall i \in \txins{tx} \cdot
-           \exists (\var{vk}, \sigma) \in \wits{\var{tx}} \cdot
-              \verify{vk}{\serialised{\txbody{tx}}}{\sigma}  \wedge \addr{i}{utxo} = \hash{vk}
-    }
-    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
-  \end{equation}
-  \caption{UTxO with witnesses inference rules}
-  \label{fig:rules-utxo-witnesses}
-\end{figure}
-
-\begin{figure}
   \emph{Abstract types}
   %
-  \begin{align*}
-    & \VKey & \text{verification key}\\
-    & \Sig  & \text{signature}\\
-    & \Data  & \text{data}\\
-  \end{align*}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{vk} & \VKey & \text{verification key}\\
+      \sigma & \Sig  & \text{signature}\\
+      \var{d} & \Data  & \text{data}\\
+    \end{array}
+  \end{equation*}
   \emph{Abstract functions}
   %
   \begin{equation*}
@@ -385,14 +376,42 @@ different order). The choice here is arbitrary.
       & \text{hash function} \\
     \end{array}
   \end{equation*}
-  \emph{Functions}
-  %
+  \caption{Definitions used in the UTxO transition system with witnesses}
+  \label{fig:state-trans-utxo-witnesses-defs}
+\end{figure}
+
+\begin{figure}
   \begin{align*}
-    & \addr{}{} \in \TxIn \mapsto \UTxO \mapsto \Addr\\
+    & \addr{}{} \in \TxIn \mapsto \UTxO \mapsto \Addr & \text{address of an input}\\
     & \addr{i}{utxo} = \var{hk} \where (hk, \wcard) = \var{utxo}~i
   \end{align*}
-  \caption{Definitions associated to the UTxO transition system with witnesses}
-  \label{fig:state-trans-utxo-witnesses-defs}
+  \caption{Functions used in rules witnesses}
+  \label{fig:witnesses-ops}
+\end{figure}
+
+% \begin{figure}
+%   \emph{UTxO with witness transitions type}
+%   \begin{equation*}
+%     \var{\_} \trans{utxow}{\_} \var{\_}
+%     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+%   \end{equation*}  
+%   \caption{UTxO with witness transition-system types}
+%   \label{fig:utxo-witnesses-ts-types}
+% \end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive}
+    \inference[UTxO-wit]
+    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+      & \forall i \in \txins{tx} \cdot
+           \exists (\var{vk}, \sigma) \in \wits{\var{tx}} \cdot
+              \verify{vk}{\serialised{\txbody{tx}}}{\sigma} \wedge \addr{i}{utxo} = \hash{vk}
+    }
+    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
+  \end{equation}
+  \caption{UTxO with witnesses inference rules}
+  \label{fig:rules-utxo-witnesses}
 \end{figure}
 
 \section{Delegation}
@@ -429,6 +448,58 @@ current epoch in this case) would be set by the (chain) rules that use
 Rule~\ref{eq:delegation}.
 
 \begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      c & \DCert & \text{delegation certificate}\\
+      vk_g & \VKeyGen & \text{genesis verification key}\\
+      e & \Epoch & \text{epoch}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    \VKeyGen \subseteq \VKey
+  \end{align*}
+  \emph{Abstract functions}
+  \begin{align*}
+    & \fun{dwho} \in \DCert \mapsto (\VKeyGen \times \VKey) & \text{who delegates to who in the certificate}\\
+    & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
+  \end{align*}
+  \caption{Delegation definitions.}
+  \label{fig:delegation-defs}
+\end{figure}
+
+\begin{figure}
+  \begin{align*}
+    & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
+    & \text{union override}\\
+    & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
+  \end{align*}
+  \caption{Functions used in delegation rules.}
+  \label{fig:delegation-funcs}
+\end{figure}
+
+\begin{figure}
+  \emph{Delegation states}
+  \begin{align*}
+    & \DState 
+      = \left(
+        \begin{array}{r@{~\in~}lr}
+          \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+          \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
+        \end{array}\right)
+  \end{align*}
+  \emph{Delegation transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+      \powerset (\Epoch \times \DState \times \DCert \times \DState)
+    \end{equation*}  
+  \caption{Delegation transition-system types}
+  \label{fig:delegation-ts-types}
+\end{figure}
+
+\begin{figure}
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
     {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} \leq e_c\\
@@ -455,53 +526,6 @@ Rule~\ref{eq:delegation}.
   \label{fig:state-trans-delegation}
 \end{figure}
 
-\begin{figure}
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      c & \DCert  & \text{delegation certificate}\\
-      vk_g & \VKeyGen & \text{genesis verification key}\\
-      e & \Epoch & \text{epoch}\\
-    \end{array}
-  \end{equation*}
-  \emph{Constraints}
-  \begin{align*}
-    \VKeyGen \subseteq \VKey
-  \end{align*}
-  \emph{Delegation states}
-  \begin{equation*}
-    \DState =
-    \left(\begin{array}{r@{~\in~}lr}
-      \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-      \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
-    \end{array}\right)
-  \end{equation*}
-  \emph{Delegation transition}
-  \begin{equation*}
-    \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      \powerset (\Epoch \times \DState \times \DCert \times \DState)
-  \end{equation*}
-  \emph{Abstract functions}
-  \begin{align*}
-    & \fun{dwho} \in \DCert \mapsto (\VKeyGen \times \VKey) & \text{who delegates to who in the certificate}\\
-    & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
-  \end{align*}
-  \emph{Functions}
-  \begin{equation*}
-    \begin{array}{rcl}
-      \unionoverride & \in & (A \mapsto B) \mapsto (A \mapsto B) \mapsto (A \mapsto B)\\
-      (d_0 \unionoverride d_1)~k & = &
-      \begin{cases}
-        d_1~k & k \in \dom d_1\\
-        d_0~k & \text{otherwise}\\
-      \end{cases}
-    \end{array}
-  \end{equation*}
-  \caption{Delegation definitions}
-  \label{fig:delegation-defs}
-\end{figure}
-
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
 
@@ -510,6 +534,27 @@ Figure~\ref{fig:deleg-witnesses}. The new definitions introduced in this rule
 are given in Figure~\ref{fig:delegation-witnesses-defs}.
 
 \begin{figure}
+  \emph{Primitive types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{epoch} & \Epoch & \text{epoch}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{dbody} & \DCert \mapsto \VKey \times \Epoch
+      & \text{body of the delegation certificate}\\
+      \fun{dwit} & \DCert \mapsto (\VKeyGen \times \Sig)
+      & \text{witness for the delegation certificate}
+    \end{array}
+  \end{equation*}
+  \caption{Delegation witnesses definitions}
+  \label{fig:delegation-witnesses-defs}
+\end{figure}
+
+\begin{figure}
+  \emph{Delegation with witness rule}      
   \begin{equation}
     \label{eq:deleg-witnesses}
     \inference[Deleg-wit]
@@ -550,22 +595,6 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \label{fig:deleg-witnesses}
 \end{figure}
 
-\begin{figure}
-  \emph{Primitive types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{epoch} & \Epoch & \text{epoch}
-    \end{array}
-  \end{equation*}
-    \emph{Abstract functions}
-  \begin{align*}
-      & \fun{dbody} \in \DCert \mapsto \VKey \times \Epoch & \text{body of the delegation certificate}\\
-      & \fun{dwit} \in \DCert \mapsto (\VKeyGen \times \Sig) & \text{witness for the delegation certificate}
-  \end{align*}
-  \caption{Delegation witnesses definitions}
-  \label{fig:delegation-witnesses-defs}
-\end{figure}
-
 \section{A proposal for the blockchain layer}
 \label{sec:blockchain-layer}
 
@@ -594,7 +623,62 @@ outputs in the context of a block are given in
 Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
 
 \begin{figure}
-  \centering
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{b} & \Block & \text{block}\\
+      \var{s} & \SlotId & \text{slot id}\\
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{bwit} & \Block \mapsto \VKey \times \Sig & \text{block witness}\\
+    \fun{s_0} & \SlotId  & \text{slot zero (smallest slot id)}\\
+    \end{array}
+  \end{equation*}
+  \caption{Blockchain extension definitions}
+  \label{fig:chain-extension-defs}
+\end{figure}
+
+\begin{figure}
+  \emph{Chain extension environment}
+  \begin{equation*}
+    \CEEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{\Gkeys} & \powerset{\VKeyGen} & \text{genesis keys}\\
+        \var{K} & \mathbb{N} & \text{number of nodes}\\
+        \var{t} & \mathbb{Q} & \text{byzantine nodes ratio}\\
+        \var{d} & \Epoch & \text{delegation liveness parameter}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  \emph{Chain extension states}
+  \begin{equation*}
+    \CEState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \beta & \seqof{\Block} & \text{blockchain}\\
+        \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
+        \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
+        \var{signers} & \seqof{\VKeyGen} & \text{last $K$ blockchain signers}\\
+        \var{sid_c} & \SlotId & \text{current slot}\\
+        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
+        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
+      \end{array}
+    \right)
+  \end{equation*}
+  \emph{Chain extension transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{chain}{\_} \_ \in
+      \powerset (\CEEnv \times \CEState \times \Block \times \CEState)
+  \end{equation*}
+  \caption{Chain extension transition-system types}
+  \label{fig:chain-ts-types}
+\end{figure}
+
+\begin{figure}
   \begin{equation}
     \label{eq:rule:chain-base}
     \inference[Chain-base]
@@ -707,50 +791,6 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \label{fig:chain-extension-rules}
 \end{figure}
 
-\begin{figure}
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{b} & \Block & \text{block}\\
-      \var{s} & \SlotId & \text{slot id}\\
-    \end{array}
-  \end{equation*}
-  \emph{Chain extension environment}
-  \begin{equation*}
-    \CEEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{\Gkeys} & \powerset{\VKeyGen} & \text{genesis keys}\\
-        \var{K} & \mathbb{N} & \text{number of nodes}\\
-        \var{t} & \mathbb{Q} & \text{byzantine nodes ratio}\\
-        \var{d} & \Epoch & \text{delegation liveness parameter}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  \emph{Chain extension states}
-  \begin{equation*}
-    \CEState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \beta & \seqof{\Block} & \text{blockchain}\\
-        \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
-        \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
-        \var{signers} & \seqof{VKeyGen} & \text{last $K$ blockchain signers}\\
-        \var{sid_c} & \SlotId & \text{current slot}\\
-        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
-        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
-      \end{array}
-    \right)
-  \end{equation*}
-  \emph{Abstract functions}
-  \begin{align*}
-    & \fun{bwit} \in \Block \mapsto \VKey \times \Sig & \text{block witness}\\
-    & \fun{s_0} \in \SlotId  & \text{slot zero (smallest slot id)}\\
-  \end{align*}
-  \caption{Blockchain extension definitions}
-  \label{fig:chain-extension-defs}
-\end{figure}
-
 \subsection{Block delegation}
 \label{sec:block-delegation}
 
@@ -762,7 +802,49 @@ state changes after applying a sequence of delegation certificates. Such rule
 is shown in Figure~\ref{fig:delegation-sequence-rules}.
 
 \begin{figure}
-  \centering
+  \emph{Abstract functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{bdlgs} & \Block \mapsto \seqof{\DCert} & \text{delegation certificates in the block}\\
+    \end{array}
+  \end{equation*}
+  \caption{Block delegation definitions}
+  \label{fig:block-delegation-defs}
+\end{figure}
+
+\begin{figure}
+  \emph{Block delegation environments}
+  \begin{equation*}
+    \BDEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{cepoch} & \Epoch & \text{current epoch}\\
+        \var{sid_c} & \SlotId & \text{current slot id}\\        
+        \var{d} & \Epoch & \text{delegation liveness parameter}\\
+      \end{array}
+    \right)
+  \end{equation*}  
+  \emph{Block delegation states}
+  \begin{equation*}
+    \BDState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
+        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
+        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
+      \end{array}
+    \right)
+  \end{equation*}  
+  \emph{Block delegation transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{chain}{\_} \_ \in
+      \powerset (\BDEnv \times \BDState \times \Block \times \CEState)
+  \end{equation*}  
+  \caption{Block delegation transition-system types}
+  \label{fig:block-delegation-ts-types}
+\end{figure}
+
+\begin{figure}
   \begin{equation}
     \label{eq:rule:block-delegation}
     \inference[Block-dlg]
@@ -824,16 +906,6 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
 \end{figure}
 
 \begin{figure}
-  \emph{Abstract functions}
-  \begin{align*}
-    & \fun{bdlgs} \in \Block \mapsto \seqof{\DCert} & \text{delegation certificates in the block}\\
-  \end{align*}
-  \caption{Block delegation definitions}
-  \label{fig:block-delegation-defs}
-\end{figure}
-
-\begin{figure}
-  \centering
   \begin{equation}
     \inference[Seq-delg-base]
     {}
