@@ -108,6 +108,8 @@
 \newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
 \newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
 
+\newcommand{\delmap}{\delta}
+
 % comments
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
@@ -266,13 +268,15 @@ certificate in which a key delegates to itself.
     sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
     vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
     h & \in \BHash & \text{block hash}\\
-    c & \in \HCert = \VKeyGen \times \VKey \times \Sig & \text{delegation certificate}\\
+    c & \in \HCert = \VKeyGen \times \VKey \times \Epoch \times \Sig & \text{delegation certificate}\\
     sig & \in \Sig  & \text{signature}\\
     data & \in \Data  & \text{data}\\
     (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
     (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
       & \text{non-genesis block} \\
-    b & \in \Block = \GBlock + \RBlock & \text{block}
+    b & \in \Block = \GBlock + \RBlock & \text{block} \\
+    \delmap & \in \VKeyGen \mapsto \seqof{\HCert}
+      & \text{key to certificate list mapping}
   \end{align*}
   %
   \emph{Functions and relations}
@@ -303,6 +307,57 @@ certificate in which a key delegates to itself.
   \label{fig:state-trans-abstract}
 \end{figure}
 
+\subsubsection{Delegation}
+\label{sec:delegation-properties}
+
+In the first epoch, every key from the genesis block delegates to itself, as given by \eqref{eq:init-delpmap}.
+
+\begin{equation}
+  \label{eq:init-delpmap}
+  \inference[Initial-delegation-map]
+  {}
+  { \delmap_0 = \Set{(vk_g, c; \epsilon)}{vk_g \in \VKeyGen \wedge c = (vk_g, vk_g, \sigma)}}
+\end{equation}
+
+
+When an epoch clock ticks and the current epoch with an index $k$ changes to
+an epoch with an index $k+1$, each list in the delegation map is shrunk to its
+head element, as given by \eqref{eq:next-epoch-delmap}.
+
+\begin{equation}
+  \label{eq:next-epoch-delmap}
+  \inference[Epoch-change]
+  {\delmap_k & \text{epoch clock tick}}
+  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_g, c; \epsilon)}{\delmap_k\ vk_g = c; \Lambda}}}
+\end{equation}
+
+
+If a new valid delegation certificate $c = (vk_g, vk_d, e_j, \sigma)$ that is
+a proof that $vk_g$ delegates to $vk_d$ starting in epoch $e_j$ is to be
+added, the delegation map is updated at $vk_g$, as given by
+\eqref{eq:new-del-cert}.
+
+\begin{equation}
+  \label{eq:new-del-cert}
+  \inference[New-certificate]
+  {
+    {
+      \begin{array}{c}
+        \delmap_k\ vk_g = c_h; \lambda \\
+        c_h = (vk_g, vk_{d_1}, e_h, \sigma_h)
+      \end{array}
+    }
+    &
+    {
+      \begin{array}{c}
+        c = (vk_g, vk_d, e_j, \sigma) \\
+        e_j > e_h
+      \end{array}
+    }
+  }
+  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk, \Lambda)}{(vk, \Lambda) \in \delmap_k \wedge vk \neq vk_g} \cup {(vk_g, c; c_h; \epsilon)}}
+\end{equation}
+
 \subsubsection{Block Validity}
 \label{sec:block-valid}
 % This definition is adopted from legacy-free-plan.md, which is written by
@@ -312,7 +367,7 @@ A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
 \item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_s, vk_d, \sigma')$ exists,
+  certificate $c = (vk_s, vk_d, e, \sigma')$ exists,
 \item the corresponding certificate $c$ is signed by a key $sk_s$ from the
   genesis block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
@@ -320,6 +375,7 @@ A non-genesis block $\var{b}$ is valid if:
   where $t$ is a constant that we will pick in the range
   $1/5 \leq t \leq 1/4$.
 \end{enumerate}
+
 
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
@@ -330,6 +386,7 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
+
 \marko{Add a rule for the \delegatename\ function with a precondition of at most one delegation per key per epoch.}
 
 The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
@@ -337,8 +394,9 @@ The \signedseqname\ function computes for a given genesis block singing key $sk_
 \begin{align}
   \label{eq:signed-window}
   \signedwindow{sk_s}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
-  & \wedge \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \wedge \signed{sk_d}{b}}
+  & \wedge \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \signed{sk_d}{b}}
 \end{align}
+
 
 A block has a block preceding it if it is not the genesis block:
 
@@ -388,7 +446,7 @@ Finally, we define the block validity relation as:
     \valid{b}{vk_d} \implies &
       \exists sk_s \exists vk_s. (sk_s, vk_s) \in \SKeyGen \times \VKey \wedge \\
       & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
-      \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \wedge \\
+      \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
         \sign{sk_d}{h}{sl}{d} = \sigma \wedge \\
       & | \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
@@ -408,7 +466,7 @@ The chain extension rule is:
     {\begin{array}{c}
        \sign{sk_d}{h}{sl}{d} = \sigma \\
        \valid{b}{vk_d} \\
-       \delegate{sk_s}{vk_d} = (vk_s, vk_d, \sigma') \\
+       \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \\
        \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t
     \end{array}}
   }
