@@ -191,8 +191,8 @@ only genesis block keys can delegate.
 \subsection{Delegation Design}
 \label{sec:delegation-design}
 
-To keep track of active certificates and when they become valid, we use a map
-from genesis block verification keys to a list of certificates.
+To keep track of active certificates and when they become valid, a map from
+genesis block verification keys to a list of certificates is used.
 %
 A certificate contains an epoch in which it becomes valid.
 %
@@ -409,8 +409,8 @@ A block has a block preceding it if it is not the genesis block:
   \end{cases}
 \end{equation}
 
-Next, we define a polymorphic function that takes an option type into a
-corresponding sequence, which can be applied to the $\Block$ type as well:
+Next, a polymorphic function that takes an option type into a corresponding
+sequence is defined, which can be applied to the $\Block$ type as well:
 
 \begin{equation}
   \label{eq:toseq}
@@ -424,22 +424,22 @@ corresponding sequence, which can be applied to the $\Block$ type as well:
 The function \predbname\ can be monadically applied $m$ times in a row, which
 is written as $\predb^m{b}$.
 
-We define a helper function that composes the \predbname\ and the \toseqname\
-functions:
+A helper function that composes the \predbname\ and the \toseqname\
+functions is defined as:
 
 \begin{equation}
   \label{eq:predbseq}
   \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
 \end{equation}
 
-Analogously to the \predbname\ function, we define $\predbseq^m{b}$ as:
+Analogously to the \predbname\ function, $\predbseq^m{b}$ is defined as:
 
 \begin{equation}
   \label{eq:predbseqton}
   \predbseq^m{b} = (\text{\toseqname} \circ \text{\predbname}^m)(b)
 \end{equation}
 
-Finally, we define the block validity relation as:
+Finally,the block validity relation is defined as:
 
 \begin{align}
   \label{eq:valid-block}
