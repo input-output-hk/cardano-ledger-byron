@@ -1,0 +1,128 @@
+name:                cardano-crypto-wrapper
+version:             1.3.0
+synopsis:            Cryptographic primitives used in the Cardano project
+description:         Cryptographic primitives used in the Cardano project
+license:             MIT
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+flag development
+    description: Disable `-Werror`
+    default: False
+    manual: True
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+                       Cardano.Crypto
+
+                       Cardano.Crypto.Hashing
+                       Cardano.Crypto.HD
+                       Cardano.Crypto.Limits
+                       Cardano.Crypto.Orphans
+                       Cardano.Crypto.ProtocolMagic
+                       Cardano.Crypto.Random
+                       Cardano.Crypto.SecretSharing
+                       Cardano.Crypto.Signing
+                       Cardano.Crypto.Signing.Redeem
+                       Cardano.Crypto.Signing.Safe
+                       Cardano.Crypto.Signing.Signing
+
+  other-modules:
+                       Cardano.Crypto.Scrypt
+
+                       Cardano.Crypto.Signing.Check
+                       Cardano.Crypto.Signing.Tag
+                       Cardano.Crypto.Signing.Types.Redeem
+                       Cardano.Crypto.Signing.Types.Safe
+                       Cardano.Crypto.Signing.Types.Signing
+                       Cardano.Crypto.Signing.Types.Tag
+
+  build-depends:       base
+                     , aeson
+                     , base64-bytestring
+                     , base64-bytestring-type
+                     , binary
+                     , bytestring
+                     , canonical-json
+                     , cardano-crypto
+                     , cardano-binary
+                     , cardano-prelude
+                     , cborg
+                     , containers
+                     , cryptonite
+                     , cryptonite-openssl
+                     , data-default
+                     , formatting
+                     , lens
+                     , memory
+                     , mtl
+                     , pvss
+                     , scrypt
+                     , text
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-missing-import-lists
+                       -fno-warn-unsafe
+                       -fno-warn-safe
+
+  if (!flag(development))
+    ghc-options:         -Werror
+
+test-suite test
+  hs-source-dirs:      test
+  main-is:             test.hs
+  type:                exitcode-stdio-1.0
+
+  other-modules:
+                       Spec
+                       Test.Cardano.Crypto.Bi
+                       Test.Cardano.Crypto.Arbitrary
+                       Test.Cardano.Crypto.Arbitrary.Unsafe
+                       Test.Cardano.Crypto.CborSpec
+                       Test.Cardano.Crypto.CryptoSpec
+                       Test.Cardano.Crypto.CryptoSpec2
+                       Test.Cardano.Crypto.Dummy
+                       Test.Cardano.Crypto.Gen
+
+  build-depends:       base
+                     , bytestring
+                     , cardano-binary
+                     , cardano-binary-test
+                     , cardano-crypto
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , containers
+                     , cryptonite
+                     , formatting
+                     , generic-arbitrary
+                     , hedgehog
+                     , hspec
+                     , memory
+                     , QuickCheck
+                     , quickcheck-instances
+                     , text
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-missing-import-lists
+                       -fno-warn-unsafe
+                       -fno-warn-safe
+
+  if (!flag(development))
+    ghc-options:         -Werror
+
+  ghc-options:         -threaded
+                       -rtsopts

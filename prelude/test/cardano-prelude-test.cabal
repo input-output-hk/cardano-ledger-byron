@@ -43,6 +43,7 @@ library
                      , QuickCheck
                      , quickcheck-instances
                      , text
+                     , time
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
