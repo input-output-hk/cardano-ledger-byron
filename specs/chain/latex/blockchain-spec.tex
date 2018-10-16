@@ -120,7 +120,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 5, 2018}
+\date{October 16, 2018}
 
 \maketitle
 
@@ -316,7 +316,7 @@ In the first epoch, every key from the genesis block delegates to itself, as giv
   \label{eq:init-delpmap}
   \inference[Initial-delegation-map]
   {}
-  { \delmap_0 = \Set{(vk_g, c; \epsilon)}{vk_g \in \VKeyGen \wedge c = (vk_g, vk_g, \sigma)}}
+  { \delmap_0 = \Set{(vk_g \mapsto c; \epsilon)}{vk_g \in \VKeyGen \wedge c = (vk_g, vk_g, e_0, \sigma)}}
 \end{equation}
 
 
@@ -328,7 +328,7 @@ head element, as given by \eqref{eq:next-epoch-delmap}.
   \label{eq:next-epoch-delmap}
   \inference[Epoch-change]
   {\delmap_k & \text{epoch clock tick}}
-  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_g, c; \epsilon)}{\delmap_k\ vk_g = c; \Lambda}}}
+  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_g \mapsto c; \epsilon)}{(vk_g \mapsto c; \Lambda) \in \delmap_k}}}
 \end{equation}
 
 
@@ -343,7 +343,7 @@ added, the delegation map is updated at $vk_g$, as given by
   {
     {
       \begin{array}{c}
-        \delmap_k\ vk_g = c_h; \lambda \\
+        (vk_g \mapsto c_h; \lambda) \in \delmap_k \\
         c_h = (vk_g, vk_{d_1}, e_h, \sigma_h)
       \end{array}
     }
@@ -355,7 +355,7 @@ added, the delegation map is updated at $vk_g$, as given by
       \end{array}
     }
   }
-  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk, \Lambda)}{(vk, \Lambda) \in \delmap_k \wedge vk \neq vk_g} \cup {(vk_g, c; c_h; \epsilon)}}
+  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_g} \cup \{vk_g \mapsto c; c_h; \epsilon\}}
 \end{equation}
 
 \subsubsection{Block Validity}
