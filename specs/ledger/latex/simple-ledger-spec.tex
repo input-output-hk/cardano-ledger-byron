@@ -83,6 +83,8 @@
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\SkVk}{\type{SkVk}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 %% Adding delegation
@@ -111,6 +113,7 @@
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
 \newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[2]{\fun{addr}~ \var{#1}~ \var{#2}}
 \newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
@@ -188,6 +191,48 @@ implementation):
   $\Lambda$.
 \end{description}
 
+\section{Cryptographic primitives}
+\label{sec:crypto-primitives}
+
+Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
+this document.
+
+\begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{vk} & \SKey & \text{signing key}\\            
+      \var{vk} & \VKey & \text{verifying key}\\
+      \sigma & \Sig  & \text{signature}\\
+      \var{d} & \Data  & \text{data}\\
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \hash{} & \VKey \mapsto \Addr
+      & \text{hash function} \\
+      %
+      \fun{verify} & \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+      \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+  \end{align*}
+  \caption{Cryptographic definitions}
+  \label{fig:crypto-defs}
+\end{figure}
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
 
@@ -288,7 +333,7 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
     & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ o \in \var{outs} \}
     & \text{range restriction}
   \end{align*}
-  \caption{Functions used in UTxO rules.}
+  \caption{Functions used in UTxO rules}
   \label{fig:utxo-auxiliary-ops}
 \end{figure}
 
@@ -353,27 +398,12 @@ have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
 different order). The choice here is arbitrary.
 
 \begin{figure}
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{vk} & \VKey & \text{verification key}\\
-      \sigma & \Sig  & \text{signature}\\
-      \var{d} & \Data  & \text{data}\\
-    \end{array}
-  \end{equation*}
   \emph{Abstract functions}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{wits} & \Tx \mapsto \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
-      %
-      \fun{verify} & \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
-      %
-      \hash{} & \VKey \mapsto \Addr
-      & \text{hash function} \\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
@@ -394,7 +424,7 @@ different order). The choice here is arbitrary.
 %   \begin{equation*}
 %     \var{\_} \trans{utxow}{\_} \var{\_}
 %     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
-%   \end{equation*}  
+%   \end{equation*}
 %   \caption{UTxO with witness transition-system types}
 %   \label{fig:utxo-witnesses-ts-types}
 % \end{figure}
@@ -466,7 +496,7 @@ Rule~\ref{eq:delegation}.
     & \fun{dwho} \in \DCert \mapsto (\VKeyGen \times \VKey) & \text{who delegates to who in the certificate}\\
     & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
   \end{align*}
-  \caption{Delegation definitions.}
+  \caption{Delegation definitions}
   \label{fig:delegation-defs}
 \end{figure}
 
@@ -476,14 +506,14 @@ Rule~\ref{eq:delegation}.
     & \text{union override}\\
     & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
   \end{align*}
-  \caption{Functions used in delegation rules.}
+  \caption{Functions used in delegation rules}
   \label{fig:delegation-funcs}
 \end{figure}
 
 \begin{figure}
   \emph{Delegation states}
   \begin{align*}
-    & \DState 
+    & \DState
       = \left(
         \begin{array}{r@{~\in~}lr}
           \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
@@ -494,7 +524,7 @@ Rule~\ref{eq:delegation}.
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
       \powerset (\Epoch \times \DState \times \DCert \times \DState)
-    \end{equation*}  
+    \end{equation*}
   \caption{Delegation transition-system types}
   \label{fig:delegation-ts-types}
 \end{figure}
@@ -554,7 +584,7 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
 \end{figure}
 
 \begin{figure}
-  \emph{Delegation with witness rule}      
+  \emph{Delegation with witness rule}
   \begin{equation}
     \label{eq:deleg-witnesses}
     \inference[Deleg-wit]
@@ -819,11 +849,11 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{cepoch} & \Epoch & \text{current epoch}\\
-        \var{sid_c} & \SlotId & \text{current slot id}\\        
+        \var{sid_c} & \SlotId & \text{current slot id}\\
         \var{d} & \Epoch & \text{delegation liveness parameter}\\
       \end{array}
     \right)
-  \end{equation*}  
+  \end{equation*}
   \emph{Block delegation states}
   \begin{equation*}
     \BDState =
@@ -834,12 +864,12 @@ is shown in Figure~\ref{fig:delegation-sequence-rules}.
         \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
       \end{array}
     \right)
-  \end{equation*}  
+  \end{equation*}
   \emph{Block delegation transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{chain}{\_} \_ \in
       \powerset (\BDEnv \times \BDState \times \Block \times \CEState)
-  \end{equation*}  
+  \end{equation*}
   \caption{Block delegation transition-system types}
   \label{fig:block-delegation-ts-types}
 \end{figure}
