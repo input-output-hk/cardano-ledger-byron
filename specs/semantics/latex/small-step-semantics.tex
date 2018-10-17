@@ -1,0 +1,152 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage{xcolor}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\hypersetup{
+  pdftitle={Small Step Semantics for Cardano},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+% For notes containing warnings, questions, etc.
+\usepackage[tikz]{bclogo}
+\newenvironment{question}
+  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
+  {\end{bclogo}}
+\newenvironment{todo}
+  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
+  {\end{bclogo}}
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+%% TODO: we should package this
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+\begin{document}
+\title{Small Step Semantics for Cardano}
+\author{}
+\date{October 17, 2018}
+
+\maketitle
+
+\begin{abstract}
+We define the basis for our version of ``small-step semantics'' as applied to
+defining components of the Cardano cryptocurrency.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+In defining Cardano, we are concerned with the means to construct inductive
+datatypes satisfying some validity conditions. For example, we wish to consider
+when a sequence of transactions forms a valid \textit{ledger}, or a sequence of
+blocks forms a valid \textit{chain}.
+
+This document describes the (loose) formalism by which we describe such validity
+conditions and how they result in the construction of valid states.
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+In describing the semantics for a system $L$ we are principally concerned with
+five things:
+
+\begin{description}
+\item [States] The underlying datatype of our system, whose validity we are
+  required to prove.
+\item [Transitions] The means by which we might move from one (valid) state to
+  another.
+\item [Signals] The means by which transitions are triggered.
+\item [Rules] Formulae describing how to derive valid states or transitions. A
+  rule has an \textit{anteccedent} and a \textit{consequent}, such that if the
+  conditions in the antecedent hold, the consequent is assumed to be a valid
+  state or transition.
+\item [Environment] Sometimes we may implicitly rely on some additional
+  information being present in the system to evaluate the rules.
+\end{description}
+
+\begin{definition}[State transition system]
+A \textit{state transition system} $L$ is given by a 5-tuple $(S, T, \Sigma, R, \Gamma)$
+where:
+\begin{description}
+\item[$S$] is a set of (not necessarily valid) states.
+\item[$\Sigma$] is a set of signals.
+\item[$\Gamma$] is a set of environment values.
+\item[$T$] is a set of (not necessarily valid) transitions. We have
+  that \[T\subseteq\powerset{(\Gamma\times S\times\Sigma\times S)}\]
+\item[$R$] is a set of derivation rules. A derivation rules is given by two
+  parts: its antecedent is a logical formula in $S\cup\Sigma\cup\Gamma$. Its
+  consequent is either:
+  \begin{itemize}
+  \item A state $s\in S$, or
+  \item A transition $t\in T$.
+  \end{itemize}
+\end{description}
+\end{definition}
+\begin{remark}
+  The above definition is somewhat redundant, since the transition set $T$
+  implicitly defines the state, signal and environment sets. We use the above
+  definition for clarity, since we often wish to refer to states and signals directly.
+\end{remark}
+\begin{definition}[Validity]
+  For a transition system $(S, T, \Sigma, R, \Gamma)$ and environment $\gamma\in\Gamma$, we say that a state $s\in
+  S$ is valid if either:
+\begin{itemize}
+\item It appears as a consequent of a rule $r\in R$ whose antecedent has no
+  variables in $S\cup\Sigma$ and which is true as evaluated at $\gamma$, or
+\item There exists a tuple $(s', \sigma, r, t)\in S\times\Sigma\times R \times
+  T$ such that $s'$ is valid, the antecedent of $r$ is true as evaluated at $(\gamma, s',
+  \sigma)$ and where $t=(\gamma, s', \sigma, s)$.
+\end{itemize}
+\end{definition}
+\end{document}
