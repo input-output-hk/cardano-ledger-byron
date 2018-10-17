@@ -343,6 +343,7 @@ added, the delegation map is updated at $vk_s$, as given by
   {
     {
       \begin{array}{c}
+        (sk_s, vk_s) \in \SKeyGen \times \VKeyGen \\
         (vk_s \mapsto c_h; \lambda) \in \delmap_k \\
         c_h = (vk_s, vk_{d_1}, e_h, \sigma_h)
       \end{array}
@@ -355,7 +356,16 @@ added, the delegation map is updated at $vk_s$, as given by
       \end{array}
     }
   }
-  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\}}
+  {\delmap_k \trans{}{}
+    \left(
+    {
+      \begin{array}{c}
+        \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\} \\
+        \delegate{sk_s}{vk_d} = (vk_s, vk_d, e_j, \sigma)
+      \end{array}
+    }
+    \right)
+  }
 \end{equation}
 
 \subsubsection{Block Validity}
