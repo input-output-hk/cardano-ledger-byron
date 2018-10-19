@@ -333,7 +333,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \var{utxo}
+    { \txins{tx} \subseteq \dom \var{utxo}
       & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
     {\var{utxo} \trans{utxo}{tx}
