@@ -20,7 +20,7 @@ Figure~\ref{fig:rules:delegation}. It states that if $\var{c}$ is a valid
 delegation certificate from key $\var{vk}_s$ to key $\var{vk}_d$, then the
 delegation map $d$ is updated to contain the key mapping
 $\var{vk}_s \mapsto \var{vk}_d$. The symbol $\unionoverride$ denotes
-union-override, and is defined in Figure~\ref{fig:defs:delegation}. Another
+union-override, and is defined in Figure~\ref{fig:funcs:delegation}. Another
 condition that is checked in the delegation rule is that each genesis key can
 issue at most one delegation certificate per epoch. To check this, the states
 of the transitions system maintain a map from epochs to set of keys that were
