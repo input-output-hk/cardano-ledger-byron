@@ -127,9 +127,9 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \VKey \times \Epoch
+      \fun{dbody} & \DCert \to (\VKey \times \Epoch)
       & \text{body of the delegation certificate}\\
-      \fun{dwit} & \DCert \mapsto (\VKeyGen \times \Sig)
+      \fun{dwit} & \DCert \to (\VKeyGen \times \Sig)
       & \text{witness for the delegation certificate}
     \end{array}
   \end{equation*}
