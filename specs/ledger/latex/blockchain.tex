@@ -13,7 +13,7 @@
 \subsection{Chain extension}
 \label{sec:chain-extension}
 
-The chain extension rule is given in Figure~\ref{fig:chain-extension-rules},
+The chain extension rule is given in Figure~\ref{fig:rules:chain-extension},
 and the definitions used in this rule are presented in
 Figure~\ref{fig:defs:chain-extension}. Rule~\ref{eq:rule:chain-extension}
 relies on transitions $\trans{bdeleg}{}$, which specify the delegation
@@ -33,7 +33,9 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-    \fun{bwit} & \Block \mapsto \VKey \times \Sig & \text{block witness}\\
+    \fun{bwit} & \Block \to (\VKey \times \Sig) & \text{block witness}\\
+      \fun{bepoch} & \Block \to \Epoch & \text{block epoch}\\
+      \fun{bslot} & \Block \to \SlotId & \text{block slot id}\\
     \fun{s_0} & \SlotId  & \text{slot zero (smallest slot id)}\\
     \end{array}
   \end{equation*}
@@ -108,6 +110,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
          \{ (\var{sid}, \var{vk})
           \mid  (\var{sid}, \var{vk}) \in \var{signers} \cup \{(\var{sid_n}, vk_g)\}
           , \var{sid_n} - K \leq \var{sid} \}\\
+      \var{cepoch} = \fun{bepoch}~b &
       {\begin{array}{l}
          \var{cepoch}\\
          \var{sid_c}\\
@@ -133,7 +136,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
           \end{array}
         \right)
       }
-      &
+      \\ ~ \\
       {
         \left(
           \begin{array}{l}
