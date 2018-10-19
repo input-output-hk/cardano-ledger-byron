@@ -24,9 +24,9 @@ union-override, and is defined in Figure~\ref{fig:defs:delegation}. Another
 condition that is checked in the delegation rule is that each genesis key can
 issue at most one delegation certificate per epoch. To check this, the states
 of the transitions system maintain a map from epochs to set of keys that were
-delegated on a given epoch. Finally, the delegation epoch cannot be older than
-the current epoch. This is what allow us to clean up the maps of keys delegated
-per epoch. Variables to the left of the $\vdash$ (turnstile) symbol are the
+delegated on a given epoch. Finally, we only allow delegations for the next
+epoch. This is what allow us to clean up the maps of keys delegated per epoch.
+Variables to the left of the $\vdash$ (turnstile) symbol are the
 \textit{environment} of a rule, which remains constant. This environment (the
 current epoch in this case) would be set by the (chain) rules that use
 Rule~\ref{eq:delegation}.
@@ -86,7 +86,7 @@ Rule~\ref{eq:delegation}.
 \begin{figure}
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
-    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} \leq e_c\\
+    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} + 1 = e_c\\
       \var{ekeys'} = \{ (e, \var{vks})  \mid (e, \var{vks}) \in \var{ekeys},~  \var{cepoch} \leq e \}
     }
     {
