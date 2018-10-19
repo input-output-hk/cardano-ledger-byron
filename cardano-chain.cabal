@@ -19,6 +19,7 @@ library
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
+                       Cardano.Chain.Epoch.File
                        Cardano.Chain.Genesis
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
@@ -70,8 +71,6 @@ library
                        Cardano.Chain.Ssc.CommitmentsMap
                        Cardano.Chain.Ssc.Opening
                        Cardano.Chain.Ssc.OpeningsMap
-                       Cardano.Chain.Ssc.Payload
-                       Cardano.Chain.Ssc.Proof
                        Cardano.Chain.Ssc.SharesMap
                        Cardano.Chain.Ssc.VssCertificate
                        Cardano.Chain.Ssc.VssCertificatesMap
@@ -103,6 +102,7 @@ library
                      , base16-bytestring
                      , base58-bytestring
                      , base64-bytestring-type
+                     , binary
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -118,7 +118,11 @@ library
                      , memory
                      , mtl
                      , plutus-prototype
+                     , resourcet
                      , servant
+                     , streaming
+                     , streaming-binary
+                     , streaming-bytestring
                      , text
                      , time
 
@@ -141,6 +145,7 @@ test-suite test
                        Test.Cardano.Chain.Delegation.Bi
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Epoch.File
                        Test.Cardano.Chain.Ssc.Bi
                        Test.Cardano.Chain.Ssc.Example
                        Test.Cardano.Chain.Ssc.Gen
@@ -170,6 +175,8 @@ test-suite test
                      , formatting
                      , hedgehog
                      , pvss
+                     , resourcet
+                     , streaming
                      , time
                      , vector
 
