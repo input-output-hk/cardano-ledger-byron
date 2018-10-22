@@ -110,7 +110,7 @@ Rule~\ref{eq:delegation}.
   \emph{Delegation transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      (\powerset \VKeyGen) \times \DCert \times (\powerset \VKey)
+      (\powerset \VKeyGen) \times \DCert \times (\powerset \VKeyGen)
     \end{equation*}
   \caption{Delegation epoch transition-system types}
   \label{fig:ts-types:depoch}
@@ -119,18 +119,18 @@ Rule~\ref{eq:delegation}.
 \begin{figure}
   \begin{equation}\label{eq:rule:depoch}
     \inference[Delegation]
-    {\var{vk_s} \notin \var{ekeys}
+    {\var{vk_s} \notin \var{keys}
     }
     {
       \left(
       \begin{array}{r}
-        \var{ekeys}
+        \var{keys}
       \end{array}
       \right)
       \trans{depoch}{c}
       \left(
       \begin{array}{lcl}
-        \var{ekeys} \cup \{\var{vk_s}\}
+        \var{keys} \cup \{\var{vk_s}\}
       \end{array}
       \right)
     }
