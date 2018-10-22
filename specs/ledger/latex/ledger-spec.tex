@@ -74,6 +74,7 @@
 \newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
+\newcommand{\minfee}[1]{\fun{minfee}~ \var{#1}}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
 %% Adding ledgers...
@@ -245,7 +246,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
                                   & \text{transaction body}\\
       %
-      \fun{txfee} & \Tx \to \Coin & \text{transaction fee}
+      \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
+      %
+      \fun{minfee} & \Tx \to \Coin & \text{minimum fee}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -303,7 +306,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \dom \var{utxo} \\
+    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{tx} \leq \txfee{tx}\\
       \balance{(\txouts{tx})}  + \txfee{tx} = \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
     {\var{utxo} \trans{utxo}{tx}
@@ -333,8 +336,8 @@ changes with a transaction:
   between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
   Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
   If, however, $\mathbb{Z}$ is used, then extra validation is required
-  to ensure that all $\TxOut$ and fees are non-negative.
-  These two extra conditions would be added to \cref{eq:utxo-inductive}.
+  to ensure that all $\TxOut$ are non-negative.
+  This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
 \subsection{Properties}
