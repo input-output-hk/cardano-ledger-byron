@@ -87,7 +87,6 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     {}
     {\left(
         \begin{array}{l}
-          \epsilon\\
           \var{utxo}\\
           \var{\{ (\var{vk}, \var{vk}) \mid \var{vk} \in \Gkeys\}}\\
           \emptyset\\
@@ -102,18 +101,12 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \begin{equation}
     \label{eq:rule:chain-extension}
     \inference[Chain-ext]
-    {\var{dmap}~\var{vk_g} = vk_d & \bwit{b} = (\var{vk_d}, \sigma)
-      & \bslot{b} = \var{sid_n} & \var{vk_g} \in \Gkeys\\
-      \var{sid_c} < \var{sid_n} & \size{\{vk_g\} \restrictdom signers} \leq K * t &
-      \verify{vk_d}{\serialised{\bbody{b}}}{\sigma} \\
-      \var{signers'} =
-         \{ (\var{sid}, \var{vk})
-          \mid  (\var{sid}, \var{vk}) \in \var{signers} \cup \{(\var{sid_n}, vk_g)\}
-          , \var{sid_n} - K \leq \var{sid} \}\\
-      \var{cepoch} = \fun{bepoch}~b &
+    {\bslot{b} = \var{sid_n} & 
+      \var{sid_c} < \var{sid_n} &
+      \var{epo_c} = \fun{bepoch}~b \\
       {\begin{array}{l}
-         \var{cepoch}\\
-         \var{sid_c}\\
+         \var{epo_c}\\
+         \var{sid_n}\\
          d
        \end{array}}
       \vdash
@@ -136,7 +129,30 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
           \end{array}
         \right)
       }
-      \\ ~ \\
+      \\
+      {\begin{array}{l}
+         K\\
+         t\\
+         \var{sid_n}\\
+         \var{dmap'}
+      \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{signers}
+          \end{array}
+        \right)
+      }
+      \trans{BSIGN}{b}
+      {
+        \left(
+          \begin{array}{l}
+            \var{signers'}
+          \end{array}
+        \right)
+      }      
+      &
       {
         \left(
           \begin{array}{l}
@@ -164,7 +180,6 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
       {
         \left(
           \begin{array}{l}
-            \beta\\
             \var{utxo}\\
             \var{dmap}\\
             \var{signers}\\
@@ -178,7 +193,6 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
       {
         \left(
           \begin{array}{l}
-            \beta; b\\
             \var{utxo}\\
             \var{dmap'}\\
             \var{signers'}\\
@@ -192,6 +206,48 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \end{equation}
   \caption{Chain extension rules}
   \label{fig:rules:chain-extension}
+\end{figure}
+
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:rule:block-signing}
+    \inference[Chain-ext]
+    {\var{vk_g} \mapsto vk_d \in \var{dmap} & \bwit{b} = (\var{vk_d}, \sigma)\\
+      \size{\{vk_g\} \restrictdom signers} \leq K * t &
+      \verify{vk_d}{\serialised{\bbody{b}}}{\sigma} \\
+      \var{signers'} =
+         \{ \var{sid} \mapsto \var{vk}
+          \mid  \var{sid} \mapsto \var{vk} \in \var{signers} \cup \{\var{sid_c} \mapsto vk_g\}
+          , \var{sid_c} - K \leq \var{sid} \}
+    }
+    {
+      {\begin{array}{l}
+         K\\
+         t\\
+         \var{sid_c}\\
+         \var{dmap}
+      \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{signers}
+          \end{array}
+        \right)
+      }
+      \trans{BSIGN}{b}
+      {
+        \left(
+          \begin{array}{l}
+            \var{signers'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block signing rules}
+  \label{fig:rules:block-signing}
 \end{figure}
 
 \subsection{Block delegation}
@@ -221,7 +277,7 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
     \BDEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{cepoch} & \Epoch & \text{current epoch}\\
+        \var{epo_c} & \Epoch & \text{current epoch}\\
         \var{sid_c} & \SlotId & \text{current slot id}\\
         \var{d} & \Epoch & \text{delegation liveness parameter}\\
       \end{array}
@@ -252,33 +308,49 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
     \label{eq:rule:block-delegation}
     \inference[Block-dlg]
     {
-      \var{pdlgs'} = \var{pdlgs} \unionoverride \{(\bslot{b} + d) \mapsto \bdlgs{b} \}\\
-      \var{spast} = \{ \var{sid} \mid \var{sid} \in \var \dom ~ \var{pdlgs'}
-                                    ,~ \var{sid} \leq \var{sid_c}\}\\
-      \Gamma = \fun{concat}~ [ \var{dlgs} \mid (\var{sid}, \var{dlgs}) \in \var{pdlgs}
-                                          ,~ \var{sid} \leq \var{sid_c}]\\
-      \var{cepoch} \vdash
+      {\begin{array}{r@{~=~}l}
+         \var{pdlgs'} & \var{pdlgs} \unionoverride \{(\bslot{b} + d) \mapsto \bdlgs{b} \}\\
+         \var{spast} & \{ \var{sid} \mid \var{sid} \in \var \dom ~ \var{pdlgs'}
+                       ,~ \var{sid} \leq \var{sid_c}\}\\
+         \var{active} &  \fun{concat}~ [ \var{dlgs} \mid \var{sid} \mapsto \var{dlgs} \in \var{pdlgs}
+                                          ,~ \var{sid} \leq \var{sid_c}]
+      \end{array}} & \\
+      \var{epo_c} \vdash
       {
         \left(
           \begin{array}{l}
-            \var{dmap}\\
             \var{ekeys}
           \end{array}
         \right)
       }
-      \trans{delegs}{\Gamma}
+      \trans{epochs}{\bdlgs{b}}
       {
         \left(
           \begin{array}{r}
-            \var{dmap'}\\
             \var{ekeys'}
           \end{array}
         \right)
+      } & 
+      \var{epo_c} \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
       }
+      \trans{delegs}{\var{active}}
+      {
+        \left(
+          \begin{array}{r}
+            \var{dmap'}
+          \end{array}
+        \right)
+      }     
     }
     {
       \begin{array}{l}
-        \var{cepoch}\\
+        \var{epo_c}\\
         \var{sid_c}\\
         d
       \end{array}
@@ -312,17 +384,15 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
   \begin{equation}
     \inference[Seq-delg-base]
     {}
-    { \var{cepoch} \vdash \left(
+    { \left(
         \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
+          \var{dmap}
         \end{array}
       \right)
         \trans{delegs}{\epsilon}
       \left(
         \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
+          \var{dmap}
         \end{array}
       \right)
     }
@@ -331,47 +401,39 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
 
   \begin{equation}
     \inference[Seq-delg-ind]
-    { \var{cepoch} \vdash
-      {\left(
+    { {\left(
         \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
+          \var{dmap}
         \end{array}
       \right)}
       \trans{delegs}{\Gamma}
       {\left(
         \begin{array}{r}
-          \var{dmap'}\\
-          \var{ekeys'}
+          \var{dmap'}
         \end{array}
       \right)}
-    \\ ~ \\
-    \var{cepoch} \vdash
+    &
     {\left(
         \begin{array}{r}
-          \var{dmap'}\\
-          \var{ekeys'}
+          \var{dmap'}
         \end{array}
       \right)}
       \trans{delegw}{c}
       {\left(
         \begin{array}{r}
-          \var{dmap''}\\
-          \var{ekeys''}
+          \var{dmap''}
         \end{array}
       \right)}
     }
     { \left(
         \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
+          \var{dmap}
         \end{array}
       \right)
       \trans{delegs}{\Gamma; c}
       \left(
         \begin{array}{r}
-          \var{dmap''}\\
-          \var{ekeys''}
+          \var{dmap''}
         \end{array}
       \right)
     }
@@ -379,6 +441,71 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
   \end{equation}
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \inference[Seq-delg-base]
+    {}
+    { \var{epo_c} \vdash \left(
+        \begin{array}{r}
+          \var{ekeys}
+        \end{array}
+      \right)
+        \trans{depochs}{\epsilon}
+      \left(
+        \begin{array}{r}
+          \var{\emptyset}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:depoch-sequence-base}
+  \end{equation}
+
+  \begin{equation}
+    \inference[Seq-delg-ind]
+    { \var{epo_c} \vdash
+      {\left(
+        \begin{array}{r}
+          \var{ekeys}
+        \end{array}
+      \right)}
+      \trans{depochs}{\Gamma}
+      {\left(
+        \begin{array}{r}
+          \var{ekeys'}
+        \end{array}
+      \right)}
+    &
+    \var{epo_c} \vdash
+    {\left(
+        \begin{array}{r}
+          \var{ekeys'}
+        \end{array}
+      \right)}
+      \trans{depoch}{c}
+      {\left(
+        \begin{array}{r}
+          \var{ekeys''}
+        \end{array}
+      \right)}
+    }
+    { \var{epo_c} \vdash \left(
+        \begin{array}{r}
+          \var{ekeys}
+        \end{array}
+      \right)
+      \trans{depochs}{\Gamma; c}
+      \left(
+        \begin{array}{r}
+          \var{ekeys''}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:depoch-sequence-inductive}
+  \end{equation}
+  \caption{Delegation epoch sequence rules}
+  \label{fig:rules:epoch-sequence}
 \end{figure}
 
 \subsection{Block UTxO}
