@@ -61,13 +61,12 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     \CEState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \beta & \seqof{\Block} & \text{blockchain}\\
         \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
         \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
         \var{signers} & \seqof{\VKeyGen} & \text{last $K$ blockchain signers}\\
         \var{sid_c} & \SlotId & \text{current slot}\\
         \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
-        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
+        \var{ekeys} & \Epoch \times \powerset{\VKeyGen} & \text{keys delegated in the current epoch}
       \end{array}
     \right)
   \end{equation*}
@@ -85,7 +84,14 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     \label{eq:rule:chain-base}
     \inference[Chain-base]
     {}
-    {\left(
+    {{\begin{array}{l}
+         \Gkeys\\
+         \wcard\\
+         \wcard\\
+         \wcard
+      \end{array}}
+      \vdash
+      \left(
         \begin{array}{l}
           \var{utxo}\\
           \var{\{ (\var{vk}, \var{vk}) \mid \var{vk} \in \Gkeys\}}\\
@@ -101,9 +107,9 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \begin{equation}
     \label{eq:rule:chain-extension}
     \inference[Chain-ext]
-    {\bslot{b} = \var{sid_n} & 
-      \var{sid_c} < \var{sid_n} &
-      \var{epo_c} = \fun{bepoch}~b \\
+    { \fun{bepoch}~b = \var{epo_c}
+      & \bslot{b} = \var{sid_n} 
+      & \var{sid_c} < \var{sid_n} \\
       {\begin{array}{l}
          \var{epo_c}\\
          \var{sid_n}\\
@@ -331,7 +337,6 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
           \end{array}
         \right)
       } & 
-      \var{epo_c} \vdash
       {
         \left(
           \begin{array}{l}
@@ -445,60 +450,77 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
 
 \begin{figure}
   \begin{equation}
-    \inference[Seq-delg-base]
-    {}
+    \inference[Seq-delg-base-0]
+    {e = epo_c}
     { \var{epo_c} \vdash \left(
         \begin{array}{r}
-          \var{ekeys}
+          \var{(e, keys)}
         \end{array}
       \right)
         \trans{depochs}{\epsilon}
       \left(
         \begin{array}{r}
-          \var{\emptyset}
+          \var{(e, keys)}
         \end{array}
       \right)
     }
-    \label{eq:rule:depoch-sequence-base}
+    \label{eq:rule:depoch-sequence-base-0}
   \end{equation}
 
+  \begin{equation}
+    \inference[Seq-delg-base-1]
+    {e \neq epo_c}
+    { \var{epo_c} \vdash \left(
+        \begin{array}{r}
+          \var{(e, keys)}
+        \end{array}
+      \right)
+        \trans{depochs}{\epsilon}
+      \left(
+        \begin{array}{r}
+          \var{(\var{epo_c}, \emptyset)}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:depoch-sequence-base-1}
+  \end{equation}
+  
   \begin{equation}
     \inference[Seq-delg-ind]
     { \var{epo_c} \vdash
       {\left(
         \begin{array}{r}
-          \var{ekeys}
+          \var{(e, keys)}
         \end{array}
       \right)}
       \trans{depochs}{\Gamma}
       {\left(
         \begin{array}{r}
-          \var{ekeys'}
+          \var{(e', keys')}
         \end{array}
       \right)}
     &
-    \var{epo_c} \vdash
     {\left(
         \begin{array}{r}
-          \var{ekeys'}
+          \var{keys'}
         \end{array}
       \right)}
       \trans{depoch}{c}
       {\left(
         \begin{array}{r}
-          \var{ekeys''}
+          \var{keys''}
         \end{array}
       \right)}
     }
     { \var{epo_c} \vdash \left(
         \begin{array}{r}
-          \var{ekeys}
+          \var{(e, keys)}
         \end{array}
       \right)
       \trans{depochs}{\Gamma; c}
       \left(
         \begin{array}{r}
-          \var{ekeys''}
+          \var{(e', keys'')}
         \end{array}
       \right)
     }

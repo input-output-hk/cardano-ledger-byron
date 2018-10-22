@@ -107,18 +107,10 @@ Rule~\ref{eq:delegation}.
 \end{figure}
 
 \begin{figure}
-  \emph{Delegation states}
-  \begin{align*}
-    & \DEState
-      = \left(
-        \begin{array}{r@{~\in~}lr}
-          \var{ekeys} & \powerset{\VKeyGen} & \text{keys delegated in the current epoch}
-        \end{array}\right)
-  \end{align*}
   \emph{Delegation transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      \powerset (\Epoch \times \DEState \times \DCert \times \DEState)
+      (\powerset \VKeyGen) \times \DCert \times (\powerset \VKey)
     \end{equation*}
   \caption{Delegation epoch transition-system types}
   \label{fig:ts-types:depoch}
