@@ -149,4 +149,25 @@ where:
   \sigma)$ and where $t=(\gamma, s', \sigma, s)$.
 \end{itemize}
 \end{definition}
+
+\begin{figure}[h]
+  \label{fig:notation}
+  For a state transition system $L=(S,T,\Sigma, R, \Gamma)$, we use the
+  following notation to represent transitions and rules. \\
+
+  \textit{Transitions}
+  \[ \_ \vdash \_ \trans{L}{\_} \_ \in T \]
+
+  \textit{Rules}
+  \[ \inference[Rule-name]
+     {\textit{antecedent}}
+     {\textit{consequent}}
+     \in R
+  \]
+\end{figure}
+\section{Composition of Transition Systems}
+
+Part of the benefit of this approach is that it allows us to define systems
+which themselves rely on other state transition systems. In this section we
+give an example of how this works.
 \end{document}
