@@ -66,7 +66,7 @@
 \newcommand{\BHash}{\type{BHash}}  % block hashes
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
-\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\BlockIx}{\type{BlockIx}}
 \newcommand{\GBlock}{\type{GBlock}}
 \newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
@@ -347,13 +347,13 @@ discarded.
   \emph{Primitive types}
   %
   \begin{align*}
-    sl & \in \Slot  & \text{slot time-stamp}\\
-     e & \in \Epoch & \text{epoch}\\
-    sk & \in \SKey  & \text{signing key}\\
-    vk & \in \VKey  & \text{verification key}\\
-     h & \in \BHash & \text{block hash}\\
-   sig & \in \Sig   & \text{signature}\\
-  data & \in \Data  & \text{data}
+    sl & \in \Slot    & \text{slot time-stamp}\\
+   bIx & \in \BlockIx & \text{block index}\\
+    sk & \in \SKey    & \text{signing key}\\
+    vk & \in \VKey    & \text{verification key}\\
+     h & \in \BHash   & \text{block hash}\\
+   sig & \in \Sig     & \text{signature}\\
+  data & \in \Data    & \text{data}
   \end{align*}
   %
   \emph{Derived types}
@@ -361,13 +361,18 @@ discarded.
   \begin{align*}
     sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
     vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
-    c & \in \HCert = \VKeyGen \times \VKey \times \Epoch \times \Sig & \text{delegation certificate}\\
     (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
     (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
       & \text{non-genesis block} \\
     b & \in \Block = \GBlock + \RBlock & \text{block} \\
     \delmap & \in \VKeyGen \totalf \seqof{\HCert}
       & \text{key to certificate list mapping}
+  \end{align*}
+  %
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    c & \in \HCert & \text{delegation certificate}\\
   \end{align*}
   %
   \emph{Functions and relations}
@@ -471,13 +476,19 @@ added, the delegation map is updated at $vk_s$, as given by
 A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
-\item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_s, vk_d, e, \sigma')$ exists,
-\item the corresponding certificate $c$ is signed by a key $sk_s$ from the
-  genesis block, and
+\item it is signed by a signing key $sk_d$ for which a current valid
+  delegation certificate $c$ exists.
+  %
+  The certificate $c$ delegates signing rights from a genesis block
+  verification key $vk_s$ to a verification key $vk_d$ starting in a slot
+  $sl$, which is confirmed by a cryptographic signature $\sigma'$,
+\item the corresponding certificate $c$ is signed by a key $sk_s$ that has a
+  corresponding verification key in the genesis block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
   by keys that $sk_s$ delegated to is no more than a threshold $K \cdot t$,
-  where $t$ is a constant that we will pick in the range
+  where $t$ is a constant\footnote{This is not the same $t$ from the Ouroboros
+    BFT paper draft where it denotes the number of Byzantine servers, though
+    it should be somehow related to it.}  that will be picked in the range
   $1/5 \leq t \leq 1/4$.
 \end{enumerate}
 
