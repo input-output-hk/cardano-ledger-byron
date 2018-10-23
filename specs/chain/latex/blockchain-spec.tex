@@ -302,12 +302,14 @@ new delegation certificates functionality to the ledger layer.
 This functionality should communicate at least the following information for
 each new delegation certificate:
 %
-1) the delegator's verification key,
+\begin{enumerate}
+\item the delegator's verification key,
 %
-2) the delegatee's verification key, and
+\item the delegatee's verification key, and
 %
-3) the slot when the delegation becomes valid (this is in K slots from the
-current slot).
+\item the slot when the delegation becomes valid (this is in K slots from the
+  current slot).
+\end{enumerate}
 %
 In Haskell, the signature of the corresponding function is:
 %
