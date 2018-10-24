@@ -265,4 +265,10 @@ We require our serialisation function to satisfy the following property:
     \end{tikzcd}
   \]
 \end{definition}
+
+This property allows us to extract specific subparts of our serialised form. Our
+specifications will rely in places on functions defined over the serialisesation
+of a value. If we have a type $A=(B,C,D,E)$, for example, and we need to extract
+$\llbracket\var{B}\rrbracket$ from $\llbracket\var{A}\rrbracket$, it is this
+property which guarantees we may do so without rounnd-tripping through $A$.
 \end{document}
