@@ -40,8 +40,6 @@ module Cardano.Chain.Block.Header
        , verifyConsensusData
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B

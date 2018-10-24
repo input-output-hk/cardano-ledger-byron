@@ -6,8 +6,6 @@ module Cardano.Chain.Slotting.SlotCount
        ( SlotCount (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (ToJSON (..))
 import           Formatting.Buildable (Buildable)
 

@@ -7,8 +7,6 @@ module Test.Cardano.Chain.Genesis.Example
        , exampleProtocolConstants
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe (fromJust)
 import qualified Serokell.Util.Base16 as B16

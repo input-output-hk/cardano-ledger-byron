@@ -12,7 +12,6 @@ module Test.Cardano.Crypto.Bi
     , tests
     ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Cardano.Crypto.Wallet (XPrv, unXPrv, xprv, xpub)

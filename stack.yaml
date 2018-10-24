@@ -1,20 +1,19 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/5943cb9701516a47de86fa7eb22eb790c613d70a/snapshot.yaml
 
 packages:
+  - binary
+  - binary/test
+  - crypto
+  - crypto/test
   - .
   - test
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: d3a3dfc451725cc3e17f47677739ba3dc7d9bbee
+    commit: 339d7384c263a234ff553fe731bed2d7091c9e10
     subdirs:
       - .
       - test
-
-  - binary
-  - binary/test
-  - crypto
-  - crypto/test
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

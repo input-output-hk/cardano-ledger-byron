@@ -27,8 +27,6 @@ module Cardano.Chain.ProtocolConstants
        , kEpochSlots
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))

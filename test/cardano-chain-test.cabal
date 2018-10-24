@@ -27,7 +27,7 @@ library
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , base16-bytestring
                      , binary
                      , cardano-binary
@@ -47,7 +47,6 @@ library
                      , vector
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Wall
                        -Werror

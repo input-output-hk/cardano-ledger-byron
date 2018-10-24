@@ -9,8 +9,6 @@ module Cardano.Chain.Common.TxSizeLinear
        , calculateTxSizeLinear
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Fixed (Nano)

@@ -4,8 +4,6 @@ module Cardano.Chain.Common.AddressHash
        , unsafeAddressHash
        ) where
 
-import           Cardano.Prelude
-
 import           Crypto.Hash (Blake2b_224, Digest, SHA3_256)
 import qualified Crypto.Hash as CryptoHash
 

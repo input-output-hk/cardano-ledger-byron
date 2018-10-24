@@ -18,7 +18,6 @@ module Test.Cardano.Chain.Update.Example
        , exampleVoteId
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.Fixed (Fixed (..))

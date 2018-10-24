@@ -25,8 +25,6 @@ module Cardano.Chain.Common.Merkle
 -- but HLint insists that this is not OK because toList and foldMap are never
 -- used unqualified. The hiding in fact makes it clearer for the human reader
 -- what's going on.
-import           Cardano.Prelude
-
 import           Data.Bits (Bits (..))
 import           Data.ByteArray (ByteArrayAccess, convert)
 import           Data.ByteString.Builder (Builder, byteString, word8)
@@ -35,7 +33,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Coerce (coerce)
 import qualified Data.Foldable as Foldable
 import           Formatting.Buildable (Buildable (..))
-import qualified Prelude
+import qualified Text.Show
 
 import           Cardano.Binary.Class (Bi (..), Raw, serializeBuilder)
 import           Cardano.Crypto (AbstractHash (..), Hash, hashRaw)

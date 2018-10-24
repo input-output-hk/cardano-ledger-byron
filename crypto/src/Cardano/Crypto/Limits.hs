@@ -8,8 +8,6 @@ module Cardano.Crypto.Limits
        , mlSignature
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Crypto.Wallet as CC
 import           Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
 

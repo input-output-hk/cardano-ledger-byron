@@ -12,8 +12,6 @@ module Cardano.Chain.Update.SoftforkRule
        ( SoftforkRule (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)

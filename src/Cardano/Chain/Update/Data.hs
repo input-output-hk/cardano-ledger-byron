@@ -7,8 +7,6 @@ module Cardano.Chain.Update.Data
        ( UpdateData (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 

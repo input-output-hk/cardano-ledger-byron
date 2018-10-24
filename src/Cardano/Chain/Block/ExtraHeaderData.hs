@@ -11,8 +11,6 @@ module Cardano.Chain.Block.ExtraHeaderData
        , verifyExtraHeaderData
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B

@@ -11,8 +11,6 @@ module Test.Cardano.Crypto.CborSpec
        ( spec
        ) where
 
-import           Cardano.Prelude
-
 import           Crypto.Hash (Blake2b_224, Blake2b_256)
 import           Test.Hspec (Spec, describe)
 

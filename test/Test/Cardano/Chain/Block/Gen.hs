@@ -13,8 +13,6 @@ module Test.Cardano.Chain.Block.Gen
        , genUndo
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Coerce (coerce)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen

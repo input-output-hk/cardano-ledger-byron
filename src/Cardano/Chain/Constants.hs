@@ -7,8 +7,6 @@ module Cardano.Chain.Constants
        , wAddressGenesisIndex
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Crypto.HD (firstHardened)
 
 -- | First index in derivation path for HD account, which is put to genesis utxo

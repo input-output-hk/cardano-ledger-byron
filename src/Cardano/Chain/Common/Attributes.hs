@@ -22,9 +22,6 @@ module Cardano.Chain.Common.Attributes
        , dropAttributes
        ) where
 
-import           Cardano.Prelude
-import qualified Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
@@ -33,6 +30,7 @@ import qualified Data.Map as M
 import           Formatting (bprint, build, int)
 import           Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
+import qualified Text.Show
 
 import           Cardano.Binary.Class (Bi (..), Decoder, Dropper, Encoding,
                      dropBytes, dropMap, dropWord8)

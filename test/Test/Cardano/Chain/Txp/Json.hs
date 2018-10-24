@@ -5,8 +5,6 @@
 module Test.Cardano.Chain.Txp.Json
        ( tests
        ) where
-import           Cardano.Prelude
-
 import qualified Data.Set as S
 import           Hedgehog (Property)
 import qualified Hedgehog as H

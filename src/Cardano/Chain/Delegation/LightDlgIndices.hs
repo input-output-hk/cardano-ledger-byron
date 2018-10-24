@@ -9,8 +9,6 @@ module Cardano.Chain.Delegation.LightDlgIndices
        , ProxySKLight
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B (Buildable (..))
 

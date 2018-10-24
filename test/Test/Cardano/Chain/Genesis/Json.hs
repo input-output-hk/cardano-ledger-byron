@@ -4,8 +4,6 @@ module Test.Cardano.Chain.Genesis.Json
        ( tests
        ) where
 
-import           Cardano.Prelude
-
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 

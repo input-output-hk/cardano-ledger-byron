@@ -17,8 +17,6 @@ module Test.Cardano.Binary.Cbor.CborSpec
        , extensionProperty
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Bits (shiftL)
 import qualified Data.ByteString as BS
 import           Data.Fixed (Nano)

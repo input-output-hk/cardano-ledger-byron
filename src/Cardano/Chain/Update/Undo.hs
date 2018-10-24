@@ -51,8 +51,6 @@ module Cardano.Chain.Update.Undo
        , newVoteState
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Lens (makeLensesFor)
 import           Data.Time (NominalDiffTime)
 import           Formatting.Buildable (Buildable (..))

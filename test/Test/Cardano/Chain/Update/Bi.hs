@@ -5,7 +5,6 @@ module Test.Cardano.Chain.Update.Bi
        ( tests
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.Map.Strict as Map

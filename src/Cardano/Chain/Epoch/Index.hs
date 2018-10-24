@@ -12,8 +12,6 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Word (Word64)
 import           System.IO (IOMode (..), SeekMode (..), hSeek, withBinaryFile)
 
-import           Cardano.Prelude
-
 -- Index format:
 --
 -- EpochIndex := "Epoch Index v1\n\n" *Offset

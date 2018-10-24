@@ -10,12 +10,12 @@ module Test.Cardano.Binary.Helpers.GoldenRoundTrip
        , legacyGoldenDecode
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy.Char8 as BS
+import           Data.String (unlines)
 import           Formatting.Buildable (Buildable (..))
 import           Hedgehog (MonadTest, Property, eval, property, success,
                      tripping, withTests, (===))
@@ -25,7 +25,6 @@ import           Hedgehog.Internal.Show (LineDiff, lineDiff, mkValue,
 
 import           Cardano.Binary.Class (Bi (..), decodeFull, decodeFullDecoder,
                      serialize)
-import qualified Prelude
 import           Text.Show.Pretty (Value (..))
 
 
@@ -34,7 +33,7 @@ type HexDump = LByteString
 type HexDumpDiff = [LineDiff]
 
 renderHexDumpDiff :: HexDumpDiff -> [Char]
-renderHexDumpDiff = Prelude.unlines . fmap renderLineDiff
+renderHexDumpDiff = unlines . fmap renderLineDiff
 
 -- | Diff two 'HexDump's by comparing lines pairwise
 hexDumpDiff :: HexDump -> HexDump -> Maybe HexDumpDiff
@@ -61,7 +60,7 @@ compareHexDump x y = do
 -- | Fail with a nice line diff of the two HexDumps
 failHexDumpDiff :: (MonadTest m, HasCallStack) => HexDump -> HexDump -> m ()
 failHexDumpDiff x y = case hexDumpDiff x y of
-  Nothing -> withFrozenCallStack $ failWith Nothing $ Prelude.unlines
+  Nothing -> withFrozenCallStack $ failWith Nothing $ unlines
     ["━━━ Not Equal ━━━", showPretty x, showPretty y]
   Just dif -> withFrozenCallStack $ failWith Nothing $ renderHexDumpDiff dif
 

@@ -6,8 +6,6 @@ module Cardano.Chain.Common.AddrAttributes
        ( AddrAttributes (..)
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString.Lazy as LBS
 import           Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B

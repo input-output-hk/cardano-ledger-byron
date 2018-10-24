@@ -9,8 +9,6 @@ module Cardano.Chain.Update.Payload
        , checkPayload
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B

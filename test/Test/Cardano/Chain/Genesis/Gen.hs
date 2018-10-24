@@ -10,8 +10,6 @@ module Test.Cardano.Chain.Genesis.Gen
        , genStaticConfig
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HM
 

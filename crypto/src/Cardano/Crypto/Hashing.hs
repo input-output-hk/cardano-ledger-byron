@@ -33,9 +33,6 @@ module Cardano.Crypto.Hashing
        , hashDigestSize'
        ) where
 
-import           Cardano.Prelude
-import qualified Prelude
-
 import           Crypto.Hash (Blake2b_256, Digest, HashAlgorithm,
                      hashDigestSize)
 import qualified Crypto.Hash as Hash
@@ -48,6 +45,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Formatting (Format, bprint, build, fitLeft, later, sformat,
                      (%.))
 import qualified Formatting.Buildable as B (Buildable (..))
+import           Text.Read (Read (readsPrec))
 
 import           Cardano.Binary.Class (Bi (..), DecoderError (..), Raw,
                      withWordSize)

@@ -35,7 +35,6 @@ module Test.Cardano.Binary.Helpers
        , sizeTest
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Codec.CBOR.FlatTerm (toFlatTerm, validFlatTerm)
@@ -51,13 +50,13 @@ import           Formatting (Buildable, bprint, build, formatToString, int)
 import           Hedgehog (annotate, failure, forAllWith, success)
 import qualified Hedgehog as HH
 import qualified Hedgehog.Gen as HH.Gen
-import           Prelude (read)
 import           Test.Hspec (Spec, describe)
 import           Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import           Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, choose,
                      conjoin, counterexample, forAll, property, resize,
                      suchThat, vectorOf, (.&&.), (===))
 import           Test.QuickCheck.Instances ()
+import           Text.Read (read)
 
 import           Cardano.Binary.Class (Bi (..), DecoderError (..), Range (..),
                      Size, SizeOverride (..), decodeFull,

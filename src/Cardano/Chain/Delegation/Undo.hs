@@ -10,8 +10,6 @@ module Cardano.Chain.Delegation.Undo
        , isRevokePsk
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (bprint)
 import           Formatting.Buildable (Buildable (..))
 

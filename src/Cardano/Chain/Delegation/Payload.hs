@@ -10,8 +10,6 @@ module Cardano.Chain.Delegation.Payload
        , checkPayload
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (throwError))
 import           Formatting (bprint, int, stext)
 import           Formatting.Buildable (Buildable (..))

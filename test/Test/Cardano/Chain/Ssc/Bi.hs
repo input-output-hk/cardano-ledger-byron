@@ -5,7 +5,6 @@ module Test.Cardano.Chain.Ssc.Bi
        ( tests
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Hedgehog (Property)

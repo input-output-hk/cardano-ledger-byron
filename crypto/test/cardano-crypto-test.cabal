@@ -27,7 +27,7 @@ library
   other-modules:
                        Test.Cardano.Crypto.Arbitrary.Unsafe
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , bytestring
                      , cardano-binary
                      , cardano-binary-test
@@ -43,9 +43,9 @@ library
                      , quickcheck-instances
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-implicit-prelude
                        -fno-warn-missing-import-lists
                        -fno-warn-unsafe
                        -fno-warn-safe

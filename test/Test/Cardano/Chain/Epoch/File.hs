@@ -3,8 +3,6 @@ module Test.Cardano.Chain.Epoch.File
        ( tests
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H

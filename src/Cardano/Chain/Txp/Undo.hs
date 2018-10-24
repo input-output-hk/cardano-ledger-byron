@@ -3,8 +3,6 @@ module Cardano.Chain.Txp.Undo
        , TxUndo
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Chain.Txp.TxOutAux
 
 

@@ -26,8 +26,6 @@ import           Cardano.Binary.Class (DecoderError, decodeFull,
                      decodeFullDecoder)
 import           Cardano.Chain.Block.Block (Block, decodeBlock)
 import           Cardano.Chain.Block.Undo (Undo)
-import           Cardano.Prelude
-
 -- Epoch file format:
 --
 -- EpochFile := "Epoch data v1\n" *SlotData

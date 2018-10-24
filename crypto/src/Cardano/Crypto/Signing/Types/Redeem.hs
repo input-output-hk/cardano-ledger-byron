@@ -21,8 +21,6 @@ module Cardano.Crypto.Signing.Types.Redeem
        , redeemToPublic
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import           Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519

@@ -9,8 +9,6 @@ module Cardano.Chain.Common.AddrSpendingData
        , addrSpendingDataToType
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString.Lazy as LBS
 import           Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B

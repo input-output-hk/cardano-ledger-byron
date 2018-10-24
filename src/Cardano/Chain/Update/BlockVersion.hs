@@ -8,12 +8,10 @@ module Cardano.Chain.Update.BlockVersion
        ( BlockVersion (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting (bprint, shown)
 import           Formatting.Buildable (Buildable (..))
-import qualified Prelude
+import qualified Text.Show
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 

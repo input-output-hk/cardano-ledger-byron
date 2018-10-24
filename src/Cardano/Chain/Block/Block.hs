@@ -36,8 +36,6 @@ module Cardano.Chain.Block.Block
        , dropBoundaryBlock
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B

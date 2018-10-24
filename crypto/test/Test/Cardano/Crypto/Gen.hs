@@ -48,7 +48,6 @@ module Test.Cardano.Crypto.Gen
         , feedPM
         ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray

@@ -12,8 +12,6 @@ module Cardano.Binary.Limit
        , vectorOfNE
        ) where
 
-import           Cardano.Prelude
-
 
 -- | A limit on the length of something (in bytes).
 --   TODO should check for overflow in the Num instance.

@@ -12,8 +12,6 @@ module Cardano.Chain.Slotting.EpochIndex
        , isBootstrapEra
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Data.Ix (Ix)

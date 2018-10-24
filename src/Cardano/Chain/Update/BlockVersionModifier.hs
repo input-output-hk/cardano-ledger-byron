@@ -10,8 +10,6 @@ module Cardano.Chain.Update.BlockVersionModifier
        , applyBVM
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Text.Lazy.Builder (Builder)
 import           Data.Time (NominalDiffTime)
 import           Formatting (Format, bprint, build, bytes, int, later, shortest)

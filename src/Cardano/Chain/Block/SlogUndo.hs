@@ -8,8 +8,6 @@ module Cardano.Chain.Block.SlogUndo
        , buildSlogUndo
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (Format, bprint, later)
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)

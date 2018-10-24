@@ -7,8 +7,6 @@ module Test.Cardano.Cbor.Canonicity
     ( perturbCanonicity
     ) where
 
-import           Cardano.Prelude
-
 import qualified Control.Monad.State as S
 import           GHC.Float (RealFloat (..))
 import           Numeric.Half (Half (..))

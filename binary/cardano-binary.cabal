@@ -29,7 +29,7 @@ library
                        Cardano.Binary.Class.Drop
                        Cardano.Binary.Class.Primitive
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , bytestring
                      , cardano-prelude
                      , cborg
@@ -46,9 +46,9 @@ library
                      , vector
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-implicit-prelude
                        -fno-warn-missing-import-lists
                        -fno-warn-unsafe
                        -fno-warn-safe
@@ -70,7 +70,7 @@ test-suite test
                        Test.Cardano.Cbor.RefImpl
                        Test.Cardano.Cbor.Canonicity
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , bytestring
                      , cardano-binary
                      , cardano-prelude
@@ -90,9 +90,9 @@ test-suite test
                      , text
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-implicit-prelude
                        -fno-warn-missing-import-lists
                        -fno-warn-unsafe
                        -fno-warn-safe

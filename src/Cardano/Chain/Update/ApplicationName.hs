@@ -12,8 +12,6 @@ module Cardano.Chain.Update.ApplicationName
        , checkApplicationName
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (throwError))
 import           Data.Aeson (FromJSON (..))
 import           Data.Aeson.TH (defaultOptions, deriveToJSON)

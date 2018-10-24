@@ -6,8 +6,6 @@ module Cardano.Crypto.Signing.Redeem
        , module Cardano.Crypto.Signing.Types.Redeem
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad (fail)
 import           Crypto.Error (maybeCryptoError)
 import qualified Crypto.PubKey.Ed25519 as Ed25519

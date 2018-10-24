@@ -11,8 +11,6 @@ module Cardano.Chain.Common.StakeholderId
        , shortStakeholderF
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import           Data.Aeson (FromJSONKey, ToJSONKey)
 import           Formatting (Format, formatToString, mapf)

@@ -63,8 +63,6 @@ module Cardano.Binary.Class.Core
     , szBounds
     ) where
 
-import           Cardano.Prelude
-
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as CBOR.Read

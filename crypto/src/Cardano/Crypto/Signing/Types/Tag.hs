@@ -4,8 +4,6 @@ module Cardano.Crypto.Signing.Types.Tag
        ( SignTag(..)
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (bprint, shown)
 import           Formatting.Buildable (Buildable (..))
 

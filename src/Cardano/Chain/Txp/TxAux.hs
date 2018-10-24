@@ -8,8 +8,6 @@ module Cardano.Chain.Txp.TxAux
        , txaF
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B

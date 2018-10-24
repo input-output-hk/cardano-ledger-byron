@@ -1,4 +1,3 @@
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Test.Hspec (hspec)

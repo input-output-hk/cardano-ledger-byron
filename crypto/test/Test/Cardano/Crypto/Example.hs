@@ -10,8 +10,6 @@ module Test.Cardano.Crypto.Example
        , staticSafeSigners
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Crypto.Wallet as CC
 import           Data.List ((!!))
 import           Data.Maybe (fromJust)

@@ -24,8 +24,6 @@ module Cardano.Chain.Slotting.Data
        , computeSlotStart
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Map.Strict as M
 import           Data.Semigroup (Semigroup)
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime)

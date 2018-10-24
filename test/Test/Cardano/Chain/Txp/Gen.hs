@@ -25,7 +25,6 @@ module Test.Cardano.Chain.Txp.Gen
        , genUnknownWitnessType
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.ByteString.Base16 as B16

@@ -33,8 +33,6 @@ module Test.Cardano.Cbor.RefImpl
     , prop_halfToFromFloat
     ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List (span)

@@ -8,7 +8,6 @@
 
 module Test.Cardano.Crypto.Arbitrary.Unsafe () where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.Coerce (coerce)

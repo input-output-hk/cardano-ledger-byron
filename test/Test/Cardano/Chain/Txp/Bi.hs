@@ -6,7 +6,6 @@ module Test.Cardano.Chain.Txp.Bi
        ( tests
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.Map as M

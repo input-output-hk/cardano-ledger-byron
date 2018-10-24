@@ -4,7 +4,6 @@ module Test.Cardano.Chain.Delegation.Bi
        ( tests
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.List ((!!))

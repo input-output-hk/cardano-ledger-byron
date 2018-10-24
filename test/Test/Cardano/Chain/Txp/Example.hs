@@ -19,8 +19,6 @@ module Test.Cardano.Chain.Txp.Example
        , exampleHashTx
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Coerce (coerce)
 import           Data.List.NonEmpty (fromList)
 import           Data.Maybe (fromJust)

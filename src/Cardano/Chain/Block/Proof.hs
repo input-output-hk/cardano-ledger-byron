@@ -12,8 +12,6 @@ module Cardano.Chain.Block.Proof
        , checkProof
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B

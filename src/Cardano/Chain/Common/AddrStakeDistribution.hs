@@ -11,8 +11,6 @@ module Cardano.Chain.Common.AddrStakeDistribution
        , MultiKeyDistrError (..)
        ) where
 
-import           Cardano.Prelude hiding (id)
-
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B (Buildable (..))

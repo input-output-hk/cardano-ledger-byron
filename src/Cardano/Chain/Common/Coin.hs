@@ -37,8 +37,6 @@ module Cardano.Chain.Common.Coin
        , divCoin
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Data.Data (Data)
 import           Formatting (Format, bprint, build, int)

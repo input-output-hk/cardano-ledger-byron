@@ -6,8 +6,6 @@ module Cardano.Crypto.Signing.Tag
        , module Cardano.Crypto.Signing.Types.Tag
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Binary.Class as Bi
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
 import           Cardano.Crypto.Signing.Types.Tag

@@ -9,7 +9,6 @@ module Test.Cardano.Crypto.CryptoSpec2
        ( spec
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Crypto.Hash (Blake2b_224, Blake2b_256)

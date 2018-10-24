@@ -1,4 +1,3 @@
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Test.Cardano.Chain.Block.Bi

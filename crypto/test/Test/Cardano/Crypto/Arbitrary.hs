@@ -15,7 +15,6 @@ module Test.Cardano.Crypto.Arbitrary
        , genRedeemSignature
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray

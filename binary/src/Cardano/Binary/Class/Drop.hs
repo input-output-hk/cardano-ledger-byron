@@ -17,8 +17,6 @@ module Cardano.Binary.Class.Drop
        , dropWord64
        ) where
 
-import           Cardano.Prelude
-
 import qualified Codec.CBOR.Decoding as D
 
 
@@ -34,7 +32,7 @@ dropInt32 = void D.decodeInt32Canonical
 dropList :: Dropper s -> Dropper s
 dropList dropElems = do
   D.decodeListLenIndef
-  D.decodeSequenceLenIndef const () id dropElems
+  D.decodeSequenceLenIndef const () identity dropElems
 
 dropMap :: Dropper s -> Dropper s -> Dropper s
 dropMap dropKey dropValue = do

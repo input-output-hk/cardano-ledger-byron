@@ -19,8 +19,6 @@ module Cardano.Crypto.Signing.Safe
        , module Cardano.Crypto.Signing.Types.Safe
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Crypto.Wallet as CC
 import           Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.ByteString as BS

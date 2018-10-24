@@ -43,7 +43,7 @@ library
                        Cardano.Crypto.Signing.Types.Signing
                        Cardano.Crypto.Signing.Types.Tag
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , aeson
                      , base64-bytestring
                      , base64-bytestring-type
@@ -66,9 +66,9 @@ library
                      , text
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-implicit-prelude
                        -fno-warn-missing-import-lists
                        -fno-warn-unsafe
                        -fno-warn-safe
@@ -92,7 +92,7 @@ test-suite test
                        Test.Cardano.Crypto.Dummy
                        Test.Cardano.Crypto.Gen
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , bytestring
                      , cardano-binary
                      , cardano-binary-test
@@ -112,9 +112,9 @@ test-suite test
                      , text
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-implicit-prelude
                        -fno-warn-missing-import-lists
                        -fno-warn-unsafe
                        -fno-warn-safe

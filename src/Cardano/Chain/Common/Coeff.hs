@@ -11,8 +11,6 @@ module Cardano.Chain.Common.Coeff
        ( Coeff (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
 import           Data.Fixed (Fixed (..), Nano, resolution, showFixed)

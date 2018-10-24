@@ -5,8 +5,6 @@ module Test.Cardano.Binary.BiSizeBounds
     ( tests
     ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M

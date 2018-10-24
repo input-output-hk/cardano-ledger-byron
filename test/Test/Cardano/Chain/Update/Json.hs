@@ -4,7 +4,6 @@ module Test.Cardano.Chain.Update.Json
        ( tests
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Hedgehog (Property)

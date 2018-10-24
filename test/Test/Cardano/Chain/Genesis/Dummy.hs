@@ -23,8 +23,6 @@ module Test.Cardano.Chain.Genesis.Dummy
        , dummyGenesisHash
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Chain.Genesis (Config (..), FakeAvvmOptions (..),
                      GeneratedGenesisData (..), GeneratedSecrets (..),
                      GenesisAvvmBalances (..), GenesisData (..),

@@ -23,8 +23,6 @@ module Cardano.Chain.Slotting.LocalSlotIndex
        , localSlotIndices
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (throwError))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.Ix (Ix)

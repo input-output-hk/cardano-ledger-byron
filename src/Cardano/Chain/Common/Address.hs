@@ -66,8 +66,6 @@ module Cardano.Chain.Common.Address
 
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Lens (makePrisms)
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson (FromJSON (..), FromJSONKey (..),

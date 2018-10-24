@@ -13,8 +13,6 @@ module Cardano.Chain.Common.TxFeePolicy
        ( TxFeePolicy (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError)
 import           Data.Aeson (object, (.:?), (.=))
 import qualified Data.Aeson as Aeson

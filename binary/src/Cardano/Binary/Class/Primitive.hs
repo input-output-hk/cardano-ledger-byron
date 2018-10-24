@@ -48,8 +48,6 @@ module Cardano.Binary.Class.Primitive
        , decodeCrcProtected
        ) where
 
-import           Cardano.Prelude
-
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as Read

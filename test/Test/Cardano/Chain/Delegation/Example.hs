@@ -6,8 +6,6 @@ module Test.Cardano.Chain.Delegation.Example
        , staticProxySKHeavys
        ) where
 
-import           Cardano.Prelude
-
 import           Data.List (zipWith4, (!!))
 import qualified Data.Set as Set
 

@@ -7,8 +7,6 @@ module Test.Cardano.Crypto.CryptoSpec
        ( spec
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString as BS
 import           Formatting (sformat)
 

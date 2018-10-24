@@ -9,8 +9,6 @@ module Cardano.Chain.Common.Script
        , Script_v0
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
                      (.:), (.=))
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)

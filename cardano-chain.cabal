@@ -89,7 +89,7 @@ library
                        Cardano.Chain.Update.Undo
                        Cardano.Chain.Update.Vote
 
-  build-depends:       base >=4.11 && <4.12
+  build-depends:       base-noprelude
                      , aeson
                      , aeson-options
                      , base16-bytestring
@@ -121,7 +121,6 @@ library
                      , vector
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Wall
                        -Werror
@@ -151,7 +150,7 @@ test-suite test
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Json
 
-  build-depends:       base
+  build-depends:       base-noprelude
                      , base16-bytestring
                      , bytestring
                      , cardano-binary
@@ -172,7 +171,6 @@ test-suite test
                      , vector
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Wall
                        -Werror

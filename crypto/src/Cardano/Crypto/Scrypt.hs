@@ -25,8 +25,6 @@ module Cardano.Crypto.Scrypt
        , verifyPass
        ) where
 
-import           Cardano.Prelude
-
 import           Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Crypto.Scrypt as S
 import           Data.Default (Default (..))

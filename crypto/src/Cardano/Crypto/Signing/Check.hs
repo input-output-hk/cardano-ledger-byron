@@ -16,8 +16,6 @@ module Cardano.Crypto.Signing.Check
        , validateProxySignature
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Crypto.Wallet as CC
 import           Control.Monad.Except (MonadError, throwError)
 import           Data.Coerce (coerce)

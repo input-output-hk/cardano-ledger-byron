@@ -11,7 +11,6 @@ module Test.Cardano.Chain.Slotting.Gen
        , feedPMEpochSlots
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.Map.Strict as Map

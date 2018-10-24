@@ -24,8 +24,6 @@ module Cardano.Chain.Slotting.SlotId
        , crucialSlot
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Lens (Iso', iso, makeLensesFor)
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting (Format, bprint, build, ords, sformat)

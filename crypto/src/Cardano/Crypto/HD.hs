@@ -26,8 +26,6 @@ module Cardano.Crypto.HD
        , isHardened
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Crypto.Wallet (DerivationScheme (..), deriveXPrv,
                      deriveXPub, unXPub)
 import qualified Crypto.Cipher.ChaChaPoly1305 as C

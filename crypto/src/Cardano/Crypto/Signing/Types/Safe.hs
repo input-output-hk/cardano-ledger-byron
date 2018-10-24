@@ -22,7 +22,6 @@ module Cardano.Crypto.Signing.Types.Safe
        ) where
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Cardano.Prelude
 import           Crypto.Random (MonadRandom)
 import           Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
@@ -31,7 +30,7 @@ import           Data.Default (Default (..))
 import           Data.Semigroup (Semigroup)
 import           Formatting (int, sformat)
 import           Formatting.Buildable (Buildable (..))
-import qualified Prelude
+import qualified Text.Show
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.Scrypt as S

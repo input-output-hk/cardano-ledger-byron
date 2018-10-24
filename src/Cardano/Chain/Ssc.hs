@@ -23,8 +23,6 @@ module Cardano.Chain.Ssc
        , dropVssCertificate
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Binary.Class (Bi (..), DecoderError (..), Dropper,
                      decodeListLenCanonical, dropBytes, dropList, dropMap,
                      dropSet, dropTriple, dropWord64, encodeListLen,

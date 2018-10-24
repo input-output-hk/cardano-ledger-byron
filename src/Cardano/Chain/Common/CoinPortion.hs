@@ -19,8 +19,6 @@ module Cardano.Chain.Common.CoinPortion
        , applyCoinPortionUp
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (..))
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Formatting (bprint, build, float, int, sformat)

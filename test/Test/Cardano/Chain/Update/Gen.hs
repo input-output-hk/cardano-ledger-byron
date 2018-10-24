@@ -19,7 +19,6 @@ module Test.Cardano.Chain.Update.Gen
        , genVoteId
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.Coerce (coerce)

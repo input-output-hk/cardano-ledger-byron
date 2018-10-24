@@ -7,8 +7,6 @@ module Test.Cardano.Chain.Delegation.Gen
        , genUndo
        ) where
 
-import           Cardano.Prelude
-
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range

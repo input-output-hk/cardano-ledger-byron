@@ -6,8 +6,6 @@ module Cardano.Crypto.Orphans
        (
        ) where
 
-import           Cardano.Prelude
-
 import qualified Codec.CBOR.Encoding as E
 import           Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519

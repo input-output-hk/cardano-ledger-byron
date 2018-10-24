@@ -4,8 +4,6 @@ module Test.Cardano.Chain.Slotting.Example
        , exampleSlottingData
        ) where
 
-import           Cardano.Prelude
-
 import qualified Data.Map.Strict as M
 
 import           Cardano.Chain.Slotting (EpochIndex (..),

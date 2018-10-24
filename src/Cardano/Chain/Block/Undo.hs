@@ -9,8 +9,6 @@ module Cardano.Chain.Block.Undo
        , Blund
        ) where
 
-import           Cardano.Prelude
-
 import           Formatting (Format, bprint, build, later)
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)

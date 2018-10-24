@@ -28,8 +28,6 @@ module Cardano.Crypto.Signing.Signing
        , module Cardano.Crypto.Signing.Types.Signing
        ) where
 
-import           Cardano.Prelude
-
 import qualified Cardano.Crypto.Wallet as CC
 import           Crypto.Random (MonadRandom, getRandomBytes)
 import           Data.ByteArray (ScrubbedBytes)

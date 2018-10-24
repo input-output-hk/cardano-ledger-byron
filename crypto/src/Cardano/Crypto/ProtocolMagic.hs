@@ -5,8 +5,6 @@ module Cardano.Crypto.ProtocolMagic
        ( ProtocolMagic (..)
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 
 -- | Magic number which should differ for different clusters. It's

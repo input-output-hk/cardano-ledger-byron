@@ -11,7 +11,6 @@ module Test.Cardano.Chain.Block.Bi
        , exampleBlockPSignatureHeavy
        ) where
 
-import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Data.Coerce (coerce)

@@ -21,8 +21,6 @@ module Cardano.Chain.Txp.Tx
        , _TxOut
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Lens (makeLenses, makePrisms)
 import           Data.Aeson (FromJSON (..), FromJSONKey (..),
                      FromJSONKeyFunction (..), ToJSON (toJSON), ToJSONKey (..),

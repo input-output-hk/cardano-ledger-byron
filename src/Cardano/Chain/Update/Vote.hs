@@ -28,8 +28,6 @@ module Cardano.Chain.Update.Vote
        , mkVoteId
        ) where
 
-import           Cardano.Prelude
-
 import           Control.Monad.Except (MonadError (throwError))
 import qualified Data.Map.Strict as Map
 import           Data.Text.Lazy.Builder (Builder)

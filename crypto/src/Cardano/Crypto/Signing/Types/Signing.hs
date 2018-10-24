@@ -44,8 +44,6 @@ module Cardano.Crypto.Signing.Types.Signing
        , isSelfSignedPsk
        ) where
 
-import           Cardano.Prelude hiding (show)
-
 import qualified Cardano.Crypto.Wallet as CC
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
@@ -59,9 +57,9 @@ import qualified Data.Text.Lazy.Builder as Builder
 import           Formatting (Format, bprint, build, fitLeft, formatToString,
                      later, sformat, (%.))
 import qualified Formatting.Buildable as B
-import           Prelude (show)
 import           Text.JSON.Canonical (JSValue (..))
 import qualified Text.JSON.Canonical as TJC (FromJSON (..), ToJSON (..))
+import qualified Text.Show
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 import           Cardano.Crypto.Hashing (hash)

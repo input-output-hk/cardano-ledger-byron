@@ -12,8 +12,6 @@ module Cardano.Chain.Txp.TxWitness
        , TxSig
        ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
                      (.:), (.=))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)

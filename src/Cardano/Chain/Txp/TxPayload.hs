@@ -10,8 +10,6 @@ module Cardano.Chain.Txp.TxPayload
        , txpWitnesses
        ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Binary.Class (Bi (..))
 import           Cardano.Chain.Txp.Tx (Tx)
 import           Cardano.Chain.Txp.TxAux (TxAux (..))
