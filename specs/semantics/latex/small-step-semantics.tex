@@ -13,6 +13,7 @@
 \usepackage[colon]{natbib}
 \usepackage[unicode=true,pdftex,pdfa]{hyperref}
 \usepackage{xcolor}
+\usepackage{xparse}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \hypersetup{
   pdftitle={Small Step Semantics for Cardano},
@@ -26,6 +27,7 @@
   citebordercolor={white},
   urlbordercolor={white}
 }
+\usepackage{tikz-cd}
 \usepackage{float}
 \floatstyle{boxed}
 \restylefloat{figure}
@@ -65,6 +67,11 @@
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
+\newcommand{\bytes}{\textbf{Bytes}}
+
+\NewDocumentCommand{\tion}{o m m m m}{
+  \IfNoValueF{#1}{\var{#1}\vdash} \var{#3} \trans{#2}{#4} \var{#5}
+}
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
@@ -95,7 +102,7 @@ blocks forms a valid \textit{chain}.
 This document describes the (loose) formalism by which we describe such validity
 conditions and how they result in the construction of valid states.
 
-\section{Preliminaries}
+\section{Transition Systems}
 \label{sec:preliminaries}
 
 In describing the semantics for a system $L$ we are principally concerned with
@@ -164,10 +171,95 @@ where:
      {\textit{consequent}}
      \in R
   \]
+  \caption{Notation for a state transition system.}
 \end{figure}
+Figure \ref{fig:notation} gives the notation for transitions and rules. For
+notational convenience, we allow for some additional constructions in the
+antecedent:
+\begin{itemize}
+  \item Rather than a single logical predicate in the antecedent, we allow
+    multiple predicate formulae. All predicates defined in the antecedent must be
+    true; that is, the antecedent is treated as the AND of all predicates defined
+    there.
+  \item The antecedent may contain variable definitions of the form $z=f(s)$,
+    where $z$ is an additional binding to be introduced. We will refer to these
+    as ``let-bindings'' in analogy with their use in programming languages.
+  \end{itemize}
+We can give an example of such a rule:
+  \[ \inference[Example]
+    {P(A) & z = f(s) & B = g(A,z)}
+    {\tion[E1]{S2}{A}{s}{B}}
+  \]
+To read such a rule, we proceed as follows:
+\begin{enumerate}
+  \item Firstly, we look at the LHS of the consequent. This introduces the basic
+    environment, iniital state and signal.
+  \item We then expand our set of variables using let bindings in the
+    antecedent.
+  \item We evaluate all predicates in the antecedent, which should now be
+    defined in terms of $S\cup\Sigma\cup\Gamma$ and the variables introduced in
+    step 2.
+  \item If all predicates evaluate to true, then we may assume a valid
+    transition to the RHS of the consequent.
+\end{enumerate}
 \section{Composition of Transition Systems}
 
 Part of the benefit of this approach is that it allows us to define systems
-which themselves rely on other state transition systems. In this section we
-give an example of how this works.
+which themselves rely on other state transition systems. To do this, we allow
+for an additional construction in the antecedent.
+
+\begin{itemize}
+\item The antecedent may contain a transition of the form $\tion{SYS}{A}{s}{B}$.
+    This may either act as a predicate (if $B$ is already bound) or as an
+    introduction of $B$ as per the state transition rules for system $\var{SYS}$.
+\end{itemize}
+
+We then allow a construction as follows:
+
+\[
+  \inference[Example]
+    {P(A) & z = f(s) & \tion[E1]{S1}{A}{z}{B}}
+    {\tion[E1]{S2}{A}{s}{B}}
+\]
+
+The transition in the antecedent acts as a predicate requiring that $A$
+transitions to $B$ under the system $S1$, and, assuming $B$ is otherwise free
+(has not been bound by the LHS of the consequent or by another let binding),
+acts as an introduction rule for $B$ as determined by the transition rules for
+system $S1$.
+
+\section{Serialisation}
+Various of our specifications will rely on a serialisation function which
+encodes a variety of types to a binary format.
+
+\begin{figure}[h]
+  \label{fig:serialisation}
+  \begin{align*}
+    & \llbracket\_\rrbracket \in \textbf{Hask}\mapsto\_\to\bytes
+    & \text{serialisation} \\
+    & \llbracket\_\rrbracket_{A} \in \var{A}\to\bytes
+  \end{align*}
+  \caption{Serialisation functions}
+\end{figure}
+
+Figure \ref{fig:serialisation} gives the definition of a serialisation function.
+We define this as a partial function since it is defined only on a subset of
+Haskell types. As an abuse of notation, we drop the subscript $A$ for the
+serialisation function on type $A$, since it is unambiguously determined by its
+first argument.
+
+We require our serialisation function to satisfy the following property:
+\begin{definition}[Distributivity over injective functions]
+  Let $s:\mathcal{C}\mapsto\_\to\var{D}$ be a function defined over a subset of
+  objects in $\mathcal{C}$, such that $s_A:A\to\var{D}$ for all $A\in\dom{s}$.
+  We say that $s$ \textit{distributes over injective functions} if, for all
+  injective functions $f:A\to B$ where $A,B\in\dom{s}$, there exists a function
+  $f_s:\var{D}\to\var{D}$ such that the following diagram commutes:
+  \[
+    \begin{tikzcd}
+      A \arrow{r}{f} \arrow{d}{s_A} & B \arrow{d}{s_B} \\
+      D \arrow{r}{f_s} & D
+    \end{tikzcd}
+  \]
+\end{definition}
 \end{document}
