@@ -23,11 +23,21 @@ outputs in the context of a block are given in
 Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
 
 \begin{note}
-  The protocal constants are currently modeled as a part of the
+  The protocol constants are currently modeled as a part of the
   chain extension environment. Once we adding voting
   (the mechanism which controls the protocol constants)
   to the model, it will probably make sense to move them to the
-  chain extension states.
+  chain extension states. The protocol constants will also be
+  added to the ledger state, along with some kind of rule which
+  combines voting with the UTxO rule:
+  \begin{equation*}
+    \inference[Voting-combine]
+    {
+      \var{pc} \trans{voting}{} \var{pc'} &
+      \var{pc'} \vdash \var{utxo} \trans{utxo}{} \var{utxo'}\\ ~ \\
+    }
+    {\ldots}
+  \end{equation*}
 \end{note}
 
 \begin{figure}
