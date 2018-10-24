@@ -109,8 +109,10 @@
 \newcommand{\predb}[1]{\fun{\predbname} ~ #1}
 \newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
 \newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
+\newcommand{\delegaator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
 
 \newcommand{\delmap}{\delta}
+\newcommand{\signmap}{\xi}
 
 % Partial and total function aliases
 \newcommand{\totalf}{\to}
@@ -341,7 +343,7 @@ Only signing keys with their verification counterparts in the genesis block
 have the right to sign blocks.
 %
 However, by the means of delegation certificates, keys from the genesis block
-can delegate signing rights to other keys.
+can delegate the signing right to other keys.
 %
 Delegation is not transitive, i.e., there is no chaining of delegation:
 %
@@ -443,7 +445,9 @@ right to sign the block in the given slot, the function returns nothing.
 If it does have the right, it returns the delegator's verification key.
 %
 Note that in the case when $vk_d \in VKeyGen$, i.e., when the verification key
-is a genesis block verification key, the function should return that same key.
+is a genesis block verification key, and it has not delegated its signing
+right to any other key, the function should return that same genesis block
+verification key.
 
 
 New delegation certificates are added to the blockchain in blocks, so the
@@ -494,19 +498,10 @@ discarded.
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
 
-\subsection{Properties}
-\label{sec:chain-properties}
-
 \begin{figure}[h]
   \emph{Primitive types}
   %
   \begin{align*}
-    sl & \in \Slot    & \text{slot time-stamp}\\
-   bIx & \in \BlockIx & \text{block index}\\
-    sk & \in \SKey    & \text{signing key}\\
-    vk & \in \VKey    & \text{verification key}\\
-     h & \in \BHash   & \text{block hash}\\
-   sig & \in \Sig     & \text{signature}\\
   data & \in \Data    & \text{data}
   \end{align*}
   %
@@ -514,19 +509,6 @@ discarded.
   %
   \begin{align*}
     sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
-    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
-    (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
-      & \text{non-genesis block} \\
-    b & \in \Block = \GBlock + \RBlock & \text{block} \\
-    \delmap & \in \VKeyGen \totalf \seqof{\HCert}
-      & \text{key to certificate list mapping}
-  \end{align*}
-  %
-  \emph{Abstract types}
-  %
-  \begin{align*}
-    c & \in \HCert & \text{delegation certificate}\\
   \end{align*}
   %
   \emph{Functions and relations}
@@ -540,8 +522,6 @@ discarded.
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\hashname} & \in \Block \totalf \BHash
-      & \text{block hash function}\\
     \text{\delegatename} & \in \SKeyGen \times \VKey \totalf \HCert
       & \text{delegation function}\\
     \text{\validname} & \in \RBlock \times \VKey
@@ -551,13 +531,15 @@ discarded.
     \text{\toseqname} & \in \type{A}^? \totalf \seqof{\type{A}}
       & \text{option to sequence function} \\
     \text{\predbseqname} & \in \Block \totalf \seqof{\Block}
-      & \text{block to sequence function}
+      & \text{block to sequence function} \\
+    \text{\delegatorname} & \in \VKey \times \Slot \partialf \VKeyGen^?
+      & \text{delegator function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
 \end{figure}
 
-\subsubsection{Delegation}
+\subsection{Delegation}
 \label{sec:delegation-properties}
 
 \marko{This whole subsection on delegation rules is out of date.
@@ -622,7 +604,7 @@ added, the delegation map is updated at $vk_s$, as given by
   }
 \end{equation}
 
-\subsubsection{Block Validity}
+\subsection{Block Validity}
 \label{sec:block-valid}
 % This definition is adopted from shelley-plan.md, which is written by
 % Duncan Coutts
@@ -630,8 +612,8 @@ added, the delegation map is updated at $vk_s$, as given by
 A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
-\item it is signed by a signing key $sk_d$ for which an active and valid
-  heavyweight delegation certificate $c$ exists.
+\item it is signed by a signing key $sk_d$ for which a valid heavyweight
+  delegation certificate $c$ that is active at the time of signing exists.
   %
   The certificate $c$ carries information that signing rights from a genesis
   block verification key $vk_s$ are transferred to a verification key $vk_d$
@@ -649,7 +631,6 @@ A non-genesis block $\var{b}$ is valid if:
   in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
 
-
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
@@ -658,6 +639,36 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
+
+
+\subsection{Counting Signed Blocks}
+\label{sec:counting-signed-blocks}
+
+Initially, when the blockchain is made of the genesis block only, no key from
+the genesis block signed (directly or indirectly via delegation) a block, as
+given by \eqref{eq:init-signed-blocks}.
+
+\begin{equation}
+  \label{eq:init-signed-blocks}
+  \inference[Initial-signing-map]
+  {}
+  {\signmap = \emptyset}
+\end{equation}
+
+
+A new block $b$ with an index $bIx \in BlockIx$, signed by a signing key
+$sk_d$ in a slot $sl$ can extend a blockchain if the following conditions are
+met:
+%
+\begin{enumerate}
+\item $sk_d$ has a corresponding verification key $vk_d$ that has delegation
+  rights for the slot $sl$, and
+\item new delegation certificates that are in the body of $b$ are not in
+  conflict with earlier delegation certificates.
+\end{enumerate}
+
+This is encoded by an inference rule given in \eqref{}.
+
 
 
 The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
