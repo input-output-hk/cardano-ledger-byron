@@ -125,12 +125,15 @@
 
 \author{Marko Dimjašević}
 
-\date{October 17, 2018}
+\date{October 24, 2018}
 
 \maketitle
 
 \begin{abstract}
 This documents defines a semantics for operations on a blockchain.
+%
+In particular, a block validity definition is given, which is accompanied by
+small-step operational semantics inference rules.
 \end{abstract}
 
 \tableofcontents
@@ -138,6 +141,19 @@ This documents defines a semantics for operations on a blockchain.
 
 \section{Introduction}
 \label{sec:introduction}
+
+The idea behind this document is to formalise what it means for a new block to
+be added to the blockchain to be valid.
+%
+Unless a new block is valid, it cannot be added to the blockchain and thereby
+extend it.
+%
+This is needed for a system that is subscribed to the blockchain and keeps a
+copy of it locally.
+%
+In particular, this document gives a formalisation that should be
+straightforward to implement in a programming language, e.g., in Haskell.
+
 
 \section{Preliminaries}
 \label{sec:preliminaries}
