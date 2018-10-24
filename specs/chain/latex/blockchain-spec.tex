@@ -82,7 +82,7 @@
 %%
 %% Function and relation names
 %%
-\newcommand{\hashname}{hash}
+\newcommand{\hashname}{bHash}
 \newcommand{\signname}{sign}
 \newcommand{\signedname}{signed}
 \newcommand{\signedseqname}{signedc}
@@ -93,6 +93,7 @@
 \newcommand{\predbname}{pred} % block predecessor
 \newcommand{\toseqname}{toSeq} % option type to a sequence
 \newcommand{\predbseqname}{bs} % block predecessor to a sequence
+\newcommand{\delegatorname}{delegator} % the delegator of a delegatee in a given slot
 
 %% 
 %% Functions and relations
@@ -177,6 +178,139 @@ straightforward to implement in a programming language, e.g., in Haskell.
 
 \section{Basic definitions}
 \label{sec:basic-definitions}
+
+This section gives definitions of basic types and functions that operate on
+and with blocks and heavyweight delegation certificates.
+
+
+\subsection{Heavyweight Delegation Certificates}
+\label{sec:certificates}
+
+A heavyweight delegation certificate is a proof that a genesis block
+verification key $vk_s$ is delegating its right to sign a block to a signing
+key $sk_d$, which has a corresponding verification key $vk_d$, starting with a
+slot $sl$, which is confirmed by a cryptographic signature $\sigma$.
+%
+The type for a heavyweight delegation certificate is kept abstract in this
+document, but it is a product type with projection functions for the
+following:
+%
+\begin{itemize}
+\item a delegator key,
+\item a delegatee key,
+\item a slot, and
+\item a cryptographic signature.
+\end{itemize}
+
+Basic types and functions pertaining to heavyweight delegation certificates
+are given in Figure~\ref{fig:cert-defs}.
+
+\begin{figure}
+  \emph{Primitive types}
+  %
+  \begin{align*}
+    sl & \in \Slot    & \text{slot time-stamp}\\
+   sig & \in \Sig     & \text{cryptographic signature}\\
+    sk & \in \SKey    & \text{signing key}\\
+    vk & \in \VKey    & \text{verification key}\\
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
+  \end{align*}
+  %
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    c & \in \HCert  & \text{heavyweight delegation certificate} \\
+  \end{align*}
+  %
+  \emph{Functions}
+  %
+  \begin{align*}
+    \text{cFrom} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
+    \text{cTo} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
+    \text{cSl} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
+    \text{cSig} & \in \HCert \totalf \Sig & \text{certificate signature projection}
+  \end{align*}
+  %
+  \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
+  \label{fig:cert-defs}
+\end{figure}
+
+
+\subsection{Blocks}
+\label{sec:blocks}
+
+A block is an element of a blockchain.
+%
+A blockchain is extended by appending a block.
+%
+There are two types of blocks.
+%
+The first type is the genesis block, denoted by $\GBlock$ in this document,
+which is made of a set of $n$ verification keys;
+%
+these keys are often referred to as genesis block verification keys.
+%
+Every blockchain starts with a genesis block.
+%
+The second type is for a non-genesis block, denoted by $\RBlock$.
+%
+In this document $\RBlock$ is kept abstract, but it is a product type with
+projection functions for the following:
+%
+\begin{itemize}
+\item a block index,
+\item a block hash pointing to the block's predecessor,
+\item a slot it is in,
+\item a set of heavyweight delegation certificates in the body, and
+\item a cryptographic signature.
+\end{itemize}
+
+
+Basic types and functions pertaining to blocks are given in
+Figure~\ref{fig:block-defs}.
+
+\begin{figure}
+  \emph{Primitive types}
+  %
+  \begin{align*}
+    ix & \in \BlockIx & \text{block index}\\
+     h & \in \BHash   & \text{block hash}\\
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
+    b & \in \Block = \GBlock + \RBlock & \text{block} \\
+  \end{align*}
+  %
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    r & \in \RBlock & \text{non-genesis block}
+  \end{align*}
+  %
+  \emph{Functions and relations}
+  %
+  \begin{align*}
+    \text{bIx} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
+    \text{\hashname} & \in \RBlock \totalf \BHash
+      & \text{block hash projection} \\
+    \text{bSl} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
+    \text{bCerts} & \in \RBlock \totalf \seqof{\HCert}
+      & \text{block certificates projection} \\
+    \text{bSig} & \in \RBlock \totalf \Sig & \text{block signature projection}
+  \end{align*}
+  %
+  \caption{Basic Block-related Types and Functions}
+  \label{fig:block-defs}
+\end{figure}
+
 
 \section{Auxiliary definitions}
 \label{sec:auxil-defin}
@@ -307,6 +441,9 @@ If the verification key does not have the delegation right, i.e., it has no
 right to sign the block in the given slot, the function returns nothing.
 %
 If it does have the right, it returns the delegator's verification key.
+%
+Note that in the case when $vk_d \in VKeyGen$, i.e., when the verification key
+is a genesis block verification key, the function should return that same key.
 
 
 New delegation certificates are added to the blockchain in blocks, so the
@@ -493,20 +630,23 @@ added, the delegation map is updated at $vk_s$, as given by
 A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
-\item it is signed by a signing key $sk_d$ for which a current valid
-  delegation certificate $c$ exists.
+\item it is signed by a signing key $sk_d$ for which an active and valid
+  heavyweight delegation certificate $c$ exists.
   %
-  The certificate $c$ delegates signing rights from a genesis block
-  verification key $vk_s$ to a verification key $vk_d$ starting in a slot
-  $sl$, which is confirmed by a cryptographic signature $\sigma'$,
+  The certificate $c$ carries information that signing rights from a genesis
+  block verification key $vk_s$ are transferred to a verification key $vk_d$
+  starting in a slot $sl$,
 \item the corresponding certificate $c$ is signed by a key $sk_s$ that has a
-  corresponding verification key in the genesis block, and
-\item in the rolling window of the last $K$ blocks the number of blocks signed
-  by keys that $sk_s$ delegated to is no more than a threshold $K \cdot t$,
-  where $t$ is a constant\footnote{This is not the same $t$ from the Ouroboros
-    BFT paper draft where it denotes the number of Byzantine servers, though
-    it should be somehow related to it.}  that will be picked in the range
-  $1/5 \leq t \leq 1/4$.
+  corresponding verification key in the genesis block.
+  %
+  The certificate therefore carries a a cryptographic signature $\sigma'$,
+  and
+\item in the rolling window of the last $K$ blocks, the number of blocks
+  signed by keys that $sk_s$ delegated to is no more than a threshold
+  $K \cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from
+    the Ouroboros BFT paper draft where it denotes the number of Byzantine
+    servers, though it should be somehow related to it.}  that will be picked
+  in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
 
 
