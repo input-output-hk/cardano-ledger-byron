@@ -94,6 +94,7 @@
 \newcommand{\toseqname}{toSeq} % option type to a sequence
 \newcommand{\predbseqname}{bs} % block predecessor to a sequence
 \newcommand{\delegatorname}{delegator} % the delegator of a delegatee in a given slot
+\newcommand{\signmapname}{smap}
 
 %% 
 %% Functions and relations
@@ -109,10 +110,10 @@
 \newcommand{\predb}[1]{\fun{\predbname} ~ #1}
 \newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
 \newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
-\newcommand{\delegaator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
+\newcommand{\delegator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
+\newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
 
 \newcommand{\delmap}{\delta}
-\newcommand{\signmap}{\xi}
 
 % Partial and total function aliases
 \newcommand{\totalf}{\to}
@@ -652,11 +653,11 @@ given by \eqref{eq:init-signed-blocks}.
   \label{eq:init-signed-blocks}
   \inference[Initial-signing-map]
   {}
-  {\signmap = \emptyset}
+  {\signmapname = \emptyset}
 \end{equation}
 
 
-A new block $b$ with an index $bIx \in BlockIx$, signed by a signing key
+A new block $b$ with an index $ix \in BlockIx$, signed by a signing key
 $sk_d$ in a slot $sl$ can extend a blockchain if the following conditions are
 met:
 %
@@ -667,9 +668,22 @@ met:
   conflict with earlier delegation certificates.
 \end{enumerate}
 
-This is encoded by an inference rule given in \eqref{}.
+\marko{We need a map (denoted as \signmapname in
+  Figure~\ref{fig:blockchain-extension}) from genesis block verification keys
+  to a queue of block indices. For a new block to be added to the blockchain,
+  we push the block's index to the queue. We pop from the queue if the head of
+  the queue is more than $K$ blocks away from $ix$.}
 
 
+\begin{figure}
+  \begin{equation*}
+  \inference[Blockchain-extension]
+  {vk_s = \delegator{vk_d}{sl} \wedge \size{\signmap{vk_s}} \leq K \cdot t}
+  {}
+  \end{equation*}
+  \caption{Blockchain-extension}
+  \label{fig:blockchain-extension}
+\end{figure}
 
 The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
 
