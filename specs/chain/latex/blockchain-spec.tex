@@ -71,6 +71,7 @@
 \newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\HCert}{\type{C}}
+\newcommand{\Queue}{\type{Q}}
 
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\SKeyGen}{\type{SKey_G}}
@@ -94,7 +95,11 @@
 \newcommand{\toseqname}{toSeq} % option type to a sequence
 \newcommand{\predbseqname}{bs} % block predecessor to a sequence
 \newcommand{\delegatorname}{delegator} % the delegator of a delegatee in a given slot
-\newcommand{\signmapname}{smap}
+\newcommand{\signmapname}{\mathcal{M}}
+\newcommand{\trimixname}{trimIx}
+\newcommand{\incixmapname}{incIxMap}
+\newcommand{\bcertsname}{bCerts}
+\newcommand{\postnewcertsname}{postNewCerts}
 
 %% 
 %% Functions and relations
@@ -112,6 +117,10 @@
 \newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
 \newcommand{\delegator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
+\newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
+\newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
+\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
+\newcommand{\postnewcerts}[1]{\fun{\postnewcertsname} ~ #1}
 
 \newcommand{\delmap}{\delta}
 
@@ -119,6 +128,8 @@
 \newcommand{\totalf}{\to}
 \newcommand{\partialf}{\mapsto}
 
+% A type alias for a map from a genesis block verification key to a queue of indices
+\newcommand{\mapqueue}{\mathcal{Q}}
 % comments
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
@@ -177,6 +188,30 @@ straightforward to implement in a programming language, e.g., in Haskell.
 \item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
   $A$ case corresponds to a case when there is a value of type $A$ and the $1$
   case corresponds to a case when there is no value.
+\item[Union override] The union override operation is defined in
+  Figure~\ref{fig:unionoverride}.
+  %
+  \begin{figure}
+    \begin{align*}
+      \var{K} \restrictdom \var{M}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ i \in \var{K} \}
+      & \text{domain restriction}
+      \\
+      \var{K} \subtractdom \var{M}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ i \notin \var{K} \}
+      & \text{domain exclusion}
+      \\
+      \var{M} \restrictrange \var{V}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ o \in \var{V} \}
+      & \text{range restriction}
+      \\
+      & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
+      & \text{union override}\\
+      & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
+    \end{align*}
+    \caption{Definition of the Union Override Operation}
+    \label{fig:unionoverride}
+  \end{figure}
 \end{description}
 
 \section{Basic definitions}
@@ -305,7 +340,7 @@ Figure~\ref{fig:block-defs}.
     \text{\hashname} & \in \RBlock \totalf \BHash
       & \text{block hash projection} \\
     \text{bSl} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
-    \text{bCerts} & \in \RBlock \totalf \seqof{\HCert}
+    \text{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates projection} \\
     \text{bSig} & \in \RBlock \totalf \Sig & \text{block signature projection}
   \end{align*}
@@ -458,27 +493,10 @@ block is to be added to the blockchain.
 Therefore, as part of the delegation interface, the blockchain layer exposes
 new delegation certificates functionality to the ledger layer.
 %
-This functionality should communicate at least the following information for
-each new delegation certificate:
-%
-\begin{enumerate}
-\item the delegator's verification key,
-%
-\item the delegatee's verification key, and
-%
-\item the slot when the delegation becomes active (this is in K slots from the
-  current slot).
-\end{enumerate}
-%
 In Haskell, the signature of the corresponding function is:
 %
 \begin{lstlisting}
-postNewCerts ::
-             ( VKey vk_d
-             , VKeyGen vk_s
-             , MonadError CertErr m )
-             => Set (vk_s, vk_d, Slot)
-             -> m ()
+postNewCerts :: (HCert c, MonadError CertErr m) => Set c -> m ()
 \end{lstlisting}
 %
 The return type of the function signals the possibility of failure.
@@ -645,9 +663,14 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 \subsection{Counting Signed Blocks}
 \label{sec:counting-signed-blocks}
 
+To make sure no signing key with a corresponding genesis block verification
+key gets to sign too many blocks, a state is maintained by keeping a mapping
+of keys to a queue of signed blocks in a sliding window of at most K last
+blocks in the blockchain.
+%
 Initially, when the blockchain is made of the genesis block only, no key from
-the genesis block signed (directly or indirectly via delegation) a block, as
-given by \eqref{eq:init-signed-blocks}.
+the genesis block signed a block (neither directly or indirectly via
+delegation), as given by \eqref{eq:init-signed-blocks}.
 
 \begin{equation}
   \label{eq:init-signed-blocks}
@@ -656,10 +679,48 @@ given by \eqref{eq:init-signed-blocks}.
   {\signmapname = \emptyset}
 \end{equation}
 
+Map $\signmapname$'s type is given in Figure~\ref{fig:block-ext-types-funs}.
 
-A new block $b$ with an index $ix \in BlockIx$, signed by a signing key
-$sk_d$ in a slot $sl$ can extend a blockchain if the following conditions are
-met:
+\begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    q & \in \Queue_\BlockIx  & \text{block index queue}
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}
+  \end{align*}
+  %
+  \emph{Type aliases}
+  %
+  \begin{align*}
+    \mapqueue = \VKeyGen \totalf \Queue_\BlockIx
+  \end{align*}
+  \emph{Functions}
+  %
+  \begin{align*}
+    \text{qHead} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
+    \text{qPush} & \in \Queue_\BlockIx \times \BlockIx \totalf \Queue_\BlockIx
+      & \text{queue push function} \\
+    \text{qPop} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
+      & \text{queue pop function} \\
+    \text{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
+      & \text{old block removal function} \\
+    \text{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+      & \text{block count increment function}
+  \end{align*}
+  %
+  \caption{Block Extension Types and Functions}
+  \label{fig:block-ext-types-funs}
+\end{figure}
+
+
+A new block $b \in \RBlock$ with an index $ix \in BlockIx$, signed by a
+signing key $sk_d$ in a slot $sl$ can extend a blockchain if the following
+conditions are met:
 %
 \begin{enumerate}
 \item $sk_d$ has a corresponding verification key $vk_d$ that has delegation
@@ -668,18 +729,25 @@ met:
   conflict with earlier delegation certificates.
 \end{enumerate}
 
-\marko{We need a map (denoted as \signmapname in
+\marko{We need a map (denoted as $\signmapname$ in
   Figure~\ref{fig:blockchain-extension}) from genesis block verification keys
   to a queue of block indices. For a new block to be added to the blockchain,
-  we push the block's index to the queue. We pop from the queue if the head of
-  the queue is more than $K$ blocks away from $ix$.}
+  we push the block's index to the queue. For each queue, we pop from the
+  queue if the head of the queue is more than $K$ blocks away from $ix$.}
 
 
 \begin{figure}
   \begin{equation*}
   \inference[Blockchain-extension]
-  {vk_s = \delegator{vk_d}{sl} \wedge \size{\signmap{vk_s}} \leq K \cdot t}
-  {}
+  {
+    {\begin{array}{c}
+      vk_s = \delegator{vk_d}{sl} \wedge \size{\signmap{vk_s}} \leq K \cdot t \\
+      \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
+      \mathcal{C} = \bcerts{b} \\
+      \postnewcerts{\mathcal{C}}
+    \end{array}}
+  }
+  {\signmapname \trans{}{b} \signmapname'}
   \end{equation*}
   \caption{Blockchain-extension}
   \label{fig:blockchain-extension}
