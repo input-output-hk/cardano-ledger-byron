@@ -14,6 +14,11 @@ extra-deps:
     subdirs:
       - .
       - test
+  - git: https://github.com/well-typed/cborg
+    commit: 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d
+    subdirs:
+      - cborg
+
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

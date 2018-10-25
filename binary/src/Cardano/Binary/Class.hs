@@ -5,3 +5,4 @@ module Cardano.Binary.Class
 import           Cardano.Binary.Class.Core as X
 import           Cardano.Binary.Class.Drop as X
 import           Cardano.Binary.Class.Primitive as X
+import           Cardano.Binary.Class.Annotated as X
