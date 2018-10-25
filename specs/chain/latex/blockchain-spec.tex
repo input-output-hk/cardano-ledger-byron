@@ -668,6 +668,24 @@ via delegation), as given by \eqref{eq:init-signed-blocks}.
 The type of map $\signmapname$ is given in
 Figure~\ref{fig:block-ext-types-funs}.
 
+Once a new block arrives, map $\signmapname$ has to be updated.
+%
+In particular, if a block with an index $ix$ signed by a signing key
+corresponding to a verification key $vk_d$ is to be added to the blockchain,
+the sliding window of the last $K$ blocks moves by one block and the map
+$\signmapname$ has to be updated for the key that signed the $K^{\text{th}}$
+previous block;
+%
+this is done with $\trimix{\signmapname}{ix}$.
+%
+To finish updating the map, the updated version of $\signmapname$ denoted by
+$\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
+with $\incixmap{vk_s}{\signmapname'}{ix}$.
+%
+Types of both of these functions are given in
+Figure~\ref{fig:block-ext-types-funs}.
+
+
 \begin{figure}
   \emph{Abstract types}
   %
@@ -705,6 +723,9 @@ Figure~\ref{fig:block-ext-types-funs}.
 \end{figure}
 
 
+\subsection{Blockchain Extension}
+\label{sec:chain-extension}
+
 A new block $b \in \RBlock$ with an index $ix \in BlockIx$, signed by a
 signing key $sk_d$ in a slot $sl$ can extend a blockchain if the following
 conditions are met:
@@ -716,6 +737,8 @@ conditions are met:
   conflict with earlier delegation certificates.
 \end{enumerate}
 
+A rule capturing the blockchain extension is given in
+Figure~\ref{fig:blockchain-extension}.
 
 \begin{figure}
   \begin{equation*}
