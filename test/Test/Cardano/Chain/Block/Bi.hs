@@ -24,7 +24,7 @@ import qualified Hedgehog as H
 import           Cardano.Binary.Class (decodeFullDecoder, dropBytes,
                      serializeEncoding)
 import           Cardano.Chain.Block (BlockSignature (..), Body (..),
-                     ConsensusData (..), ExtraBodyData (..),
+                     ConsensusData, consensusData, ExtraBodyData (..),
                      ExtraHeaderData (..), Header, HeaderHash, Proof (..),
                      SlogUndo (..), ToSign (..), Undo (..), decodeBlock,
                      decodeHeader, dropBoundaryBody, dropBoundaryConsensusData,
@@ -193,7 +193,7 @@ roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
 golden_ConsensusData :: Property
 golden_ConsensusData = goldenTestBi mcd "test/golden/block/ConsensusData"
  where
-  mcd = ConsensusData
+  mcd = consensusData
     exampleSlotId
     examplePublicKey
     exampleChainDifficulty
@@ -301,7 +301,7 @@ exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
   pm = ProtocolMagic 2
 
 exampleConsensusData :: ConsensusData
-exampleConsensusData = ConsensusData
+exampleConsensusData = consensusData
   exampleSlotId
   examplePublicKey
   exampleChainDifficulty

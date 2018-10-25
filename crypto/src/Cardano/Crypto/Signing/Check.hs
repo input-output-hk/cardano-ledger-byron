@@ -10,6 +10,7 @@
 
 module Cardano.Crypto.Signing.Check
        ( checkSig
+       , checkSigAnnotated
        , checkSigRaw
        , verifyProxyCert
        , validateProxySecretKey
@@ -22,7 +23,7 @@ import qualified Cardano.Crypto.Wallet as CC
 import           Control.Monad.Except (MonadError, throwError)
 import           Data.Coerce (coerce)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import           Cardano.Binary.Class (Annotated (..), Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import           Cardano.Crypto.Signing.Tag (SignTag (..), signTag)
@@ -37,6 +38,10 @@ import           Cardano.Crypto.Signing.Types.Signing (ProxyCert (..),
 checkSig
   :: Bi a => ProtocolMagic -> SignTag -> PublicKey -> a -> Signature a -> Bool
 checkSig pm t k x s = checkSigRaw pm (Just t) k (Bi.serialize' x) (coerce s)
+
+checkSigAnnotated
+  :: ProtocolMagic -> SignTag -> PublicKey -> (Annotated a ByteString) -> Signature a -> Bool
+checkSigAnnotated pm t k x s = checkSigRaw pm (Just t) k (annotation x) (coerce s)
 
 -- CHECK: @checkSigRaw
 -- | Verify raw 'ByteString'

@@ -50,12 +50,12 @@ import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
                      dropBoundaryExtraBodyData)
 import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData (..))
 import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
-import           Cardano.Chain.Block.Header (BlockSignature (..), Header (..),
+import           Cardano.Chain.Block.Header (BlockSignature (..), Header,
                      HeaderError, HeaderHash, dropBoundaryHeader, hashHeader,
                      headerAttributes, headerBlockVersion, headerDifficulty,
                      headerEBDataProof, headerLeaderKey, headerSignature,
                      headerSlot, headerSoftwareVersion, mkHeaderExplicit,
-                     verifyHeader)
+                     verifyHeader, headerPrevHash, headerProof)
 import           Cardano.Chain.Block.Proof (Proof (..), ProofError, checkProof)
 import           Cardano.Chain.Common (Attributes, ChainDifficulty,
                      mkAttributes)

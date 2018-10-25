@@ -20,7 +20,7 @@ import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 
 import           Cardano.Chain.Block (Block, BlockSignature (..), Body (..),
-                     ConsensusData (..), ExtraBodyData (..),
+                     ConsensusData, consensusData, ExtraBodyData (..),
                      ExtraHeaderData (..), Header, HeaderHash, Proof (..),
                      SlogUndo (..), ToSign (..), Undo (..), mkBlockExplicit,
                      mkHeaderExplicit)
@@ -75,7 +75,7 @@ genHeader pm epochSlots =
 
 genConsensusData :: ProtocolMagic -> SlotCount -> Gen ConsensusData
 genConsensusData pm epochSlots =
-  ConsensusData
+  consensusData
     <$> genSlotId epochSlots
     <*> genPublicKey
     <*> genChainDifficulty

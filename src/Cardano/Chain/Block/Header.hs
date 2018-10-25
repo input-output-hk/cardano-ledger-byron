@@ -7,9 +7,14 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DeriveFunctor        #-}
 
 module Cardano.Chain.Block.Header
-       ( Header (..)
+       ( Header
+       , header
+       , headerPrevHash
+       , headerProof
+
        , mkHeader
        , mkHeaderExplicit
        , headerSlot
@@ -37,6 +42,7 @@ module Cardano.Chain.Block.Header
        , ToSign (..)
 
        , ConsensusData (..)
+       , consensusData
        , verifyConsensusData
        ) where
 
@@ -45,8 +51,9 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
+import qualified Data.ByteString.Lazy as LBS
 
-import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
+import           Cardano.Binary.Class (Annotated (..), ByteSpan, Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, dropBytes, dropInt32, encodeListLen,
                      enforceSize, serializeEncoding)
 import           Cardano.Chain.Block.Body (Body)
@@ -66,8 +73,8 @@ import           Cardano.Chain.Slotting (SlotId (..), slotIdF)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
-                     SignTag (..), Signature, checkSig, hashHexF,
-                     isSelfSignedPsk, proxySign, proxyVerify, psigPsk, sign,
+                     SignTag (..), Signature, checkSig, checkSigAnnotated, checkSigRaw, hashHexF,
+                     isSelfSignedPsk, proxySign, proxyVerify, proxyVerifyAnnotated, psigPsk, sign,
                      toPublic, unsafeAbstractHash)
 
 
@@ -75,17 +82,36 @@ import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
 -- Header
 --------------------------------------------------------------------------------
 
-data Header = Header
-  { headerProtocolMagic :: !ProtocolMagic
-  , headerPrevHash      :: !HeaderHash
+type Header = AHeader ()
+
+header :: ProtocolMagic -> HeaderHash -> Proof -> ConsensusData -> ExtraHeaderData -> Header
+header pm hh p cd ehd = AHeader
+  pm
+  (Annotated hh ())
+  (Annotated p ())
+  cd
+  (Annotated ehd ())
+
+data AHeader a = AHeader
+  { headerProtocolMagic  :: !ProtocolMagic
+  , aHeaderPrevHash      :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
-  , headerProof         :: !Proof
+  , aHeaderProof         :: !(Annotated Proof a)
   -- ^ Proof of body
-  , headerConsensusData :: !ConsensusData
+  , headerConsensusData  :: !(AConsensusData a)
   -- ^ Consensus data to verify consensus algorithm
-  , headerExtraData     :: !ExtraHeaderData
+  , aHeaderExtraData     :: !(Annotated ExtraHeaderData a)
   -- ^ Any extra data
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, Functor)
+
+headerPrevHash :: AHeader a -> HeaderHash
+headerPrevHash = unAnnotated . aHeaderPrevHash
+
+headerProof :: AHeader a -> Proof
+headerProof = unAnnotated . aHeaderProof
+
+headerExtraData :: AHeader a -> ExtraHeaderData
+headerExtraData = unAnnotated . aHeaderExtraData
 
 instance B.Buildable Header where
   build header = bprint
@@ -111,17 +137,17 @@ instance B.Buildable Header where
     consensus  = headerConsensusData header
 
 instance Bi Header where
-  encode header =
+  encode h =
     encodeListLen 5
-      <> encode (getProtocolMagic (headerProtocolMagic header))
-      <> encode (headerPrevHash header)
-      <> encode (headerProof header)
-      <> encode (headerConsensusData header)
-      <> encode (headerExtraData header)
+      <> encode (getProtocolMagic (headerProtocolMagic h))
+      <> encode (headerPrevHash h)
+      <> encode (headerProof h)
+      <> encode (headerConsensusData h)
+      <> encode (headerExtraData h)
 
   decode = do
     enforceSize "Header" 5
-    Header
+    header
       <$> (ProtocolMagic <$> decode)
       <*> decode
       <*> decode
@@ -160,7 +186,7 @@ mkHeaderExplicit
   -> ExtraHeaderData
   -> Header
 mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
-  Header pm prevHash proof consensus extra
+  header pm prevHash proof consensus extra
  where
   proof = mkProof body
   makeSignature toSign (psk, _) =
@@ -173,12 +199,7 @@ mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
         (makeSignature toSign)
         pske
   leaderPk  = maybe (toPublic sk) snd pske
-  consensus = ConsensusData
-    { consensusSlot       = slotId
-    , consensusLeaderKey  = leaderPk
-    , consensusDifficulty = difficulty
-    , consensusSignature  = signature
-    }
+  consensus = consensusData slotId leaderPk difficulty signature
 
 headerSlot :: Header -> SlotId
 headerSlot = consensusSlot . headerConsensusData
@@ -220,9 +241,10 @@ instance B.Buildable HeaderError where
     HeaderInvalidSignature sig ->
       bprint ("Invalid signature while checking Header.\n" . build) sig
 
+
 -- | Verify a main block header in isolation
-verifyHeader :: MonadError HeaderError m => ProtocolMagic -> Header -> m ()
-verifyHeader pm header = do
+verifyAHeader :: MonadError HeaderError m => ProtocolMagic -> AHeader LBS.ByteString -> m ()
+verifyAHeader pm header_ = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although must
   -- be checked against the actual body, in verifyBlock. Consensus data and
@@ -230,38 +252,36 @@ verifyHeader pm header = do
   either (throwError . HeaderConsensusError) pure
     $ verifyConsensusData consensus
   either (throwError . HeaderExtraDataError) pure
-    $ verifyExtraHeaderData (headerExtraData header)
+    $ verifyExtraHeaderData (headerExtraData header_)
   -- Internal consistency: is the signature in the consensus data really for
   -- this block?
   unless (verifyBlockSignature $ consensusSignature consensus)
     $ throwError (HeaderInvalidSignature $ consensusSignature consensus)
  where
   verifyBlockSignature (BlockSignature sig) =
-    checkSig pm SignMainBlock (consensusLeaderKey consensus) signature sig
-  verifyBlockSignature (BlockPSignatureLight proxySig) = proxyVerify
+    checkSigAnnotated pm SignMainBlock (consensusLeaderKey consensus) signed sig
+  verifyBlockSignature (BlockPSignatureLight proxySig) = proxyVerifyAnnotated
     pm
     SignMainBlockLight
     proxySig
     (\(LightDlgIndices (epochLow, epochHigh)) ->
       epochLow <= epochId && epochId <= epochHigh
     )
-    signature
+    signed
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
-    proxyVerify pm SignMainBlockHeavy proxySig (const True) signature
+    proxyVerifyAnnotated pm SignMainBlockHeavy proxySig (const True) signed
 
-  signature = ToSign
-    (headerPrevHash header)
-    (headerProof header)
-    (consensusSlot consensus)
-    (consensusDifficulty consensus)
-    (headerExtraData header)
+  signed = LBS.toStrict <$> recoverSignedBytes header_
 
   epochId   = siEpoch $ consensusSlot consensus
 
-  consensus = headerConsensusData header
+  consensus = headerConsensusData header_
+
+verifyHeader :: MonadError HeaderError m => ProtocolMagic -> Header -> m ()
+verifyHeader = undefined
 
 encodeHeader :: Header -> Encoding
-encodeHeader header = encodeListLen 2 <> encode (1 :: Word) <> encode header
+encodeHeader h = encodeListLen 2 <> encode (1 :: Word) <> encode h
 
 decodeHeader :: Decoder s (Maybe Header)
 decodeHeader = do
@@ -345,10 +365,30 @@ instance Bi BlockSignature where
       2 -> BlockPSignatureHeavy <$> decode
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
-
 --------------------------------------------------------------------------------
 -- ToSign
 --------------------------------------------------------------------------------
+
+-- | Produces the ByteString that was signed in the block
+recoverSignedBytes :: AHeader LBS.ByteString -> Annotated ToSign LBS.ByteString
+recoverSignedBytes h = Annotated toSign bytes
+  where
+    bytes = LBS.concat
+      [ "\133"
+      -- This is the value of Codec.CBOR.Write.toLazyByteString (encodeListLen 5)
+      -- It is hard coded here because the signed bytes included it as an implementation artifact
+      , (annotation . aHeaderPrevHash) h
+      , (annotation . aHeaderProof) h
+      , (annotation . aConsensusSlot . headerConsensusData) h
+      , (annotation . aConsensusDifficulty . headerConsensusData) h
+      , (annotation . aHeaderExtraData) h
+      ]
+    toSign = ToSign
+      (headerPrevHash h)
+      (headerProof h)
+      (consensusSlot . headerConsensusData $ h)
+      (consensusDifficulty . headerConsensusData $ h)
+      (headerExtraData h)
 
 -- | Data to be signed in 'Block'
 data ToSign = ToSign
@@ -378,18 +418,29 @@ instance Bi ToSign where
 -- ConsensusData
 --------------------------------------------------------------------------------
 
-data ConsensusData = ConsensusData
-  { consensusSlot       :: !SlotId
+type ConsensusData = AConsensusData ()
+
+consensusData :: SlotId -> PublicKey -> ChainDifficulty -> BlockSignature -> ConsensusData
+consensusData sid pk cd bs = AConsensusData (Annotated sid ()) pk (Annotated cd ()) bs
+
+data AConsensusData a = AConsensusData
+  { aConsensusSlot       :: !(Annotated SlotId a)
   -- ^ Id of the slot for which this block was generated
   , consensusLeaderKey  :: !PublicKey
   -- ^ Public key of the slot leader. It's essential to have it here, because
   --   FTS gives us only hash of public key (aka 'StakeholderId').
-  , consensusDifficulty :: !ChainDifficulty
+  , aConsensusDifficulty :: !(Annotated ChainDifficulty a)
   -- ^ Difficulty of chain ending in this block
   , consensusSignature  :: !BlockSignature
   -- ^ Signature given by slot leader
-  } deriving (Generic, Show, Eq)
+  } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
+
+consensusSlot :: AConsensusData a -> SlotId
+consensusSlot = unAnnotated . aConsensusSlot
+
+consensusDifficulty :: AConsensusData a -> ChainDifficulty
+consensusDifficulty = unAnnotated . aConsensusDifficulty
 
 instance Bi ConsensusData where
   encode cd =
@@ -401,7 +452,7 @@ instance Bi ConsensusData where
 
   decode = do
     enforceSize "ConsensusData" 4
-    ConsensusData <$> decode <*> decode <*> decode <*> decode
+    consensusData <$> decode <*> decode <*> decode <*> decode
 
 data ConsensusError = ConsensusSelfSignedPSK
 
@@ -411,7 +462,7 @@ instance B.Buildable ConsensusError where
       bprint "Self-signed ProxySecretKey in ConsensusData"
 
 -- | Verify the consensus data in isolation
-verifyConsensusData :: MonadError ConsensusError m => ConsensusData -> m ()
+verifyConsensusData :: MonadError ConsensusError m => AConsensusData a -> m ()
 verifyConsensusData mcd = when (selfSignedProxy $ consensusSignature mcd)
   $ throwError ConsensusSelfSignedPSK
  where

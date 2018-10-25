@@ -24,6 +24,7 @@ module Cardano.Crypto.Signing.Signing
        , validateProxySecretKey        -- reexport
        , proxySign
        , proxyVerify
+       , proxyVerifyAnnotated
 
        , module Cardano.Crypto.Signing.Types.Signing
        ) where
@@ -33,11 +34,10 @@ import           Cardano.Prelude
 import qualified Cardano.Crypto.Wallet as CC
 import           Crypto.Random (MonadRandom, getRandomBytes)
 import           Data.ByteArray (ScrubbedBytes)
-import qualified Data.ByteString as BS
 import           Data.Coerce (coerce)
 import           Formatting (build, sformat)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import           Cardano.Binary.Class (Bi, Raw, Annotated(..))
 import qualified Cardano.Binary.Class as Bi
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import           Cardano.Crypto.Signing.Check (checkSig, checkSigRaw,
@@ -56,7 +56,7 @@ emptyPass = mempty
 
 -- TODO: this is just a placeholder for actual (not ready yet) derivation
 -- of keypair from seed in cardano-crypto API
-createKeypairFromSeed :: BS.ByteString -> (CC.XPub, CC.XPrv)
+createKeypairFromSeed :: ByteString -> (CC.XPub, CC.XPrv)
 createKeypairFromSeed seed =
   let prv = CC.generate seed emptyPass in (CC.toXPub prv, prv)
 
@@ -70,7 +70,7 @@ keyGen = do
   return (PublicKey pk, SecretKey sk)
 
 -- | Create key pair deterministically from 32 bytes.
-deterministicKeyGen :: BS.ByteString -> (PublicKey, SecretKey)
+deterministicKeyGen :: ByteString -> (PublicKey, SecretKey)
 deterministicKeyGen seed =
   bimap PublicKey SecretKey (createKeypairFromSeed seed)
 
@@ -147,9 +147,31 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
           -- issuerPk` always takes 64 bytes
               ["01", CC.unXPub issuerPk, signTag pm t, Bi.serialize' m]
 
+
+-- | Verify delegated signature given issuer's pk, signature, message
+--   space predicate and message itself.
+proxyVerifyAnnotated
+  :: ProtocolMagic
+  -> SignTag
+  -> ProxySignature w a
+  -> (w -> Bool)
+  -> Annotated a ByteString
+  -> Bool
+proxyVerifyAnnotated pm t psig omegaPred m = predCorrect && sigValid
+ where
+  psk = psigPsk psig
+  PublicKey issuerPk        = pskIssuerPk psk
+  PublicKey pdDelegatePkRaw = pskDelegatePk psk
+  predCorrect               = omegaPred (pskOmega psk)
+  sigValid                  = CC.verify
+    pdDelegatePkRaw
+    (mconcat ["01", CC.unXPub issuerPk, signTag pm t, annotation m])
+    (psigSig psig)
+
 -- CHECK: @proxyVerify
 -- | Verify delegated signature given issuer's pk, signature, message
 --   space predicate and message itself.
+{-# WARNING proxyVerify "to remove" #-}
 proxyVerify
   :: Bi a
   => ProtocolMagic
