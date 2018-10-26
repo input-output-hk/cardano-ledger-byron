@@ -2,12 +2,14 @@
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Cardano.Binary.Class.Annotated
   ( Annotated (..)
   , ByteSpan (..)
   , slice
   , decodeAnnotated
+  , decodeFullAnnotatedBytes
   )
   where
 
@@ -15,9 +17,9 @@ import qualified Codec.CBOR.Decoding as D
 import           Codec.CBOR.Read (ByteOffset)
 import qualified Data.ByteString.Lazy as BSL
 
-import           Cardano.Binary.Class.Core (Bi (..))
+import           Cardano.Binary.Class.Core (Bi (..), DecoderError)
+import           Cardano.Binary.Class.Primitive (decodeFullDecoder)
 import           Cardano.Prelude
-
 
 slice :: BSL.ByteString -> ByteSpan -> BSL.ByteString
 slice bytes (ByteSpan start end) = BSL.take (end - start) $ BSL.drop start $ bytes
@@ -34,3 +36,12 @@ annotatedDecoder d = flip fmap (D.decodeWithByteSpan d) $ \(x, start, end) ->
 
 decodeAnnotated :: (Bi a) => D.Decoder s (Annotated a ByteSpan)
 decodeAnnotated = annotatedDecoder decode
+
+decodeFullAnnotatedBytes
+  :: (Functor f)
+  => Text
+  -> (forall s. D.Decoder s (f ByteSpan))
+  -> BSL.ByteString
+  -> Either DecoderError (f ByteString)
+decodeFullAnnotatedBytes lbl decoder bytes = (fmap.fmap) (BSL.toStrict . slice bytes) $
+  decodeFullDecoder lbl decoder bytes

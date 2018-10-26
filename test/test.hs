@@ -2,6 +2,7 @@ import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Test.Cardano.Chain.Block.Bi
+import qualified Test.Cardano.Chain.Block.Header
 import qualified Test.Cardano.Chain.Delegation.Bi
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Ssc.Bi
@@ -12,6 +13,7 @@ import qualified Test.Cardano.Chain.Update.Json
 main :: IO ()
 main = runTests
     [ Test.Cardano.Chain.Block.Bi.tests
+    , Test.Cardano.Chain.Block.Header.tests
     , Test.Cardano.Chain.Delegation.Bi.tests
     , Test.Cardano.Chain.Epoch.File.tests
     , Test.Cardano.Chain.Ssc.Bi.tests

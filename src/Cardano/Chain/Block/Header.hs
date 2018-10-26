@@ -11,6 +11,7 @@
 
 module Cardano.Chain.Block.Header
        ( Header
+       , AHeader
        , header
        , headerPrevHash
        , headerProof
@@ -27,9 +28,11 @@ module Cardano.Chain.Block.Header
        , headerEBDataProof
        , encodeHeader
        , decodeHeader
+       , decodeAHeader
 
        , HeaderError (..)
        , verifyHeader
+       , verifyAHeader
 
        , HeaderHash
        , headerHashF
@@ -51,11 +54,12 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import           Cardano.Binary.Class (Annotated (..), ByteSpan, Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, dropBytes, dropInt32, encodeListLen,
-                     enforceSize, serializeEncoding)
+                     enforceSize, serializeEncoding, decodeAnnotated)
 import           Cardano.Chain.Block.Body (Body)
 import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
                      dropBoundaryExtraHeaderData)
@@ -145,14 +149,18 @@ instance Bi Header where
       <> encode (headerConsensusData h)
       <> encode (headerExtraData h)
 
-  decode = do
-    enforceSize "Header" 5
-    header
-      <$> (ProtocolMagic <$> decode)
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
+  decode = (fmap.fmap) (const ()) decodeAHeader
+
+decodeAHeader :: Decoder s (AHeader ByteSpan)
+decodeAHeader = do
+  enforceSize "Header" 5
+  AHeader
+    <$> (ProtocolMagic <$> decode)
+    <*> decodeAnnotated
+    <*> decodeAnnotated
+    <*> decodeAConsensus
+    <*> decodeAnnotated
+
 
 -- | Smart constructor for 'Header'
 mkHeader
@@ -229,6 +237,7 @@ data HeaderError
   = HeaderConsensusError ConsensusError
   | HeaderExtraDataError ExtraHeaderDataError
   | HeaderInvalidSignature BlockSignature
+  deriving (Eq, Show)
 
 instance B.Buildable HeaderError where
   build = \case
@@ -243,7 +252,7 @@ instance B.Buildable HeaderError where
 
 
 -- | Verify a main block header in isolation
-verifyAHeader :: MonadError HeaderError m => ProtocolMagic -> AHeader LBS.ByteString -> m ()
+verifyAHeader :: MonadError HeaderError m => ProtocolMagic -> AHeader ByteString -> m ()
 verifyAHeader pm header_ = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although must
@@ -271,7 +280,7 @@ verifyAHeader pm header_ = do
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
     proxyVerifyAnnotated pm SignMainBlockHeavy proxySig (const True) signed
 
-  signed = LBS.toStrict <$> recoverSignedBytes header_
+  signed = recoverSignedBytes header_
 
   epochId   = siEpoch $ consensusSlot consensus
 
@@ -370,10 +379,10 @@ instance Bi BlockSignature where
 --------------------------------------------------------------------------------
 
 -- | Produces the ByteString that was signed in the block
-recoverSignedBytes :: AHeader LBS.ByteString -> Annotated ToSign LBS.ByteString
+recoverSignedBytes :: AHeader ByteString -> Annotated ToSign ByteString
 recoverSignedBytes h = Annotated toSign bytes
   where
-    bytes = LBS.concat
+    bytes = BS.concat
       [ "\133"
       -- This is the value of Codec.CBOR.Write.toLazyByteString (encodeListLen 5)
       -- It is hard coded here because the signed bytes included it as an implementation artifact
@@ -436,6 +445,11 @@ data AConsensusData a = AConsensusData
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
 
+decodeAConsensus :: Decoder s (AConsensusData ByteSpan)
+decodeAConsensus = do
+    enforceSize "ConsensusData" 4
+    AConsensusData <$> decodeAnnotated <*> decode <*> decodeAnnotated <*> decode
+
 consensusSlot :: AConsensusData a -> SlotId
 consensusSlot = unAnnotated . aConsensusSlot
 
@@ -450,11 +464,10 @@ instance Bi ConsensusData where
       <> encode (consensusDifficulty cd)
       <> encode (consensusSignature cd)
 
-  decode = do
-    enforceSize "ConsensusData" 4
-    consensusData <$> decode <*> decode <*> decode <*> decode
+  decode = (fmap.fmap) (const ()) decodeAConsensus
 
 data ConsensusError = ConsensusSelfSignedPSK
+  deriving (Show, Eq)
 
 instance B.Buildable ConsensusError where
   build = \case
