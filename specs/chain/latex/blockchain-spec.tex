@@ -730,7 +730,7 @@ Figure~\ref{fig:block-ext-types-funs}.
 
 \begin{equation}
   \label{eq:incixmap}
-  \incixmap{vk_s}{\signmapname'}{ix} = ?
+  \incixmap{vk_s}{\signmapname}{ix} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
 \end{equation}
 
 
@@ -755,8 +755,8 @@ Figure~\ref{fig:block-ext-types-funs}.
   \emph{Functions}
   %
   \begin{align*}
-    \fun{qHead} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
-    \fun{qPush} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
+    \fun{\qheadname} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
+    \fun{\qpushname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
       & \text{queue push function} \\
     \fun{\qpopname} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
       & \text{queue pop function} \\
