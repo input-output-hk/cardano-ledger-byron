@@ -91,10 +91,13 @@
 \newcommand{\signmapname}{\mathcal{M}}
 \newcommand{\trimixname}{trimIx}
 \newcommand{\incixmapname}{incIxMap}
-\newcommand{\bcertsname}{bCerts}
 \newcommand{\postnewcertsname}{postNewCerts}
+
 \newcommand{\bdataname}{bData}
+\newcommand{\bcertsname}{bCerts}
 \newcommand{\bsigname}{bSig}
+\newcommand{\bixname}{bIx}
+\newcommand{\bslname}{bSl}
 
 %% 
 %% Functions and relations
@@ -107,10 +110,13 @@
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
 \newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
-\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
 \newcommand{\postnewcerts}[1]{\fun{\postnewcertsname} ~ #1}
+
 \newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
+\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
 \newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
+\newcommand{\bix}[1]{\fun{\bixname} ~ #1}
+\newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
 
 \newcommand{\delmap}{\delta}
 
@@ -130,7 +136,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 24, 2018}
+\date{October 26, 2018}
 
 \maketitle
 
@@ -258,10 +264,10 @@ are given in Figure~\ref{fig:cert-defs}.
   \emph{Functions}
   %
   \begin{align*}
-    \text{cFrom} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
-    \text{cTo} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
-    \text{cSl} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
-    \text{cSig} & \in \HCert \totalf \Sig & \text{certificate signature projection}
+    \text{$\fun{cFrom}$} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
+    \text{$\fun{cTo}$} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
+    \text{$\fun{cSl}$} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
+    \text{$\fun{cSig}$} & \in \HCert \totalf \Sig & \text{certificate signature projection}
   \end{align*}
   %
   \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
@@ -278,13 +284,24 @@ A blockchain is extended by appending a block.
 %
 There are two types of blocks.
 %
-The first type is the genesis block, denoted by $\GBlock$ in this document,
-which is made of a set of $n$ verification keys;
-%
-these keys are often referred to as genesis block verification keys.
+The first type is the genesis block, denoted by $\GBlock$ in this document.
 %
 Every blockchain starts with a genesis block.
 %
+A genesis block contains a set of $n$ verification keys.
+%
+These keys are often referred to as the genesis block verification keys.
+%
+A genesis block also contains a hash.
+%
+In this document $\GBlock$ is kept abstract, but it is a product type with
+projection functions for the two just mentioned values:
+%
+\begin{itemize}
+\item a set of $n$ verification keys, and
+\item a block hash.
+\end{itemize}
+
 The second type is for a non-genesis block, denoted by $\RBlock$.
 %
 In this document $\RBlock$ is kept abstract, but it is a product type with
@@ -310,30 +327,31 @@ Figure~\ref{fig:block-defs}.
      h & \in \BHash   & \text{block hash}\\
   \end{align*}
   %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    (vk_1, \dotsc, vk_n, h) & \in \GBlock = \VKeyGen^n \times \BHash & \text{genesis block} \\
-    b & \in \Block = \GBlock + \RBlock & \text{block} \\
-  \end{align*}
-  %
   \emph{Abstract types}
   %
   \begin{align*}
-    r & \in \RBlock & \text{non-genesis block}
+    r & \in \RBlock & \text{non-genesis block} \\
+    g & \in \GBlock & \text{genesis block} \\
   \end{align*}
   %
-  \emph{Functions and relations}
+  \emph{Derived types}
   %
   \begin{align*}
-    \text{bIx} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
-    \text{\hashname} & \in \Block \totalf \BHash
+    b & \in \Block = \GBlock + \RBlock & \text{block} \\
+  \end{align*}
+  %
+  \emph{Functions}
+  %
+  \begin{align*}
+    \text{$\fun{gbKeys}$} & \in \GBlock \totalf \VKeyGen^n & \text{block keys projection} \\
+    \text{$\fun{\bixname}$} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
+    \text{$\fun{\hashname}$} & \in \Block \totalf \BHash
       & \text{block hash projection} \\
-    \text{bSl} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
-    \text{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
+    \text{$\fun{\bslname}$} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
+    \text{$\fun{\bcertsname}$} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates projection} \\
-    \text{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature projection} \\
-    \text{\bdataname} & \in \RBlock \totalf \Data & \text{block data projection}
+    \text{$\fun{\bsigname}$} & \in \RBlock \totalf \Sig & \text{block signature projection} \\
+    \text{$\fun{\bdataname}$} & \in \RBlock \totalf \Data & \text{block data projection}
   \end{align*}
   %
   \caption{Basic Block-related Types and Functions}
@@ -524,12 +542,12 @@ discarded.
   \emph{Functions and relations}
   %
   \begin{align*}
-    \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
-    \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+    \text{$\fun{\keypairname}$} & \in \SKey \times \VKey & \text{key pair relation}\\
+    \text{$\fun{\signname}$} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
-    \text{\verifyname} & \in \VKey \times \Data \times \Sig
+    \text{$\fun{\verifyname}$} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\delegatorname} & \in \VKey \times \Slot \partialf \VKeyGen^?
+    \text{$\fun{\delegatorname}$} & \in \VKey \times \Slot \partialf \VKeyGen^?
       & \text{delegator function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
@@ -707,14 +725,14 @@ Figure~\ref{fig:block-ext-types-funs}.
   \emph{Functions}
   %
   \begin{align*}
-    \text{qHead} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
-    \text{qPush} & \in \Queue_\BlockIx \times \BlockIx \totalf \Queue_\BlockIx
+    \text{$\fun{qHead}$} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
+    \text{$\fun{qPush}$} & \in \Queue_\BlockIx \times \BlockIx \totalf \Queue_\BlockIx
       & \text{queue push function} \\
-    \text{qPop} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
+    \text{$\fun{qPop}$} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
       & \text{queue pop function} \\
-    \text{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
+    \text{$\fun{\trimixname}$} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
-    \text{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+    \text{$\fun{\incixmapname}$} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{block count increment function}
   \end{align*}
   %
@@ -745,7 +763,8 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      \hash{b} = h = p \\ % types have to be fixed for hashes
+      ix = \bix{b} \wedge sl = \bsl{b} \\
+      \hash{b} = h = p \\ % TODO: types have to be fixed for hashes
       vk_s = \delegator{vk_d}{sl} \wedge (sk_d, vk_d) \in \SKey \times \VKey \\
       \size{\signmap{vk_s}} \leq K \cdot t \wedge \sign{sk_d}{h}{sl}{(\bdata{b})} = \bsig{b} \\
       \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
