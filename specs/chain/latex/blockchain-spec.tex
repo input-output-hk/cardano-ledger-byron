@@ -99,6 +99,11 @@
 \newcommand{\bixname}{bIx}
 \newcommand{\bslname}{bSl}
 
+\newcommand{\qrestrname}{qRestrict}
+\newcommand{\qpopname}{qPop}
+\newcommand{\qheadname}{qHead}
+\newcommand{\qpushname}{qPush}
+
 %% 
 %% Functions and relations
 %%
@@ -108,6 +113,7 @@
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
 \newcommand{\delegator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
+\newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
 \newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
 \newcommand{\postnewcerts}[1]{\fun{\postnewcertsname} ~ #1}
@@ -117,6 +123,10 @@
 \newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
 \newcommand{\bix}[1]{\fun{\bixname} ~ #1}
 \newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
+
+\newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
+\newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
+\newcommand{\qpush}[1]{\fun{\qpushname} ~ #1}
 
 \newcommand{\delmap}{\delta}
 
@@ -666,12 +676,11 @@ of keys to a queue of signed blocks in a sliding window of at most K last
 blocks in the blockchain.
 %
 Initially, when the blockchain is made of the genesis block $g_0 \in \GBlock$
-only, we use $p$ to denote the predecessor of the next block to be added, and
-no key from the genesis block signed a block (neither directly or indirectly
-via delegation), as given by \eqref{eq:init-signed-blocks}.
+only, and no key from the genesis block signed a block (neither directly or
+indirectly via delegation), as given by \eqref{eq:init-bc-state}.
 
 \begin{equation}
-  \label{eq:init-signed-blocks}
+  \label{eq:init-bc-state}
   \inference[Initial-state]
   {}
   {\left(
@@ -682,7 +691,9 @@ via delegation), as given by \eqref{eq:init-signed-blocks}.
   \right)
   }
 \end{equation}
-
+%
+With $p$ we denote the last block that was added to the blockchain.
+%
 The type of map $\signmapname$ is given in
 Figure~\ref{fig:block-ext-types-funs}.
 
@@ -694,14 +705,33 @@ the sliding window of the last $K$ blocks moves by one block and the map
 $\signmapname$ has to be updated for the key that signed the $K^{\text{th}}$
 previous block;
 %
-this is done with $\trimix{\signmapname}{ix}$.
+this is done with $\trimix{\signmapname}{ix}$, as given by
+\eqref{eq:trimix}.
 %
 To finish updating the map, the updated version of $\signmapname$ denoted by
 $\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
-with $\incixmap{vk_s}{\signmapname'}{ix}$.
+with $\incixmap{vk_s}{\signmapname'}{ix}$, as given by
+\eqref{eq:incixmap}.
 %
 Types of both of these functions are given in
 Figure~\ref{fig:block-ext-types-funs}.
+
+
+\begin{align}
+  \label{eq:trimix}
+  \trimix{\signmapname}{ix} = \Set{(vk_s \partialf q)}{vk_s \in \dom \signmapname.~
+  q = \qrestr{ix}{(\signmap{vk_s}})} \\
+  \qrestr{ix}{q} = \
+  \begin{cases}
+    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < ix \\
+    q & \text{otherwise}
+  \end{cases}
+\end{align}
+
+\begin{equation}
+  \label{eq:incixmap}
+  \incixmap{vk_s}{\signmapname'}{ix} = ?
+\end{equation}
 
 
 \begin{figure}
@@ -726,10 +756,12 @@ Figure~\ref{fig:block-ext-types-funs}.
   %
   \begin{align*}
     \text{$\fun{qHead}$} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
-    \text{$\fun{qPush}$} & \in \Queue_\BlockIx \times \BlockIx \totalf \Queue_\BlockIx
+    \text{$\fun{qPush}$} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
       & \text{queue push function} \\
-    \text{$\fun{qPop}$} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
+    \text{$\fun{\qpopname}$} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
       & \text{queue pop function} \\
+    \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
+      & \text{restricted queue pop function} \\
     \text{$\fun{\trimixname}$} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
     \text{$\fun{\incixmapname}$} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
