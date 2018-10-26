@@ -99,8 +99,25 @@ datatypes satisfying some validity conditions. For example, we wish to consider
 when a sequence of transactions forms a valid \textit{ledger}, or a sequence of
 blocks forms a valid \textit{chain}.
 
-This document describes the (loose) formalism by which we describe such validity
+This document describes the semi-formal methods we use to describe such validity
 conditions and how they result in the construction of valid states.
+
+\section{Preliminaries and Notation}
+
+In this section, we define some preliminaries and some notation common to
+Cardano specifications.
+
+\begin{description}
+\item [Functions and partial functions] We denote the set of functions from $A$
+  to $B$ as $A \to B$, and a function from $A$ to $B$ as $f \in A \to B$ or $f :
+  A \to B$. We
+  denote the set of partial functions from $A$ to $B$ as $A \mapsto B$, and an
+  equivalent partial function as $g \in A \mapsto B$ or $g : A \mapsto B$. \\
+  Analogously to Haskell, we use spacing for function application. So $f ~ a$
+  represents the application of $a$ to the function $f$.
+
+\end{description}
+
 
 \section{Transition Systems}
 \label{sec:preliminaries}
@@ -187,7 +204,7 @@ antecedent:
   \end{itemize}
 We can give an example of such a rule:
   \[ \inference[Example]
-    {P(A) & z = f(s) & B = g(A,z)}
+    {P(A) & z = f ~ s & B = g(A,z)}
     {\tion[E1]{S2}{A}{s}{B}}
   \]
 To read such a rule, we proceed as follows:
@@ -209,7 +226,7 @@ which themselves rely on other state transition systems. To do this, we allow
 for an additional construction in the antecedent.
 
 \begin{itemize}
-\item The antecedent may contain a transition of the form $\tion{SYS}{A}{s}{B}$.
+\item The antecedent may contain a transition of the form $\tion[ENV1]{SYS}{A}{s}{B}$.
     This may either act as a predicate (if $B$ is already bound) or as an
     introduction of $B$ as per the state transition rules for system $\var{SYS}$.
 \end{itemize}
@@ -218,7 +235,7 @@ We then allow a construction as follows:
 
 \[
   \inference[Example]
-    {P(A) & z = f(s) & \tion[E1]{S1}{A}{z}{B}}
+    {P(A) & z = f ~ s & \tion[E1]{S1}{A}{z}{B}}
     {\tion[E1]{S2}{A}{s}{B}}
 \]
 
@@ -262,4 +279,12 @@ We require our serialisation function to satisfy the following property:
     \end{tikzcd}
   \]
 \end{definition}
+
+This property allows us to extract specific subparts of our serialised form. Our
+specifications will rely in places on functions defined over the serialisesation
+of a value. If we have a type $A=(B,C,D,E)$, for example, and we need to extract
+$\llbracket\var{B}\rrbracket$ from $\llbracket\var{A}\rrbracket$, it is this
+property which guarantees we may do so without rounnd-tripping through $A$,
+since $\llbracket \pi_1 ~ A\rrbracket = (\pi_1)_{\llbracket\rrbracket} ~ \llbracket A
+\rrbracket$ (where $\pi_1$ is the projection onto the first component of the tuple).
 \end{document}
