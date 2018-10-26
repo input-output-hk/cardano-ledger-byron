@@ -346,18 +346,18 @@ Figure~\ref{fig:block-defs}.
     b & \in \Block = \GBlock + \RBlock & \text{block} \\
   \end{align*}
   %
-  \emph{Functions}
+  \emph{Projection functions}
   %
   \begin{align*}
-    \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys projection} \\
-    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
+    \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
+    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
     \fun{\hashname} & \in \Block \totalf \BHash
-      & \text{block hash projection} \\
-    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
+      & \text{block hash} \\
+    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
     \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
-      & \text{block certificates projection} \\
-    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature projection} \\
-    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data projection}
+      & \text{block certificates} \\
+    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
+    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data}
   \end{align*}
   %
   \caption{Basic Block-related Types and Functions}
