@@ -12,7 +12,7 @@ module Cardano.Chain.Common.AddrSpendingData
 import           Cardano.Prelude
 
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, int, (%))
+import           Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Case (..), szCases)
@@ -36,14 +36,14 @@ data AddrSpendingData
     -- ^ Unknown type of spending data. It consists of a tag and
     -- arbitrary 'ByteString'. It allows us to introduce a new type of
     -- spending data via softfork.
-    deriving (Eq, Generic, Typeable, Show)
+    deriving (Eq, Generic, Show)
 
 instance B.Buildable AddrSpendingData where
     build = \case
-        PubKeyASD pk     -> bprint ("PubKeyASD " % build) pk
-        ScriptASD script -> bprint ("ScriptASD " % build) script
-        RedeemASD rpk    -> bprint ("RedeemASD " % build) rpk
-        UnknownASD tag _ -> bprint ("UnknownASD with tag " % int) tag
+        PubKeyASD pk     -> bprint ("PubKeyASD " . build) pk
+        ScriptASD script -> bprint ("ScriptASD " . build) script
+        RedeemASD rpk    -> bprint ("RedeemASD " . build) rpk
+        UnknownASD tag _ -> bprint ("UnknownASD with tag " . int) tag
 
 instance NFData AddrSpendingData
 
@@ -93,12 +93,9 @@ instance Bi AddrSpendingData where
             tag -> UnknownASD tag <$> Bi.decodeUnknownCborDataItem
 
     encodedSizeExpr size _ = szCases
-        [ let PubKeyASD pk = error "unused"
-          in  Case "PubKeyASD" $ size ((,) <$> pure (w8 0) <*> pure pk)
-        , let ScriptASD script = error "unused"
-          in  Case "ScriptASD" $ size ((,) <$> pure (w8 1) <*> pure script)
-        , let RedeemASD redeemPK = error "unused"
-          in  Case "RedeemASD" $ size ((,) <$> pure (w8 2) <*> pure redeemPK)
+        [ Case "PubKeyASD" $ size $ Proxy @(Word8, PublicKey)
+        , Case "ScriptASD" $ size $ Proxy @(Word8, Script)
+        , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemPublicKey)
         ]
 
 -- | Type of an address. It corresponds to constructors of
@@ -109,7 +106,7 @@ data AddrType
     | ATScript
     | ATRedeem
     | ATUnknown !Word8
-    deriving (Eq, Ord, Generic, Typeable, Show)
+    deriving (Eq, Ord, Generic, Show)
 
 instance NFData AddrType
 

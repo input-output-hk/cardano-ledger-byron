@@ -26,8 +26,6 @@
 
 module Cardano.Binary.Class.Core
     ( Bi(..)
-    , encodeBinary
-    , decodeBinary
     , enforceSize
     , matchSize
     , DecoderError (..)
@@ -71,14 +69,12 @@ import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as CBOR.Read
 import qualified Codec.CBOR.Write as CBOR.Write
-import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.Char as Char
 import           Data.Fixed (E12, Fixed (..), Nano, Pico, resolution)
 import           Data.Functor.Foldable
 import qualified Data.Map as M
-import qualified Data.Ratio as R
 import qualified Data.Set as S
 import           Data.Tagged (Tagged (..))
 import qualified Data.Text as Text
@@ -88,7 +84,7 @@ import           Data.Typeable (TypeRep, typeRep)
 import qualified Data.Vector as Vector
 import qualified Data.Vector.Generic as Vector.Generic
 import           Foreign.Storable (sizeOf)
-import           Formatting (bprint, build, int, shown, stext, string, (%))
+import           Formatting (bprint, build, int, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 
@@ -112,41 +108,41 @@ data DecoderError
 instance B.Buildable DecoderError where
   build = \case
     DecoderErrorCanonicityViolation lbl ->
-      bprint ("Canonicity violation while decoding " % stext) lbl
+      bprint ("Canonicity violation while decoding " . stext) lbl
 
     DecoderErrorCustom lbl err -> bprint
-      ("An error occured while decoding " % stext % ".\n"
-      % "Error: " % stext)
+      ("An error occured while decoding " . stext . ".\n"
+      . "Error: " . stext)
       lbl
       err
 
     DecoderErrorDeserialiseFailure lbl failure -> bprint
-      ( "Deserialisation failure while decoding " % stext % ".\n"
-      % "CBOR failed with error: " % shown
+      ( "Deserialisation failure while decoding " . stext . ".\n"
+      . "CBOR failed with error: " . shown
       )
       lbl
       failure
 
     DecoderErrorEmptyList lbl ->
-      bprint ("Found unexpected empty list while decoding " % stext) lbl
+      bprint ("Found unexpected empty list while decoding " . stext) lbl
 
     DecoderErrorLeftover lbl leftover -> bprint
-      ( "Found unexpected leftover bytes while decoding " % stext % "./n"
-      % "Leftover: " % shown
+      ( "Found unexpected leftover bytes while decoding " . stext . "./n"
+      . "Leftover: " . shown
       )
       lbl
       leftover
 
     DecoderErrorSizeMismatch lbl requested actual -> bprint
-      ( "Size mismatch when decoding " % stext % ".\n"
-      % "Expected " % int % ", but found " % int % "."
+      ( "Size mismatch when decoding " . stext . ".\n"
+      . "Expected " . int . ", but found " . int . "."
       )
       lbl
       requested
       actual
 
     DecoderErrorUnknownTag lbl t ->
-      bprint ("Found unknown tag " % int % " while decoding " % stext) t lbl
+      bprint ("Found unknown tag " . int . " while decoding " . stext) t lbl
 
     DecoderErrorVoid -> bprint "Attempted to decode Void"
 
@@ -154,18 +150,6 @@ instance B.Buildable DecoderError where
 --------------------------------------------------------------------------------
 -- Useful primitives
 --------------------------------------------------------------------------------
-
-encodeBinary :: Binary.Binary a => a -> E.Encoding
-encodeBinary = encode . BS.Lazy.toStrict . Binary.encode
-
-decodeBinary :: Binary.Binary a => D.Decoder s a
-decodeBinary = do
-  x <- decode @ByteString
-  toCborError @Text $ case Binary.decodeOrFail (BS.Lazy.fromStrict x) of
-    Left (_, _, err) -> Left (fromString err)
-    Right (bs, _, res)
-      | BS.Lazy.null bs -> Right res
-      | otherwise       -> Left "decodeBinary: unconsumed input"
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
@@ -237,8 +221,8 @@ defaultDecodeList = do
 newtype LengthOf xs = LengthOf xs
 
 instance Typeable xs => Bi (LengthOf xs) where
-  encode = error "The `LengthOf` type cannot be encoded!"
-  decode = error "The `LengthOf` type cannot be decoded!"
+  encode = panic "The `LengthOf` type cannot be encoded!"
+  decode = panic "The `LengthOf` type cannot be decoded!"
 
 -- | Default size expression for a list type.
 defaultEncodedListSizeExpr
@@ -273,13 +257,13 @@ instance Bi Char where
     pure $ Text.head t
 
   -- For [Char]/String we have a special encoding
-  encodeList cs = E.encodeString (toText cs)
-  decodeList = toString <$> D.decodeStringCanonical
+  encodeList cs = E.encodeString (toS cs)
+  decodeList = toS <$> D.decodeStringCanonical
 
   encodedSizeExpr _ pxy = encodedSizeRange (Char.ord <$> pxy)
   encodedListSizeExpr size _ =
     let
-      bsLength = size (Proxy @(LengthOf String))
+      bsLength = size (Proxy @(LengthOf [Char]))
         * szCases [Case "minChar" 1, Case "maxChar" 4]
     in bsLength + apMono "withWordSize" withWordSize bsLength
 
@@ -359,7 +343,7 @@ instance Bi NominalDiffTime where
     toPicoseconds :: NominalDiffTime -> Integer
     toPicoseconds t =
       numerator (toRational t * toRational (resolution $ Proxy @E12))
-  decode = fromRational . (R.% 1e6) <$> decode
+  decode = fromRational . (% 1e6) <$> decode
 
 instance Bi Natural where
   encode = encode . toInteger
@@ -431,7 +415,7 @@ instance Bi BS.ByteString where
 instance Bi Text.Text where
   encode = E.encodeString
   decode = D.decodeStringCanonical
-  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @String)
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @[Char])
 
 instance Bi BS.Lazy.ByteString where
   encode = encode . BS.Lazy.toStrict
@@ -698,7 +682,7 @@ data SizeF t
   -- ^ Case-selection for sizes. Used for sum types.
   | ValueF Natural
   -- ^ A constant value.
-  | ApF String (Natural -> Natural) t
+  | ApF Text (Natural -> Natural) t
   -- ^ Application of a monotonic function to a size.
   | forall a. Bi a => TodoF (forall x. Bi x => Proxy x -> Size) (Proxy a)
   -- ^ A suspended size calculation ("thunk"). This is used to delay the
@@ -733,21 +717,21 @@ instance Num (Fix SizeF) where
 instance B.Buildable t => B.Buildable (SizeF t) where
   build x_
     = let
-        showp2 :: (B.Buildable a, B.Buildable b) => a -> String -> b -> Builder
-        showp2 = bprint ("(" % build % " " % string % " " % build % ")")
+        showp2 :: (B.Buildable a, B.Buildable b) => a -> Text -> b -> Builder
+        showp2 = bprint ("(" . build . " " . stext . " " . build . ")")
       in
         case x_ of
           AddF x y -> showp2 x "+" y
           MulF x y -> showp2 x "*" y
           SubF x y -> showp2 x "-" y
-          NegF x   -> bprint ("-" % build) x
-          AbsF x   -> bprint ("|" % build % "|") x
-          SgnF x   -> bprint ("sgn(" % build % ")") x
+          NegF x   -> bprint ("-" . build) x
+          AbsF x   -> bprint ("|" . build . "|") x
+          SgnF x   -> bprint ("sgn(" . build . ")") x
           CasesF xs ->
-            bprint ("{ " % build % "}") $ foldMap (bprint (build % " ")) xs
+            bprint ("{ " . build . "}") $ foldMap (bprint (build . " ")) xs
           ValueF x  -> bprint shown (toInteger x)
-          ApF n _ x -> bprint (string % "(" % build % ")") n x
-          TodoF _ x -> bprint ("(_ :: " % shown % ")") (typeRep x)
+          ApF n _ x -> bprint (stext . "(" . build . ")") n x
+          TodoF _ x -> bprint ("(_ :: " . shown . ")") (typeRep x)
 
 instance B.Buildable (Fix SizeF) where
   build x = bprint build (unfix x)
@@ -758,7 +742,7 @@ szCases = Fix . CasesF
 
 -- | An individual labeled case.
 data Case t =
-  Case String t
+  Case Text t
   deriving (Functor)
 
 -- | Discard the label on a case.
@@ -766,7 +750,7 @@ caseValue :: Case t -> t
 caseValue (Case _ x) = x
 
 instance B.Buildable t => B.Buildable (Case t) where
-  build (Case n x) = bprint (string % "=" % build) n x
+  build (Case n x) = bprint (stext . "=" . build) n x
 
 -- | A range of values. Should satisfy the invariant @forall x. lo x <= hi x@.
 data Range b = Range
@@ -792,7 +776,7 @@ instance (Ord b, Num b) => Num (Range b) where
   fromInteger n = Range {lo = fromInteger n, hi = fromInteger n}
 
 instance B.Buildable (Range Natural) where
-  build r = bprint (shown % ".." % shown) (toInteger $ lo r) (toInteger $ hi r)
+  build r = bprint (shown . ".." . shown) (toInteger $ lo r) (toInteger $ hi r)
 
 -- | Fully evaluate a size expression by applying the given function to any
 --   suspended computations. @szEval g@ effectively turns each "thunk"
@@ -850,7 +834,7 @@ todo f pxy = Fix (TodoF f pxy)
 --      * When applied to a value @x@, compute @f x@.
 --      * When applied to cases, apply to each case individually.
 --      * In all other cases, create a deferred application of @f@.
-apMono :: String -> (Natural -> Natural) -> Size -> Size
+apMono :: Text -> (Natural -> Natural) -> Size -> Size
 apMono n f = \case
   Fix (ValueF x ) -> Fix (ValueF (f x))
   Fix (CasesF cs) -> Fix (CasesF (map (fmap (apMono n f)) cs))
@@ -869,12 +853,12 @@ szWithCtx ctx pxy = case M.lookup (typeRep pxy) ctx of
   -- The non-override case
   normal = encodedSizeExpr (szWithCtx ctx) pxy
 
-  selectCase :: [String] -> SizeF Size -> Size
+  selectCase :: [Text] -> SizeF Size -> Size
   selectCase names orig = case orig of
     CasesF cs -> matchCase names cs (Fix orig)
     _         -> Fix orig
 
-  matchCase :: [String] -> [Case Size] -> Size -> Size
+  matchCase :: [Text] -> [Case Size] -> Size -> Size
   matchCase names cs orig =
     case filter (\(Case name _) -> name `elem` names) cs of
       []         -> orig
@@ -887,7 +871,7 @@ data SizeOverride
   -- ^ Replace with a fixed @Size@.
   | SizeExpression ((forall a. Bi a => Proxy a -> Size) -> Size)
   -- ^ Recursively compute the size.
-  | SelectCases [String]
+  | SelectCases [Text]
   -- ^ Select only a specific case from a @CasesF@.
 
 -- | Simplify the given @Size@, resulting in either the simplified @Size@ or,

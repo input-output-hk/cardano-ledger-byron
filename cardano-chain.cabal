@@ -12,6 +12,11 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
+flag development
+    description: Disable `-Werror`
+    default: False
+    manual: True
+
 library
   hs-source-dirs:      src
   exposed-modules:
@@ -19,6 +24,7 @@ library
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
+                       Cardano.Chain.Epoch.File
                        Cardano.Chain.Genesis
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
@@ -28,12 +34,14 @@ library
 
   other-modules:
                        Cardano.Chain.Block.Block
+                       Cardano.Chain.Block.Body
                        Cardano.Chain.Block.Boundary
+                       Cardano.Chain.Block.ExtraBodyData
+                       Cardano.Chain.Block.ExtraHeaderData
                        Cardano.Chain.Block.Header
-                       Cardano.Chain.Block.Main
+                       Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.SlogUndo
                        Cardano.Chain.Block.Undo
-                       Cardano.Chain.Block.Util
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
@@ -48,7 +56,6 @@ library
                        Cardano.Chain.Common.CoinPortion
                        Cardano.Chain.Common.Merkle
                        Cardano.Chain.Common.Script
-                       Cardano.Chain.Common.SlotLeaders
                        Cardano.Chain.Common.StakeholderId
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear
@@ -65,16 +72,6 @@ library
                        Cardano.Chain.Slotting.LocalSlotIndex
                        Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
-
-                       Cardano.Chain.Ssc.Commitment
-                       Cardano.Chain.Ssc.CommitmentsMap
-                       Cardano.Chain.Ssc.Opening
-                       Cardano.Chain.Ssc.OpeningsMap
-                       Cardano.Chain.Ssc.Payload
-                       Cardano.Chain.Ssc.Proof
-                       Cardano.Chain.Ssc.SharesMap
-                       Cardano.Chain.Ssc.VssCertificate
-                       Cardano.Chain.Ssc.VssCertificatesMap
 
                        Cardano.Chain.Txp.Tx
                        Cardano.Chain.Txp.TxAux
@@ -103,6 +100,7 @@ library
                      , base16-bytestring
                      , base58-bytestring
                      , base64-bytestring-type
+                     , binary
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -118,15 +116,26 @@ library
                      , memory
                      , mtl
                      , plutus-prototype
+                     , resourcet
                      , servant
+                     , streaming
+                     , streaming-binary
+                     , streaming-bytestring
                      , text
                      , time
+                     , vector
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
 
-  ghc-options:         -Wall
-                       -Werror
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+
+  if (!flag(development))
+    ghc-options:         -Werror
 
 test-suite test
   hs-source-dirs:      test
@@ -141,9 +150,8 @@ test-suite test
                        Test.Cardano.Chain.Delegation.Bi
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Epoch.File
                        Test.Cardano.Chain.Ssc.Bi
-                       Test.Cardano.Chain.Ssc.Example
-                       Test.Cardano.Chain.Ssc.Gen
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Txp.Bi
@@ -169,12 +177,19 @@ test-suite test
                      , cryptonite
                      , formatting
                      , hedgehog
-                     , pvss
+                     , resourcet
+                     , streaming
                      , time
                      , vector
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
 
-  ghc-options:         -Wall
-                       -Werror
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+
+  if (!flag(development))
+    ghc-options:         -Werror

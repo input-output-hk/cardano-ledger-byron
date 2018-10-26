@@ -26,15 +26,11 @@ library
 
   other-modules:
                        Cardano.Binary.Class.Core
+                       Cardano.Binary.Class.Drop
                        Cardano.Binary.Class.Primitive
 
   build-depends:       base
-                     , aeson
-                     , base64-bytestring
-                     , base64-bytestring-type
-                     , binary
                      , bytestring
-                     , canonical-json
                      , cardano-prelude
                      , cborg
                      , containers
@@ -53,9 +49,10 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
                        -fno-warn-missing-import-lists
-                       -fno-warn-unsafe
                        -fno-warn-safe
+                       -fno-warn-unsafe
 
   if (!flag(development))
     ghc-options:         -Werror
@@ -97,9 +94,10 @@ test-suite test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
                        -fno-warn-missing-import-lists
-                       -fno-warn-unsafe
                        -fno-warn-safe
+                       -fno-warn-unsafe
 
   if (!flag(development))
     ghc-options:         -Werror

@@ -14,7 +14,7 @@ import           Cardano.Prelude
 import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
                      (.:), (.=))
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
-import           Formatting (bprint, int, (%))
+import           Formatting (bprint, int)
 import qualified Formatting.Buildable as B
 import qualified PlutusCore.Program as PLCore
 
@@ -27,11 +27,11 @@ type ScriptVersion = Word16
 data Script = Script
     { scrVersion :: ScriptVersion -- ^ Version
     , scrScript  :: ByteString   -- ^ Serialized script
-    } deriving (Eq, Show, Generic, Typeable)
+    } deriving (Eq, Show, Generic)
       deriving anyclass NFData
 
 instance B.Buildable Script where
-    build script = bprint ("<script v"%int%">") (scrVersion script)
+    build script = bprint ("<script v".int.">") (scrVersion script)
 
 instance ToJSON Script where
     toJSON script = object

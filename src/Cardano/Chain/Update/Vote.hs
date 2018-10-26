@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Vote
        (
        -- Software update proposal
          Proposal (..)
+       , ProposalError (..)
        , Proposals
        , UpId
        , ProposalBody (..)
@@ -17,6 +19,7 @@ module Cardano.Chain.Update.Vote
        -- Software update vote
        , VoteId
        , Vote (..)
+       , VoteError (..)
        , mkVote
        , mkVoteSafe
        , formatVoteShort
@@ -30,20 +33,22 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError (throwError))
 import qualified Data.Map.Strict as Map
 import           Data.Text.Lazy.Builder (Builder)
-import           Formatting (Format, bprint, build, builder, later, (%))
+import           Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
+import           Cardano.Binary.Class (Bi (..), Decoder, encodeListLen,
+                     enforceSize)
 import           Cardano.Chain.Common (addressHash)
 import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier, checkBlockVersionModifier)
+                     (BlockVersionModifier)
 import           Cardano.Chain.Update.Data (UpdateData)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion,
-                     checkSoftwareVersion)
-import           Cardano.Chain.Update.SystemTag (SystemTag, checkSystemTag)
+                     SoftwareVersionError, checkSoftwareVersion)
+import           Cardano.Chain.Update.SystemTag (SystemTag, SystemTagError,
+                     checkSystemTag)
 import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SafeSigner,
                      SecretKey, SignTag (SignUSProposal, SignUSVote),
                      Signature, checkSig, hash, safeSign, safeToPublic,
@@ -89,24 +94,24 @@ data Proposal = Proposal
   , proposalIssuer    :: !PublicKey
   -- ^ Who proposed this UP.
   , proposalSignature :: !(Signature ProposalBody)
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 type Proposals = Map UpId Proposal
 
 instance B.Buildable Proposal where
   build proposal = bprint
     ( build
-    % " { block v"
-    % build
-    % ", UpId: "
-    % build
-    % ", "
-    % build
-    % ", tags: "
-    % listJson
-    % ", "
-    % builder
-    % " }"
+    . " { block v"
+    . build
+    . ", UpId: "
+    . build
+    . ", "
+    . build
+    . ", tags: "
+    . listJson
+    . ", "
+    . builder
+    . " }"
     )
     (pbSoftwareVersion body)
     (pbBlockVersion body)
@@ -119,7 +124,7 @@ instance B.Buildable Proposal where
     attrs = pbAttributes body
     attrsBuilder
       | areAttributesKnown attrs = "no attributes"
-      | otherwise                = bprint ("attributes: " % build) attrs
+      | otherwise                = bprint ("attributes: " . build) attrs
 
 instance NFData Proposal
 
@@ -139,6 +144,7 @@ instance Bi Proposal where
     enforceSize "Proposal" 7
     Proposal <$> decodeBody <*> decode <*> decode
    where
+    decodeBody :: Decoder s ProposalBody
     decodeBody =
       ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode
 
@@ -155,12 +161,30 @@ signProposal pm body ss = Proposal
   issuer    = safeToPublic ss
   signature = safeSign pm SignUSProposal ss body
 
-checkProposal :: MonadError Text m => ProtocolMagic -> Proposal -> m ()
+data ProposalError
+  = ProposalInvalidSignature (Signature ProposalBody)
+  | ProposalSoftwareVersionError SoftwareVersionError
+  | ProposalSystemTagError SystemTagError
+
+instance B.Buildable ProposalError where
+  build = \case
+    ProposalInvalidSignature sig ->
+      bprint ("Invalid signature, " . build . ", in Proposal") sig
+    ProposalSoftwareVersionError err -> bprint
+      ("SoftwareVersion was invalid while checking Proposal.\n Error: " . build)
+      err
+    ProposalSystemTagError err -> bprint
+      ("SystemTag was invalid while checking Proposal.\n Error: " . build)
+      err
+
+checkProposal :: MonadError ProposalError m => ProtocolMagic -> Proposal -> m ()
 checkProposal pm proposal = do
   let body = proposalBody proposal
-  checkBlockVersionModifier (pbBlockVersionModifier body)
-  checkSoftwareVersion (pbSoftwareVersion body)
-  forM_ (Map.keys (pbData body)) checkSystemTag
+  either (throwError . ProposalSoftwareVersionError) pure
+    $ checkSoftwareVersion (pbSoftwareVersion body)
+  forM_
+    (Map.keys (pbData body))
+    (either (throwError . ProposalSystemTagError) pure . checkSystemTag)
   let
     sigIsValid = checkSig
       pm
@@ -168,7 +192,8 @@ checkProposal pm proposal = do
       (proposalIssuer proposal)
       body
       (proposalSignature proposal)
-  unless sigIsValid $ throwError "Proposal: invalid signature"
+  unless sigIsValid $ throwError $ ProposalInvalidSignature
+    (proposalSignature proposal)
 
 
 --------------------------------------------------------------------------------
@@ -182,12 +207,12 @@ type VoteId = (UpId, PublicKey, Bool)
 instance B.Buildable VoteId where
   build (upId, pk, dec) = bprint
     ( "Vote Id { voter: "
-    % build
-    % ", proposal id: "
-    % build
-    % ", voter's decision: "
-    % build
-    % " }"
+    . build
+    . ", proposal id: "
+    . build
+    . ", voter's decision: "
+    . build
+    . " }"
     )
     pk
     upId
@@ -205,19 +230,19 @@ data Vote = UnsafeVote
   -- ^ Approval/rejection bit
   , uvSignature  :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit) by stakeholder
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 instance NFData Vote
 
 instance B.Buildable Vote where
   build uv = bprint
     ( "Update Vote { voter: "
-    % build
-    % ", proposal id: "
-    % build
-    % ", voter's decision: "
-    % build
-    % " }"
+    . build
+    . ", proposal id: "
+    . build
+    . ", voter's decision: "
+    . build
+    . " }"
     )
     (addressHash $ uvKey uv)
     (uvProposalId uv)
@@ -225,7 +250,7 @@ instance B.Buildable Vote where
 
 instance B.Buildable (Proposal, [Vote]) where
   build (up, votes) =
-    bprint (build % " with votes: " % listJson) up (map formatVoteShort votes)
+    bprint (build . " with votes: " . listJson) up (map formatVoteShort votes)
 
 instance Bi Vote where
   encode uv =
@@ -276,7 +301,7 @@ mkVoteSafe pm sk proposalId decision = UnsafeVote
 -- | Format 'Vote' compactly
 formatVoteShort :: Vote -> Builder
 formatVoteShort uv = bprint
-  ("(" % shortHashF % " " % builder % " " % shortHashF % ")")
+  ("(" . shortHashF . " " . builder . " " . shortHashF . ")")
   (addressHash $ uvKey uv)
   (bool "against" "for" $ uvDecision uv)
   (uvProposalId uv)
@@ -285,15 +310,25 @@ formatVoteShort uv = bprint
 shortVoteF :: Format r (Vote -> r)
 shortVoteF = later formatVoteShort
 
-checkVote :: (MonadError Text m) => ProtocolMagic -> Vote -> m ()
-checkVote pm it = unless sigValid (throwError "Vote: invalid signature")
+data VoteError =
+  VoteInvalidSignature (Signature (UpId, Bool))
+
+instance B.Buildable VoteError where
+  build = \case
+    VoteInvalidSignature sig ->
+      bprint ("Invalid signature, " . build . ", in Vote") sig
+
+checkVote :: MonadError VoteError m => ProtocolMagic -> Vote -> m ()
+checkVote pm uv = unless
+  sigValid
+  (throwError $ VoteInvalidSignature (uvSignature uv))
  where
   sigValid = checkSig
     pm
     SignUSVote
-    (uvKey it)
-    (uvProposalId it, uvDecision it)
-    (uvSignature it)
+    (uvKey uv)
+    (uvProposalId uv, uvDecision uv)
+    (uvSignature uv)
 
 mkVoteId :: Vote -> VoteId
 mkVoteId vote = (uvProposalId vote, uvKey vote, uvDecision vote)

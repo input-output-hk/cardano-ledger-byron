@@ -16,7 +16,6 @@ module Test.Cardano.Binary.Helpers
        -- * From/to
        , binaryEncodeDecode
        , binaryTest
-       , serDeserId
        , showReadId
        , showReadTest
        , identityTest
@@ -44,10 +43,11 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Map (Map)
 import qualified Data.Map as M
+import           Data.String (String)
 import           Data.Text.Lazy (unpack)
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Typeable (TypeRep, typeRep)
-import           Formatting (Buildable, bprint, build, formatToString, int, (%))
+import           Formatting (Buildable, bprint, build, formatToString, int)
 import           Hedgehog (annotate, failure, forAllWith, success)
 import qualified Hedgehog as HH
 import qualified Hedgehog.Gen as HH.Gen
@@ -59,12 +59,11 @@ import           Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, choose,
                      suchThat, vectorOf, (.&&.), (===))
 import           Test.QuickCheck.Instances ()
 
-import           Cardano.Binary.Class (AsBinaryClass (..), Bi (..),
-                     DecoderError (..), Range (..), Size, SizeOverride (..),
-                     decodeFull, decodeListLenCanonicalOf,
-                     decodeUnknownCborDataItem, encodeListLen,
-                     encodeUnknownCborDataItem, serialize, serialize',
-                     szSimplify, szWithCtx, toLazyByteString,
+import           Cardano.Binary.Class (Bi (..), DecoderError (..), Range (..),
+                     Size, SizeOverride (..), decodeFull,
+                     decodeListLenCanonicalOf, decodeUnknownCborDataItem,
+                     encodeListLen, encodeUnknownCborDataItem, serialize,
+                     serialize', szSimplify, szWithCtx, toLazyByteString,
                      unsafeDeserialize)
 import           Cardano.Binary.Limit (Limit (..))
 
@@ -114,10 +113,6 @@ cborCanonicalRep a = property $ do
 
   -- isCanonicityFailure :: DeserialiseFailure -> Bool
   -- isCanonicityFailure (DeserialiseFailure _ s) = "canonic" `L.isInfixOf` s
-
-serDeserId :: forall t . (Show t, Eq t, AsBinaryClass t) => t -> Property
-serDeserId a =
-  either (error . toText) identity (fromBinary $ asBinary @t a) === a
 
 showReadId :: (Show a, Eq a, Read a) => a -> Property
 showReadId a = read (show a) === a
@@ -232,7 +227,7 @@ msgLenLimitedCheck :: Bi a => Limit a -> a -> Property
 msgLenLimitedCheck limit msg = if sz <= fromIntegral limit
   then property True
   else flip counterexample False $ formatToString
-    ("Message size (max found " % int % ") exceeds limit (" % int % ")")
+    ("Message size (max found " . int . ") exceeds limit (" . int . ")")
     sz
     limit
   where sz = BS.length . serialize' $ msg
@@ -297,7 +292,7 @@ bshow = unpack . toLazyText . bprint build
 
 -- | Configuration for a single test case.
 data SizeTestConfig a = SizeTestConfig
-    { debug       :: a -> String      -- ^ Pretty-print values
+    { debug       :: a -> String     -- ^ Pretty-print values
     , gen         :: HH.Gen a        -- ^ Generator
     , precise     :: Bool            -- ^ Must estimates be exact?
     , addlCtx     :: Map TypeRep SizeOverride -- ^ Additional size overrides

@@ -28,7 +28,6 @@ library
                        Cardano.Crypto.Orphans
                        Cardano.Crypto.ProtocolMagic
                        Cardano.Crypto.Random
-                       Cardano.Crypto.SecretSharing
                        Cardano.Crypto.Signing
                        Cardano.Crypto.Signing.Redeem
                        Cardano.Crypto.Signing.Safe
@@ -63,7 +62,6 @@ library
                      , lens
                      , memory
                      , mtl
-                     , pvss
                      , scrypt
                      , text
 
@@ -71,9 +69,10 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
                        -fno-warn-missing-import-lists
-                       -fno-warn-unsafe
                        -fno-warn-safe
+                       -fno-warn-unsafe
 
   if (!flag(development))
     ghc-options:         -Werror
@@ -117,9 +116,10 @@ test-suite test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
                        -fno-warn-missing-import-lists
-                       -fno-warn-unsafe
                        -fno-warn-safe
+                       -fno-warn-unsafe
 
   if (!flag(development))
     ghc-options:         -Werror

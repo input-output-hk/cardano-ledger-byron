@@ -10,7 +10,6 @@
 
 module Cardano.Chain.Update.SoftforkRule
        ( SoftforkRule (..)
-       , checkSoftforkRule
        ) where
 
 import           Cardano.Prelude
@@ -18,13 +17,13 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
                      mkObject)
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion, checkCoinPortion)
+import           Cardano.Chain.Common (CoinPortion)
 
 
 -- | Values defining softfork resolution rule
@@ -48,7 +47,7 @@ data SoftforkRule = SoftforkRule
 
 instance B.Buildable SoftforkRule where
   build sr = bprint
-    ("(init = " % build % ", min = " % build % ", decrement = " % build % ")")
+    ("(init = " . build . ", min = " . build . ", decrement = " . build . ")")
     (srInitThd sr)
     (srMinThd sr)
     (srThdDecrement sr)
@@ -75,11 +74,5 @@ instance MonadError SchemaError m => FromJSON m SoftforkRule where
       <$> fromJSField obj "initThd"
       <*> fromJSField obj "minThd"
       <*> fromJSField obj "thdDecrement"
-
-checkSoftforkRule :: (MonadError Text m) => SoftforkRule -> m ()
-checkSoftforkRule sr = do
-  checkCoinPortion (srInitThd sr)
-  checkCoinPortion (srMinThd sr)
-  checkCoinPortion (srThdDecrement sr)
 
 deriveJSON S.defaultOptions ''SoftforkRule

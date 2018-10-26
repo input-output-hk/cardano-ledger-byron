@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 -- | Golden and round-trip testing of 'Bi' instances
 
 module Test.Cardano.Binary.Helpers.GoldenRoundTrip
@@ -5,11 +7,13 @@ module Test.Cardano.Binary.Helpers.GoldenRoundTrip
        , roundTripsBiShow
        , roundTripsBiBuildable
        , compareHexDump
+       , legacyGoldenDecode
        ) where
 
 import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
+import qualified Codec.CBOR.Decoding as D
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Formatting.Buildable (Buildable (..))
@@ -19,7 +23,8 @@ import           Hedgehog.Internal.Property (failWith)
 import           Hedgehog.Internal.Show (LineDiff, lineDiff, mkValue,
                      renderLineDiff, showPretty)
 
-import           Cardano.Binary.Class (Bi (..), decodeFull, serialize)
+import           Cardano.Binary.Class (Bi (..), decodeFull, decodeFullDecoder,
+                     serialize)
 import qualified Prelude
 import           Text.Show.Pretty (Value (..))
 
@@ -28,16 +33,19 @@ type HexDump = LByteString
 
 type HexDumpDiff = [LineDiff]
 
-renderHexDumpDiff :: HexDumpDiff -> String
+renderHexDumpDiff :: HexDumpDiff -> [Char]
 renderHexDumpDiff = Prelude.unlines . fmap renderLineDiff
 
 -- | Diff two 'HexDump's by comparing lines pairwise
 hexDumpDiff :: HexDump -> HexDump -> Maybe HexDumpDiff
-hexDumpDiff x y =
-  concatMap (uncurry lineDiff)
-    ... zipWithPadding (String "") (String "")
-    <$> sequence (mkValue <$> BS.lines x)
-    <*> sequence (mkValue <$> BS.lines y)
+hexDumpDiff x y = do
+  xs <- sequence (mkValue <$> BS.lines x)
+  ys <- sequence (mkValue <$> BS.lines y)
+  pure $ concatMap (uncurry lineDiff) $ zipWithPadding
+    (String "")
+    (String "")
+    xs
+    ys
 
 zipWithPadding :: a -> b -> [a] -> [b] -> [(a, b)]
 zipWithPadding a b (x : xs) (y : ys) = (x, y) : zipWithPadding a b xs ys
@@ -55,7 +63,7 @@ failHexDumpDiff :: (MonadTest m, HasCallStack) => HexDump -> HexDump -> m ()
 failHexDumpDiff x y = case hexDumpDiff x y of
   Nothing -> withFrozenCallStack $ failWith Nothing $ Prelude.unlines
     ["━━━ Not Equal ━━━", showPretty x, showPretty y]
-  Just diff -> withFrozenCallStack $ failWith Nothing $ renderHexDumpDiff diff
+  Just dif -> withFrozenCallStack $ failWith Nothing $ renderHexDumpDiff dif
 
 goldenTestBi :: (Bi a, Eq a, Show a, HasCallStack) => a -> FilePath -> Property
 goldenTestBi x path = withFrozenCallStack $ do
@@ -78,3 +86,10 @@ roundTripsBiShow x = tripping x serialize decodeFull
 --   that also has a 'Buildable' instance.
 roundTripsBiBuildable :: (Bi a, Eq a, MonadTest m, Buildable a) => a -> m ()
 roundTripsBiBuildable a = trippingBuildable a serialize decodeFull
+
+legacyGoldenDecode
+  :: HasCallStack => Text -> (forall s . D.Decoder s ()) -> FilePath -> Property
+legacyGoldenDecode lbl decoder path =
+  withFrozenCallStack $ withTests 1 . property $ do
+    bs <- decodeBase16 <$> liftIO (BS.readFile path)
+    fmap (decodeFullDecoder lbl decoder) bs === Just (Right ())

@@ -7,26 +7,21 @@
 
 module Cardano.Chain.Update.BlockVersionModifier
        ( BlockVersionModifier (..)
-       , checkBlockVersionModifier
        , applyBVM
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
 import           Data.Text.Lazy.Builder (Builder)
 import           Data.Time (NominalDiffTime)
-import           Formatting (Format, bprint, build, bytes, int, later, shortest,
-                     (%))
+import           Formatting (Format, bprint, build, bytes, int, later, shortest)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy,
-                     checkCoinPortion)
+import           Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy)
 import           Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 import           Cardano.Chain.Update.BlockVersionData (BlockVersionData (..))
-import           Cardano.Chain.Update.SoftforkRule (SoftforkRule,
-                     checkSoftforkRule)
+import           Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
 
 -- | Data which represents modifications of block (aka protocol) version
@@ -45,26 +40,26 @@ data BlockVersionModifier = BlockVersionModifier
   , bvmSoftforkRule      :: !(Maybe SoftforkRule)
   , bvmTxFeePolicy       :: !(Maybe TxFeePolicy)
   , bvmUnlockStakeEpoch  :: !(Maybe EpochIndex)
-  } deriving (Show, Eq, Ord, Generic, Typeable)
+  } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
 
 instance B.Buildable BlockVersionModifier where
   build bvm = bprint
-    ( "{ script version: " % bmodifier build
-    % ", slot duration: " % bmodifier build
-    % ", block size limit: " % bmodifier bytes'
-    % ", header size limit: " % bmodifier bytes'
-    % ", tx size limit: " % bmodifier bytes'
-    % ", proposal size limit: " % bmodifier bytes'
-    % ", mpc threshold: " % bmodifier build
-    % ", heavyweight delegation threshold: " % bmodifier build
-    % ", update vote threshold: " % bmodifier build
-    % ", update proposal threshold: " % bmodifier build
-    % ", update implicit period (slots): " % bmodifier int
-    % ", softfork rule: " % bmodifier build
-    % ", tx fee policy: " % bmodifier build
-    % ", unlock stake epoch: " % bmodifier build
-    % " }"
+    ( "{ script version: " . bmodifier build
+    . ", slot duration: " . bmodifier build
+    . ", block size limit: " . bmodifier bytes'
+    . ", header size limit: " . bmodifier bytes'
+    . ", tx size limit: " . bmodifier bytes'
+    . ", proposal size limit: " . bmodifier bytes'
+    . ", mpc threshold: " . bmodifier build
+    . ", heavyweight delegation threshold: " . bmodifier build
+    . ", update vote threshold: " . bmodifier build
+    . ", update proposal threshold: " . bmodifier build
+    . ", update implicit period (slots): " . bmodifier int
+    . ", softfork rule: " . bmodifier build
+    . ", tx fee policy: " . bmodifier build
+    . ", unlock stake epoch: " . bmodifier build
+    . " }"
     )
     (bvmScriptVersion bvm)
     (bvmSlotDuration bvm)
@@ -84,6 +79,7 @@ instance B.Buildable BlockVersionModifier where
     bmodifier :: Format Builder (a -> Builder) -> Format r (Maybe a -> r)
     bmodifier b = later $ maybe "no change" (bprint b)
 
+    bytes' :: Format r (Natural -> r)
     bytes' = bytes (shortest @Double)
 
 instance Bi BlockVersionModifier where
@@ -121,14 +117,6 @@ instance Bi BlockVersionModifier where
       <*> decode
       <*> decode
       <*> decode
-
-checkBlockVersionModifier :: MonadError Text m => BlockVersionModifier -> m ()
-checkBlockVersionModifier bvm = do
-  whenJust (bvmMpcThd bvm)            checkCoinPortion
-  whenJust (bvmHeavyDelThd bvm)       checkCoinPortion
-  whenJust (bvmUpdateVoteThd bvm)     checkCoinPortion
-  whenJust (bvmUpdateProposalThd bvm) checkCoinPortion
-  whenJust (bvmSoftforkRule bvm)      checkSoftforkRule
 
 -- | Apply 'BlockVersionModifier' to 'BlockVersionData'
 applyBVM :: BlockVersionModifier -> BlockVersionData -> BlockVersionData
