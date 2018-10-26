@@ -518,21 +518,24 @@ blocks in the blockchain.
 %
 Initially, when the blockchain is made of the genesis block $g_0 \in \GBlock$
 only, and no key from the genesis block signed a block (neither directly or
-indirectly via delegation), as given by \eqref{eq:init-bc-state}.
+indirectly via delegation), as given in Figure~\ref{fig:init-bc-state}.
 
-\begin{equation}
-  \label{eq:init-bc-state}
-  \inference[Initial-state]
-  {}
-  {\left(
-      {\begin{array}{c}
-        \signmapname = \emptyset \\
-        p = g_0
-      \end{array}}
-  \right)
-  }
-\end{equation}
-%
+\begin{figure}
+  \begin{equation*}
+    \inference[Initial-state]
+    {}
+    {\left(
+        {\begin{array}{c}
+           \signmapname = \emptyset \\
+           p = g_0
+         \end{array}}
+     \right)
+   }
+ \end{equation*}
+ \caption{The Initial State Rule}
+ \label{fig:init-bc-state}
+\end{figure}
+
 With $p$ we denote the last block that was added to the blockchain.
 %
 The type of map $\signmapname$ is given in
@@ -661,7 +664,7 @@ Figure~\ref{fig:blockchain-extension}.
     \right)
  }
   \end{equation*}
-  \caption{Blockchain-extension}
+  \caption{The Blockchain Extension Rule}
   \label{fig:blockchain-extension}
 \end{figure}
 
