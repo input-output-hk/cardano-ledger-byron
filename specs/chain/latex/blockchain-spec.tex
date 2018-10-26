@@ -252,19 +252,19 @@ are given in Figure~\ref{fig:cert-defs}.
     sl & \in \Slot    & \text{slot time-stamp}\\
    sig & \in \Sig     & \text{cryptographic signature}\\
     sk & \in \SKey    & \text{signing key}\\
-    vk & \in \VKey    & \text{verification key}\\
+    vk & \in \VKey    & \text{verification key}
   \end{align*}
   %
   \emph{Derived types}
   %
   \begin{align*}
-    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
+    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}
   \end{align*}
   %
   \emph{Abstract types}
   %
   \begin{align*}
-    c & \in \HCert  & \text{heavyweight delegation certificate} \\
+    c & \in \HCert  & \text{heavyweight delegation certificate}
   \end{align*}
   %
   \emph{Functions}
@@ -330,20 +330,20 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     ix & \in \BlockIx & \text{block index}\\
-     h & \in \BHash   & \text{block hash}\\
+     h & \in \BHash   & \text{block hash}
   \end{align*}
   %
   \emph{Abstract types}
   %
   \begin{align*}
-    r & \in \RBlock & \text{non-genesis block} \\
     g & \in \GBlock & \text{genesis block} \\
+    r & \in \RBlock & \text{non-genesis block}
   \end{align*}
   %
   \emph{Derived types}
   %
   \begin{align*}
-    b & \in \Block = \GBlock + \RBlock & \text{block} \\
+    b & \in \Block = \GBlock + \RBlock & \text{block}
   \end{align*}
   %
   \emph{Projection functions}
