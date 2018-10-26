@@ -274,10 +274,10 @@ are given in Figure~\ref{fig:cert-defs}.
   \emph{Functions}
   %
   \begin{align*}
-    \text{$\fun{cFrom}$} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
-    \text{$\fun{cTo}$} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
-    \text{$\fun{cSl}$} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
-    \text{$\fun{cSig}$} & \in \HCert \totalf \Sig & \text{certificate signature projection}
+    \fun{cFrom} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
+    \fun{cTo} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
+    \fun{cSl} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
+    \fun{cSig} & \in \HCert \totalf \Sig & \text{certificate signature projection}
   \end{align*}
   %
   \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
@@ -353,15 +353,15 @@ Figure~\ref{fig:block-defs}.
   \emph{Functions}
   %
   \begin{align*}
-    \text{$\fun{gbKeys}$} & \in \GBlock \totalf \VKeyGen^n & \text{block keys projection} \\
-    \text{$\fun{\bixname}$} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
-    \text{$\fun{\hashname}$} & \in \Block \totalf \BHash
+    \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys projection} \\
+    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index projection} \\
+    \fun{\hashname} & \in \Block \totalf \BHash
       & \text{block hash projection} \\
-    \text{$\fun{\bslname}$} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
-    \text{$\fun{\bcertsname}$} & \in \RBlock \totalf \powerset{\HCert}
+    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot projection} \\
+    \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates projection} \\
-    \text{$\fun{\bsigname}$} & \in \RBlock \totalf \Sig & \text{block signature projection} \\
-    \text{$\fun{\bdataname}$} & \in \RBlock \totalf \Data & \text{block data projection}
+    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature projection} \\
+    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data projection}
   \end{align*}
   %
   \caption{Basic Block-related Types and Functions}
@@ -552,12 +552,12 @@ discarded.
   \emph{Functions and relations}
   %
   \begin{align*}
-    \text{$\fun{\keypairname}$} & \in \SKey \times \VKey & \text{key pair relation}\\
-    \text{$\fun{\signname}$} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+    \fun{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
+    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
-    \text{$\fun{\verifyname}$} & \in \VKey \times \Data \times \Sig
+    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{$\fun{\delegatorname}$} & \in \VKey \times \Slot \partialf \VKeyGen^?
+    \fun{\delegatorname} & \in \VKey \times \Slot \partialf \VKeyGen^?
       & \text{delegator function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
@@ -755,16 +755,16 @@ Figure~\ref{fig:block-ext-types-funs}.
   \emph{Functions}
   %
   \begin{align*}
-    \text{$\fun{qHead}$} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
-    \text{$\fun{qPush}$} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
+    \fun{qHead} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
+    \fun{qPush} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
       & \text{queue push function} \\
-    \text{$\fun{\qpopname}$} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
+    \fun{\qpopname} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
       & \text{queue pop function} \\
     \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
       & \text{restricted queue pop function} \\
-    \text{$\fun{\trimixname}$} & \in \mapqueue \times \BlockIx \totalf \mapqueue
+    \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
-    \text{$\fun{\incixmapname}$} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+    \fun{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{block count increment function}
   \end{align*}
   %
