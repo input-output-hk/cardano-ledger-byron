@@ -114,7 +114,7 @@
 \newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
 \newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
-\newcommand{\postnewcerts}[1]{\fun{\postnewcertsname} ~ #1}
+\newcommand{\postnewcerts}[2]{\fun{\postnewcertsname} ~ #1 ~ #2}
 
 \newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
 \newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
@@ -407,27 +407,26 @@ blockchain layer has to inform the ledger layer of new certificates when a new
 block is to be added to the blockchain.
 %
 Therefore, as part of the delegation interface, the blockchain layer exposes
-new delegation certificates functionality to the ledger layer.
+the new delegation certificates functionality to the ledger layer.
 %
-In Haskell, the signature of the corresponding function is:
-%
-\begin{lstlisting}
-postNewCerts :: (HCert c, MonadError CertErr m) => Set c -> m ()
-\end{lstlisting}
-%
-The return type of the function signals the possibility of failure.
+This is modeled as a relation
+$\fun{\postnewcertsname} \subseteq (\powerset{\HCert}) \times \Slot$.
 %
 Given that the blockchain layer does not keep the state of delegation
 certificates, it has no way of checking if certificates are valid.
 %
+That is why new certificates can be added to the relation in the current slot
+only if there are no conflicts with existing certificates that are stored in
+the ledger layer.
+%
 For example, the blockchain layer cannot know if the delegator already posted
 another delegation certificate in the current epoch.
 %
-Furthermore, the slot in which the certificate is claimed to become active
-might not be in K slots, which should disallow such a certificate.
+Furthermore, the slot in which a certificate is claimed to become active might
+not be in K slots, which should disallow such a certificate.
 %
-In case of failure, the whole block to be added to the blockchain is
-discarded.
+In case a certificate cannot be added to the relation, the block to be added
+to the blockchain is discarded.
 
 
 \section{State transitions for Blockchain}
@@ -454,7 +453,9 @@ discarded.
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
     \fun{\delegationname} & \in \VKeyGen \times \VKey \times \Slot
-      & \text{delegation relation}
+      & \text{delegation relation}\\
+    \fun{\postnewcertsname} & \in (\powerset{\HCert}) \times \Slot
+      & \text{new certificates relation}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
@@ -634,7 +635,7 @@ Figure~\ref{fig:blockchain-extension}.
       \delegation{vk_s}{vk_d}{sl} \wedge \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
       \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
-      \postnewcerts{(\bcerts{b})} \\
+      \postnewcerts{(\bcerts{b})}{sl} \\
       p' = b 
     \end{array}}
   }
