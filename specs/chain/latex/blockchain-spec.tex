@@ -86,7 +86,7 @@
 \newcommand{\hashname}{bHash}
 \newcommand{\signname}{sign}
 \newcommand{\verifyname}{verify}
-\newcommand{\delegatorname}{delegator} % the delegator of a delegatee in a given slot
+\newcommand{\delegationname}{delegation} % the delegation relation
 \newcommand{\signmapname}{\mathcal{M}}
 \newcommand{\trimixname}{trimIx}
 \newcommand{\incixmapname}{incIxMap}
@@ -109,7 +109,7 @@
 \newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
-\newcommand{\delegator}[2]{\fun{\delegatorname} ~ #1 ~ #2}
+\newcommand{\delegation}[3]{\fun{\delegationname} ~ #1 ~ #2 ~#3}
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
 \newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
 \newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
@@ -385,31 +385,21 @@ It does so by keeping a set of certificates that are currently active.
 %
 Furthermore, the ledger layer also needs to maintain a set of delegation
 certificates that have been added to the blockchain, but that will become
-active and that possibly inactive other certificates in the future.
+active and that possibly inactivate other certificates in the future.
 %
 As part of the delegation interface, the ledger layer exposes functionality
-for checking if a particular verification key has the delegation right to sign
-a block in a given slot.
+for checking if a particular verification key $vk_d$ has the delegation right
+to sign a block in a given slot $sl$.
 %
 In particular, if the verification key has the right to sign, the
-functionality should inform who is the delegator.
+functionality should inform who is the delegator $vk_s$.
 %
-In Haskell, the signature of the corresponding function is:
+The functionality can be modeled as a relation
+$\fun{\delegationname} \subseteq \VKeyGen \times \VKey \times \Slot$.
 %
-\begin{lstlisting}
-delegator :: ( VKey vk_d, VKeyGen vk_s)
-          => vk_d -> Slot s -> Maybe vk_s
-\end{lstlisting}
-
-If the verification key does not have the delegation right, i.e., it has no
-right to sign the block in the given slot, the function returns nothing.
-%
-If it does have the right, it returns the delegator's verification key.
-%
-Note that in the case when $vk_d \in VKeyGen$, i.e., when the verification key
-is a genesis block verification key, and it has not delegated its signing
-right to any other key, the function should return that same genesis block
-verification key.
+Note that in the case when $vk_d \in \VKeyGen$, i.e., when the verification
+key is a genesis block verification key, and it has not delegated its signing
+right to any other key, the element from the relation is $(vk_d, vk_d, sl)$.
 
 
 New delegation certificates are added to the blockchain in blocks, so the
@@ -463,8 +453,8 @@ discarded.
       & \text{signature function}\\
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \fun{\delegatorname} & \in \VKey \times \Slot \partialf \VKeyGen^?
-      & \text{delegator function}
+    \fun{\delegationname} & \in \VKeyGen \times \VKey \times \Slot
+      & \text{delegation relation}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
@@ -641,7 +631,7 @@ Figure~\ref{fig:blockchain-extension}.
     {\begin{array}{c}
       ix = \bix{b} \wedge sl = \bsl{b} \\
       \hash{b} = h = p \\ % TODO: types have to be fixed for hashes
-      vk_s = \delegator{vk_d}{sl} \wedge \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
+      \delegation{vk_s}{vk_d}{sl} \wedge \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
       \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
       \postnewcerts{(\bcerts{b})} \\
