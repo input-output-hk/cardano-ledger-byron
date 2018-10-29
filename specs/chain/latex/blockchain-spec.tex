@@ -432,36 +432,6 @@ to the blockchain is discarded.
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
 
-\begin{figure}[h]
-  \emph{Primitive types}
-  %
-  \begin{align*}
-  data & \in \Data    & \text{data}
-  \end{align*}
-  %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-  \end{align*}
-  %
-  \emph{Functions and relations}
-  %
-  \begin{align*}
-    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
-      & \text{signature function}\\
-    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
-    \fun{\delegationname} & \in \VKeyGen \times \VKey \times \Slot
-      & \text{delegation relation}\\
-    \fun{\postnewcertsname} & \in (\powerset{\HCert}) \times \Slot
-      & \text{new certificates relation}
-  \end{align*}
-  \caption{Definitions associated with the blockchain transition system}
-  \label{fig:state-trans-abstract}
-\end{figure}
-
-
 \subsection{Block Validity}
 \label{sec:block-valid}
 % This definition is adopted from shelley-plan.md, which is written by
@@ -573,13 +543,15 @@ Figure~\ref{fig:block-ext-types-funs}.
   \emph{Abstract types}
   %
   \begin{align*}
-    q & \in \Queue_\BlockIx  & \text{block index queue}
+    q  & \in \Queue_\BlockIx  & \text{block index queue}\\
+  data & \in \Data    & \text{data}
   \end{align*}
   %
   \emph{Derived types}
   %
   \begin{align*}
-    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}
+    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
+    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
   \end{align*}
   %
   \emph{Type aliases}
@@ -600,10 +572,18 @@ Figure~\ref{fig:block-ext-types-funs}.
     \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
     \fun{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
-      & \text{block count increment function}
+      & \text{block count increment function}\\
+    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+      & \text{signature function}\\
+    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \fun{\delegationname} & \in \VKeyGen \times \VKey \times \Slot
+      & \text{delegation relation}\\
+    \fun{\postnewcertsname} & \in (\powerset{\HCert}) \times \Slot
+      & \text{new certificates relation}
   \end{align*}
   %
-  \caption{Block Extension Types and Functions}
+  \caption{Blockchain Extension Types and Functions}
   \label{fig:block-ext-types-funs}
 \end{figure}
 
