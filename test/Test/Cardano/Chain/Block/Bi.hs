@@ -39,7 +39,7 @@ import           Cardano.Crypto (ProtocolMagic (..), SignTag (..), abstractHash,
                      createPsk, hash, proxySign, sign, toPublic)
 
 import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
-                     legacyGoldenDecode, roundTripsBiBuildable,
+                     deprecatedGoldenDecode, roundTripsBiBuildable,
                      roundTripsBiShow)
 import           Test.Cardano.Chain.Block.Gen
 import           Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
@@ -60,9 +60,9 @@ import           Test.Cardano.Crypto.Gen (feedPM)
 -- Header
 --------------------------------------------------------------------------------
 
-golden_Header :: Property
-golden_Header =
-  goldenTestBi exampleHeader "test/golden/block/Header"
+goldenHeader :: Property
+goldenHeader =
+  goldenTestBi exampleHeader "test/golden/bi/block/Header"
 
 roundTripHeaderBi :: Property
 roundTripHeaderBi =
@@ -107,17 +107,17 @@ roundTripBlockCompat = eachOf
 -- BlockSignature
 --------------------------------------------------------------------------------
 
-golden_BlockSignature :: Property
-golden_BlockSignature =
-  goldenTestBi exampleBlockSignature "test/golden/BlockSignature"
+goldenBlockSignature :: Property
+goldenBlockSignature =
+  goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
 
-golden_BlockSignature_Light :: Property
-golden_BlockSignature_Light =
-  goldenTestBi exampleBlockPSignatureLight "test/golden/BlockSignature_Light"
+goldenBlockSignature_Light :: Property
+goldenBlockSignature_Light =
+  goldenTestBi exampleBlockPSignatureLight "test/golden/bi/block/BlockSignature_Light"
 
-golden_BlockSignature_Heavy :: Property
-golden_BlockSignature_Heavy =
-  goldenTestBi exampleBlockPSignatureHeavy "test/golden/BlockSignature_Heavy"
+goldenBlockSignature_Heavy :: Property
+goldenBlockSignature_Heavy =
+  goldenTestBi exampleBlockPSignatureHeavy "test/golden/bi/block/BlockSignature_Heavy"
 
 roundTripBlockSignatureBi :: Property
 roundTripBlockSignatureBi =
@@ -128,41 +128,41 @@ roundTripBlockSignatureBi =
 -- BoundaryBlockHeader
 --------------------------------------------------------------------------------
 
-golden_legacy_BoundaryBlockHeader :: Property
-golden_legacy_BoundaryBlockHeader = legacyGoldenDecode
+goldenDeprecatedBoundaryBlockHeader :: Property
+goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   "BoundaryBlockHeader"
   dropBoundaryHeader
-  "test/golden/BoundaryBlockHeader"
+  "test/golden/bi/block/BoundaryBlockHeader"
 
 
 --------------------------------------------------------------------------------
 -- BoundaryBody
 --------------------------------------------------------------------------------
 
-golden_legacy_BoundaryBody :: Property
-golden_legacy_BoundaryBody = legacyGoldenDecode
+goldenDeprecatedBoundaryBody :: Property
+goldenDeprecatedBoundaryBody = deprecatedGoldenDecode
   "BoundaryBody"
   dropBoundaryBody
-  "test/golden/BoundaryBody"
+  "test/golden/bi/block/BoundaryBody"
 
 
 --------------------------------------------------------------------------------
 -- BoundaryConsensusData
 --------------------------------------------------------------------------------
 
-golden_legacy_BoundaryConsensusData :: Property
-golden_legacy_BoundaryConsensusData = legacyGoldenDecode
+goldenDeprecatedBoundaryConsensusData :: Property
+goldenDeprecatedBoundaryConsensusData = deprecatedGoldenDecode
   "BoundaryConsensusData"
   dropBoundaryConsensusData
-  "test/golden/BoundaryConsensusData"
+  "test/golden/bi/block/BoundaryConsensusData"
 
 
 --------------------------------------------------------------------------------
 -- HeaderHash
 --------------------------------------------------------------------------------
 
-golden_HeaderHash :: Property
-golden_HeaderHash = goldenTestBi exampleHeaderHash "test/golden/HeaderHash"
+goldenHeaderHash :: Property
+goldenHeaderHash = goldenTestBi exampleHeaderHash "test/golden/bi/block/HeaderHash"
 
 roundTripHeaderHashBi :: Property
 roundTripHeaderHashBi = eachOf 1000 genHeaderHash roundTripsBiBuildable
@@ -172,19 +172,19 @@ roundTripHeaderHashBi = eachOf 1000 genHeaderHash roundTripsBiBuildable
 -- BoundaryProof
 --------------------------------------------------------------------------------
 
-golden_legacy_BoundaryProof :: Property
-golden_legacy_BoundaryProof = legacyGoldenDecode
+goldenDeprecatedBoundaryProof :: Property
+goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
   "BoundaryProof"
   dropBytes
-  "test/golden/BoundaryProof"
+  "test/golden/bi/block/BoundaryProof"
 
 
 --------------------------------------------------------------------------------
 -- Body
 --------------------------------------------------------------------------------
 
-golden_Body :: Property
-golden_Body = goldenTestBi exampleBody "test/golden/block/Body"
+goldenBody :: Property
+goldenBody = goldenTestBi exampleBody "test/golden/bi/block/Body"
 
 roundTripBodyBi :: Property
 roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
@@ -194,8 +194,8 @@ roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
 -- ConsensusData
 --------------------------------------------------------------------------------
 
-golden_ConsensusData :: Property
-golden_ConsensusData = goldenTestBi mcd "test/golden/block/ConsensusData"
+goldenConsensusData :: Property
+goldenConsensusData = goldenTestBi mcd "test/golden/bi/block/ConsensusData"
  where
   mcd = ConsensusData
     exampleSlotId
@@ -212,8 +212,8 @@ roundTripConsensusData =
 -- ExtraBodyData
 --------------------------------------------------------------------------------
 
-golden_ExtraBodyData :: Property
-golden_ExtraBodyData = goldenTestBi mebd "test/golden/block/ExtraBodyData"
+goldenExtraBodyData :: Property
+goldenExtraBodyData = goldenTestBi mebd "test/golden/bi/block/ExtraBodyData"
   where mebd = ExtraBodyData (mkAttributes ())
 
 roundTripExtraBodyDataBi :: Property
@@ -225,9 +225,9 @@ roundTripExtraBodyDataBi =
 -- ExtraHeaderData
 --------------------------------------------------------------------------------
 
-golden_ExtraHeaderData :: Property
-golden_ExtraHeaderData =
-  goldenTestBi exampleExtraHeaderData "test/golden/block/ExtraHeaderData"
+goldenExtraHeaderData :: Property
+goldenExtraHeaderData =
+  goldenTestBi exampleExtraHeaderData "test/golden/bi/block/ExtraHeaderData"
 
 roundTripExtraHeaderDataBi :: Property
 roundTripExtraHeaderDataBi =
@@ -238,8 +238,8 @@ roundTripExtraHeaderDataBi =
 -- Proof
 --------------------------------------------------------------------------------
 
-golden_Proof :: Property
-golden_Proof = goldenTestBi exampleProof "test/golden/block/Proof"
+goldenProof :: Property
+goldenProof = goldenTestBi exampleProof "test/golden/bi/block/Proof"
 
 roundTripProofBi :: Property
 roundTripProofBi = eachOf 20 (feedPM genProof) roundTripsBiBuildable
@@ -249,8 +249,8 @@ roundTripProofBi = eachOf 20 (feedPM genProof) roundTripsBiBuildable
 -- ToSign
 --------------------------------------------------------------------------------
 
-golden_ToSign :: Property
-golden_ToSign = goldenTestBi exampleToSign "test/golden/block/ToSign"
+goldenToSign :: Property
+goldenToSign = goldenTestBi exampleToSign "test/golden/bi/block/ToSign"
 
 roundTripToSignBi :: Property
 roundTripToSignBi =
@@ -261,8 +261,8 @@ roundTripToSignBi =
 -- Undo
 --------------------------------------------------------------------------------
 
-golden_Undo :: Property
-golden_Undo = goldenTestBi exampleUndo "test/golden/block/Undo"
+goldenUndo :: Property
+goldenUndo = goldenTestBi exampleUndo "test/golden/bi/block/Undo"
 
 roundTripUndo :: Property
 roundTripUndo = eachOf 20 (feedPMEpochSlots genUndo) roundTripsBiShow
