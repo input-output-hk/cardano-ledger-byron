@@ -14,6 +14,7 @@ module Cardano.Binary.Class.Primitive
        , serializeWith
        , serialize'
        , serializeBuilder
+       , serializeEncoding
 
        -- * Deserialize inside the Decoder monad
        , deserialize
@@ -62,7 +63,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
 import           Data.Digest.CRC32 (CRC32 (..))
 import           Data.Typeable (typeOf)
-import           Formatting (Format, sformat, shown, (%))
+import           Formatting (Format, sformat, shown)
 
 import           Cardano.Binary.Class.Core (Bi (..), DecoderError (..), Size,
                      apMono, enforceSize, withWordSize)
@@ -95,6 +96,11 @@ serializeWith :: Bi a => Int -> Int -> a -> BSL.ByteString
 serializeWith firstChunk nextChunk =
   Builder.toLazyByteStringWith strategy mempty . serializeBuilder
   where strategy = Builder.safeStrategy firstChunk nextChunk
+
+serializeEncoding :: E.Encoding -> BSL.ByteString
+serializeEncoding =
+  Builder.toLazyByteStringWith strategy mempty . CBOR.Write.toBuilder
+  where strategy = Builder.safeStrategy 1024 4096
 
 -- | Deserialize a Haskell value from the external binary representation
 --   (which must have been made using 'serialize' or related function).
@@ -250,7 +256,7 @@ encodedCrcProtectedSizeExpr
   :: forall a . Bi a => (forall t . Bi t => Proxy t -> Size) -> Proxy a -> Size
 encodedCrcProtectedSizeExpr size pxy =
   2 + unknownCborDataItemSizeExpr (size pxy) + size
-    (pure $ crc32 (serialize (error "unused" :: a)))
+    (pure $ crc32 (serialize (panic "unused" :: a)))
 
 -- | Decodes a CBOR blob into a type `a`, checking the serialised CRC corresponds to the computed one.
 decodeCrcProtected :: forall s a . Bi a => D.Decoder s a
@@ -265,9 +271,9 @@ decodeCrcProtected = do
     crcErrorFmt :: Format r (Word32 -> Word32 -> r)
     crcErrorFmt =
       "decodeCrcProtected, expected CRC "
-        % shown
-        % " was not the computed one, which was "
-        % shown
+        . shown
+        . " was not the computed one, which was "
+        . shown
   when (actualCrc /= expectedCrc)
     $ cborError (sformat crcErrorFmt expectedCrc actualCrc)
   toCborError $ decodeFull' body

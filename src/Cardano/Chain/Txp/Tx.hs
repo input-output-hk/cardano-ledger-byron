@@ -6,7 +6,6 @@
 
 module Cardano.Chain.Txp.Tx
        ( Tx (..)
-       , checkTx
        , txInputs
        , txOutputs
        , txAttributes
@@ -25,7 +24,6 @@ module Cardano.Chain.Txp.Tx
 import           Cardano.Prelude
 
 import           Control.Lens (makeLenses, makePrisms)
-import           Control.Monad.Except (MonadError (throwError))
 import           Data.Aeson (FromJSON (..), FromJSONKey (..),
                      FromJSONKeyFunction (..), ToJSON (toJSON), ToJSONKey (..),
                      object, withObject, (.:), (.=))
@@ -33,7 +31,7 @@ import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import           Formatting (Format, bprint, build, builder, int, sformat, (%))
+import           Formatting (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Case (..),
@@ -41,8 +39,8 @@ import           Cardano.Binary.Class (Bi (..), Case (..),
                      encodeKnownCborDataItem, encodeListLen,
                      encodeUnknownCborDataItem, enforceSize,
                      knownCborDataItemSizeExpr, szCases)
-import           Cardano.Chain.Common (Address (..), Coin (..), checkCoin,
-                     coinF, coinToInteger, decodeTextAddress, integerToCoin)
+import           Cardano.Chain.Common (Address (..), Coin, coinF, coinToInteger,
+                     decodeTextAddress, integerToCoin)
 import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import           Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF,
@@ -63,17 +61,17 @@ data Tx = UnsafeTx
   -- ^ Outputs of transaction.
   , _txAttributes :: !TxAttributes
   -- ^ Attributes of transaction
-  } deriving (Eq, Ord, Generic, Show, Typeable)
+  } deriving (Eq, Ord, Generic, Show)
 
 instance B.Buildable Tx where
   build tx = bprint
     ( "Tx "
-    % build
-    % " with inputs "
-    % listJson
-    % ", outputs: "
-    % listJson
-    % builder
+    . build
+    . " with inputs "
+    . listJson
+    . ", outputs: "
+    . listJson
+    . builder
     )
     (hash tx)
     (_txInputs tx)
@@ -83,7 +81,7 @@ instance B.Buildable Tx where
     attrs = _txAttributes tx
     attrsBuilder
       | areAttributesKnown attrs = mempty
-      | otherwise                = bprint (", attributes: " % build) attrs
+      | otherwise                = bprint (", attributes: " . build) attrs
 
 instance Bi Tx where
   encode tx =
@@ -103,19 +101,6 @@ instance NFData Tx
 -- | Specialized formatter for 'Tx'
 txF :: Format r (Tx -> r)
 txF = build
-
--- | Verify inputs and outputs are non empty; have enough coins
-checkTx :: MonadError Text m => Tx -> m ()
-checkTx tx = zipWithM_ checkOutput [0 :: Word ..] $ toList (_txOutputs tx)
- where
-  checkOutput i txOut = do
-    unless (txOutValue txOut > Coin 0) $ throwError $ sformat
-      ("output #" % int % " has non-positive value: " % coinF)
-      i
-      (txOutValue txOut)
-    unless (isRight . checkCoin $ txOutValue txOut) $ throwError $ sformat
-      ("output #" % int % " has invalid coin")
-      i
 
 
 --------------------------------------------------------------------------------
@@ -146,7 +131,7 @@ data TxIn
   -- | Word32 = Index of the output in transaction's outputs
   = TxInUtxo TxId Word32
   | TxInUnknown !Word8 !ByteString
-  deriving (Eq, Ord, Generic, Show, Typeable)
+  deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxIn where
   parseJSON v = toAesonError =<< txInFromText <$> parseJSON v
@@ -162,9 +147,9 @@ instance ToJSONKey TxIn where
 
 instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
-    bprint ("TxInUtxo " % shortHashF % " #" % int) txInHash txInIndex
+    bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
   build (TxInUnknown tag bs) =
-    bprint ("TxInUnknown " % int % " " % base16F) tag bs
+    bprint ("TxInUnknown " . int . " " . base16F) tag bs
 
 instance Bi TxIn where
   encode (TxInUtxo txInHash txInIndex) =
@@ -180,13 +165,8 @@ instance Bi TxIn where
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
       _ -> TxInUnknown tag <$> decodeUnknownCborDataItem
 
-  encodedSizeExpr size _ =
-    2
-      + (knownCborDataItemSizeExpr $ szCases
-          [ let TxInUtxo txInHash txInIndex = error "unused"
-            in Case "TxInUtxo" (size ((,) <$> pure txInHash <*> pure txInIndex))
-          ]
-        )
+  encodedSizeExpr size _ = 2 + knownCborDataItemSizeExpr
+    (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
 
 instance NFData TxIn
 
@@ -196,16 +176,19 @@ isTxInUnknown _                 = False
 
 txInFromText :: Text -> Either Text TxIn
 txInFromText t = case T.splitOn "_" t of
-  ["TxInUtxo", h, idx] -> TxInUtxo <$> decodeAbstractHash h <*> readEither idx
+  ["TxInUtxo", h, idx] ->
+    TxInUtxo <$> decodeAbstractHash h <*> first toS (readEither (toS idx))
   ["TxInUnknown", tag, bs] ->
-    TxInUnknown <$> readEither tag <*> first show (parseBase16 bs)
+    TxInUnknown <$> first toS (readEither (toS tag)) <*> first
+      show
+      (parseBase16 bs)
   _ -> Left $ "Invalid TxIn " <> t
 
 txInToText :: TxIn -> Text
 txInToText (TxInUtxo txInHash txInIndex) =
-  sformat ("TxInUtxo_" % hashHexF % "_" % int) txInHash txInIndex
+  sformat ("TxInUtxo_" . hashHexF . "_" . int) txInHash txInIndex
 txInToText (TxInUnknown tag bs) =
-  sformat ("TxInUnknown_" % int % "_" % base16F) tag bs
+  sformat ("TxInUnknown_" . int . "_" . base16F) tag bs
 
 
 --------------------------------------------------------------------------------
@@ -216,7 +199,7 @@ txInToText (TxInUnknown tag bs) =
 data TxOut = TxOut
   { txOutAddress :: !Address
   , txOutValue   :: !Coin
-  } deriving (Eq, Ord, Generic, Show, Typeable)
+  } deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxOut where
   parseJSON = withObject "TxOut" $ \o ->
@@ -232,7 +215,7 @@ instance ToJSON TxOut where
 
 instance B.Buildable TxOut where
   build txOut = bprint
-    ("TxOut " % coinF % " -> " % build)
+    ("TxOut " . coinF . " -> " . build)
     (txOutValue txOut)
     (txOutAddress txOut)
 

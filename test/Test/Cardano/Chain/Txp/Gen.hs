@@ -39,8 +39,8 @@ import qualified Hedgehog.Range as Range
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Txp (Tx (..), TxAttributes, TxAux (..), TxId,
                      TxIn (..), TxInWitness (..), TxOut (..), TxOutAux (..),
-                     TxPayload, TxProof (..), TxSig, TxSigData (..), TxUndo,
-                     TxWitness, TxpUndo, mkTxPayload)
+                     TxPayload (..), TxProof (..), TxSig, TxSigData (..),
+                     TxUndo, TxWitness, TxpUndo)
 import           Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
 
 import           Test.Cardano.Chain.Common.Gen (genAddress, genCoin,
@@ -73,9 +73,9 @@ genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash
 
 genTxId :: Gen TxId
-genTxId = genBase16Text >>= pure . decodeHash >>= either error pure
+genTxId = genBase16Text >>= pure . decodeHash >>= either panic pure
     where
-        genBase16Text = decodeUtf8 @Text @ByteString <$> genBase16Bs
+        genBase16Text = decodeUtf8 <$> genBase16Bs
 
 genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32
@@ -105,7 +105,7 @@ genTxpUndo :: Gen TxpUndo
 genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
 genTxPayload :: ProtocolMagic -> Gen TxPayload
-genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
+genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagic -> Gen TxProof
 genTxProof pm =

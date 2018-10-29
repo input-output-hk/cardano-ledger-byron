@@ -18,7 +18,7 @@ import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Time (NominalDiffTime)
-import           Formatting (bprint, build, bytes, int, shortest, (%))
+import           Formatting (Format, bprint, build, bytes, int, shortest)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
                      mkObject)
@@ -45,27 +45,27 @@ data BlockVersionData = BlockVersionData
   , bvdSoftforkRule      :: !SoftforkRule
   , bvdTxFeePolicy       :: !TxFeePolicy
   , bvdUnlockStakeEpoch  :: !EpochIndex
-  } deriving (Show, Eq, Ord, Generic, Typeable)
+  } deriving (Show, Eq, Ord, Generic)
 
 instance NFData BlockVersionData where
 
 instance B.Buildable BlockVersionData where
   build bvd = bprint
-    ( "{ script version: " % build
-    % ", slot duration: " % build
-    % ", block size limit: " % bytes'
-    % ", header size limit: " % bytes'
-    % ", tx size limit: " % bytes'
-    % ", proposal size limit: " % bytes'
-    % ", mpc threshold: " % build
-    % ", heavyweight delegation threshold: " % build
-    % ", update vote threshold: " % build
-    % ", update proposal threshold: " % build
-    % ", update implicit period: " % int % " slots"
-    % ", softfork rule: " % build
-    % ", tx fee policy: " % build
-    % ", unlock stake epoch: " % build
-    % " }"
+    ( "{ script version: " . build
+    . ", slot duration: " . build
+    . ", block size limit: " . bytes'
+    . ", header size limit: " . bytes'
+    . ", tx size limit: " . bytes'
+    . ", proposal size limit: " . bytes'
+    . ", mpc threshold: " . build
+    . ", heavyweight delegation threshold: " . build
+    . ", update vote threshold: " . build
+    . ", update proposal threshold: " . build
+    . ", update implicit period: " . int . " slots"
+    . ", softfork rule: " . build
+    . ", tx fee policy: " . build
+    . ", unlock stake epoch: " . build
+    . " }"
     )
     (bvdScriptVersion bvd)
     (bvdSlotDuration bvd)
@@ -81,7 +81,9 @@ instance B.Buildable BlockVersionData where
     (bvdSoftforkRule bvd)
     (bvdTxFeePolicy bvd)
     (bvdUnlockStakeEpoch bvd)
-    where bytes' = bytes (shortest @Double)
+    where
+     bytes' :: Format r (Natural -> r)
+     bytes' = bytes (shortest @Double)
 
 instance Monad m => ToJSON m BlockVersionData where
   toJSON bvd = mkObject

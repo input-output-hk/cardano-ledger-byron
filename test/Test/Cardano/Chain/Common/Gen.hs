@@ -1,3 +1,6 @@
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Test.Cardano.Chain.Common.Gen
        ( genAddrAttributes
        , genAddress
@@ -13,7 +16,6 @@ module Test.Cardano.Chain.Common.Gen
        , genMerkleTree
        , genScript
        , genScriptVersion
-       , genSlotLeaders
        , genStakeholderId
        , genTxFeePolicy
        , genTxSizeLinear
@@ -24,7 +26,7 @@ import           Test.Cardano.Prelude
 
 import           Data.Fixed (Fixed (..))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust)
+import           Formatting (build, sformat)
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -34,11 +36,10 @@ import           Cardano.Binary.Class (Bi)
 import           Cardano.Chain.Common (AddrAttributes (..),
                      AddrSpendingData (..), AddrStakeDistribution (..),
                      AddrType (..), Address (..), BlockCount (..),
-                     ChainDifficulty (..), Coeff (..), Coin (..),
-                     CoinPortion (..), MerkleRoot (..), MerkleTree,
-                     Script (..), ScriptVersion, SlotLeaders, StakeholderId,
-                     TxFeePolicy (..), TxSizeLinear (..),
-                     coinPortionDenominator, makeAddress, maxCoinVal,
+                     ChainDifficulty (..), Coeff (..), Coin, CoinPortion (..),
+                     MerkleRoot (..), MerkleTree, Script (..), ScriptVersion,
+                     StakeholderId, TxFeePolicy (..), TxSizeLinear (..),
+                     coinPortionDenominator, makeAddress, maxCoinVal, mkCoin,
                      mkMerkleTree, mkStakeholderId, mtRoot)
 
 import           Test.Cardano.Crypto.Gen (genHDAddressPayload, genPublicKey,
@@ -127,12 +128,15 @@ genCoeff = do
     -- A `Coeff` wraps a Nano-precision integral value, which corresponds to a
     -- number of "Lovelace" (10^6 Lovelace == 1 ADA). The `Coeff` values used
     -- in Cardano correspond to less than 1 ADA.
-    let exponent = 9 + 6 :: Integer
-    integer <- Gen.integral (Range.constant 0 (10^exponent))
+    let e = 9 + 6 :: Integer
+    integer <- Gen.integral (Range.constant 0 (10^e))
     pure $ Coeff (MkFixed integer)
 
 genCoin :: Gen Coin
-genCoin = Coin <$> Gen.word64 (Range.constant 0 maxCoinVal)
+genCoin = mkCoin <$> Gen.word64 (Range.constant 0 maxCoinVal) >>= \case
+  Right coin -> pure coin
+  Left err ->
+    panic $ sformat ("The impossible happened in genCoin: " . build) err
 
 genCoinPortion :: Gen CoinPortion
 genCoinPortion =
@@ -151,11 +155,6 @@ genScript = Script <$> genScriptVersion <*> gen32Bytes
 
 genScriptVersion :: Gen ScriptVersion
 genScriptVersion = Gen.word16 Range.constantBounded
-
-genSlotLeaders :: Gen SlotLeaders
-genSlotLeaders = do
-    stakeHolderList <- Gen.list (Range.linear 1 10) genStakeholderId
-    pure $ fromJust $ nonEmpty stakeHolderList
 
 genStakeholderId :: Gen StakeholderId
 genStakeholderId = mkStakeholderId <$> genPublicKey
