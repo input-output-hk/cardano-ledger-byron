@@ -1,0 +1,47 @@
+\newcommand{\DIEnv}{\type{DIEnv}}
+\newcommand{\DIState}{\type{DIState}}
+
+\subsection{Delegation interface}
+\label{sec:delegation-interface}
+
+\begin{figure}
+  \emph{Delegation interface environments}
+  \begin{equation*}
+    \DIEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{e} & \Epoch & \text{epoch}\\
+        \var{s} & \Slot & \text{slot}\\
+        \var{d} & \Slot & \text{certificate liveness parameter}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Delegation interface states}
+  \begin{equation*}
+    \DIState
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{sds} & \seqof{(\Slot \times (\VKeyGen \times \VKey))} & \text{scheduled delegations}\\
+        \var{eks} & \powerset{\Epoch \times \VKeyGen} & \text{key-epoch delegations}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Delegation transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+    \powerset (\DIEnv \times \DIState \times \seqof{\DCert} \times \DIState)
+  \end{equation*}    
+  \caption{Delegation interface transition-system types}
+  \label{fig:ts-types:delegation-interface}
+\end{figure}
+
+\subsubsection{Delegation interface rules}
+\label{sec:delegation-interface-rules}
+
+\subsubsection{Delegation interface functions}
+\label{sec:delegation-interface-functions}
+
+TODO: define $\fun{delegates}$ and $\fun{initialDS}$.
