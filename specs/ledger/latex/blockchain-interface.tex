@@ -10,6 +10,7 @@
     \DIEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
+        \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\        
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
         \var{d} & \Slot & \text{certificate liveness parameter}
@@ -24,7 +25,7 @@
       \begin{array}{r@{~\in~}lr}
         \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{sds} & \seqof{(\Slot \times (\VKeyGen \times \VKey))} & \text{scheduled delegations}\\
-        \var{eks} & \powerset{\Epoch \times \VKeyGen} & \text{key-epoch delegations}
+        \var{eks} & \powerset{(\Epoch \times \VKeyGen)} & \text{key-epoch delegations}
       \end{array}
     \right)
   \end{equation*}
@@ -47,10 +48,11 @@
     \inference
     {\var{active} = [(s_i, w) \mid (s_i, w) \in \var{sds'},~ s_i \leq s]\\
       {\begin{array}{l}
-        e\\
-        s\\
-        d
-      \end{array}}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
       \vdash
       {
         \left(
@@ -88,9 +90,10 @@
     }    
     {
       {\begin{array}{l}
-        e\\
-        s\\
-        d
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
       \end{array}}
       \vdash
       {
