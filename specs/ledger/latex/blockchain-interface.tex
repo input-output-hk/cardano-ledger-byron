@@ -44,4 +44,20 @@
 \subsubsection{Delegation interface functions}
 \label{sec:delegation-interface-functions}
 
-TODO: define $\fun{delegates}$ and $\fun{initialDS}$.
+\begin{figure}
+  \begin{align*}
+    & \fun{delegates} \in \DIState \to (\VKeyGen \times \VKey) \to \Bool & \text{delegation relationship}\\
+    & \fun{delegates}~s~(\var{vk_s}, \var{vk_d}) = \var{vk_s} \mapsto \var{vk_d} \in (\var{dmap}~s)\\
+    \nextdef
+    & \fun{initialDS} \in \VKeyGen \to \DIState & \text{initial delegation state}\\
+    & \fun{initialDS}~\var{ks} =
+      \left(
+      \begin{array}{l}
+        \var{ks} \mapsto \var{ks}\\
+        \epsilon\\
+        \emptyset\\
+      \end{array}
+      \right)
+  \end{align*}
+  \caption{Delegation interface functions}
+\end{figure}
