@@ -10,7 +10,7 @@
     \DIEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\        
+        \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
         \var{d} & \Slot & \text{certificate liveness parameter}
@@ -23,7 +23,8 @@
     \DIState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{dws} & \VKeyGen \mapsto \Slot & \text{when last delegation occurred}\\
         \var{sds} & \seqof{(\Slot \times (\VKeyGen \times \VKey))} & \text{scheduled delegations}\\
         \var{eks} & \powerset{(\Epoch \times \VKeyGen)} & \text{key-epoch delegations}
       \end{array}
@@ -34,7 +35,7 @@
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
     \powerset (\DIEnv \times \DIState \times \seqof{\DCert} \times \DIState)
-  \end{equation*}    
+  \end{equation*}
   \caption{Delegation interface transition-system types}
   \label{fig:ts-types:delegation-interface}
 \end{figure}
@@ -46,7 +47,7 @@
   \begin{equation}
     \label{eq:rule:delegation-interface}
     \inference
-    {\var{active} = [(s_i, w) \mid (s_i, w) \in \var{sds'},~ s_i \leq s]\\
+    {
       {\begin{array}{l}
          \mathcal{K} \\
          e\\
@@ -75,19 +76,21 @@
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{dms}\\
+            \var{dws}
           \end{array}
         \right)
       }
-      \trans{adelegs}{\var{active}}
+      \trans{adelegs}{[.., s] \restrictdom \var{sds'}}
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{dms'}\\
+            \var{dws'}
           \end{array}
         \right)
-      }      
-    }    
+      }
+    }
     {
       {\begin{array}{l}
          \mathcal{K} \\
@@ -99,7 +102,8 @@
       {
         \left(
           \begin{array}{l}
-            \var{dmap}\\
+            \var{dms}\\
+            \var{dws}\\
             \var{sds}\\
             \var{eks}
           \end{array}
@@ -109,12 +113,13 @@
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{dms'}\\
+            \var{dws'}\\
             \var{[s-d,~ s+d]} \restrictdom \var{sds'}\\
             \var{[e, ..]} \restrictdom \var{eks'}
           \end{array}
         \right)
-      }      
+      }
     }
   \end{equation}
   \caption{Delegation interface rules}
@@ -127,7 +132,7 @@
 \begin{figure}
   \begin{align*}
     & \fun{delegates} \in \DIState \to (\VKeyGen \times \VKey) \to \Bool & \text{delegation relationship}\\
-    & \fun{delegates}~s~(\var{vk_s}, \var{vk_d}) = \var{vk_s} \mapsto \var{vk_d} \in (\var{dmap}~s)\\
+    & \fun{delegates}~s~(\var{vk_s}, \var{vk_d}) = \var{vk_s} \mapsto \var{vk_d} \in (\var{dms}~s)\\
     \nextdef
     & \fun{initialDS} \in \VKeyGen \to \DIState & \text{initial delegation state}\\
     & \fun{initialDS}~\var{ks} =

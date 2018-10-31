@@ -126,8 +126,8 @@ $\trans{sdeleg}{\wcard}$ are presented in
       {
         \left(
           \begin{array}{l}
-            \var{sds'}; (s + d,~ (\var{vk_s},~ \var{vk_d}))\\
-            \var{eks'} \cup \{(e_d,~ \var{vk_s})\}
+            \var{sds}; (s + d,~ (\var{vk_s},~ \var{vk_d}))\\
+            \var{eks} \cup \{(e_d,~ \var{vk_s})\}
           \end{array}
         \right)
       }
@@ -157,33 +157,57 @@ it. \cref{fig:rules:delegation} models such change.
     & \DState
       = \left(
         \begin{array}{r@{~\in~}lr}
-          \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}
+          \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+          \var{dws} & \VKeyGen \mapsto \Slot & \text{when last delegation occurred}\\
         \end{array}\right)
   \end{align*}
   \emph{Delegation transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      \powerset (\DState \times \DCert \times \DState)
+    \powerset (\DState \times (\Slot \times (\VKeyGen \times \VKey)) \times \DState)
     \end{equation*}
   \caption{Delegation transition-system types}
   \label{fig:ts-types:delegation}
 \end{figure}
 
 \begin{figure}
-  \begin{equation}\label{eq:delegation}
-    \inference[Delegation]
-    {\dwho{c} = (vk_s, vk_d)
+  \begin{equation}\label{eq:delegation-change}
+    \inference
+    {\var{vk_s} \mapsto s_p \Rightarrow s_p < s
     }
     {
       \left(
       \begin{array}{r}
-        \var{dmap}
+        \var{dms}\\
+        \var{dws}
       \end{array}
       \right)
-      \trans{adeleg}{c}
+      \trans{adeleg}{(s,~ (vk_s,~ vk_d))}
       \left(
       \begin{array}{lcl}
-        \var{dmap} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}
+        \var{dms} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
+        \var{dws} & \unionoverride & \{\var{vk_s} \mapsto s \}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}\label{eq:delegation-nop}
+    \inference
+    {\var{kv_s} \mapsto s_p \wedge s \leq s_p
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{dms}\\
+        \var{dws}
+      \end{array}
+      \right)
+      \trans{adeleg}{(s,~ (vk_s,~ \wcard))}
+      \left(
+      \begin{array}{lcl}
+        \var{dms}\\
+        \var{dws}
       \end{array}
       \right)
     }
@@ -201,14 +225,22 @@ delegations have on the ledger.
 \begin{figure}
   \begin{equation}
     \label{eq:rule:delegation-scheduling-seq-base}
-    \inference[SDELEGS-Base]
+    \inference
     {
     }
     {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{sds}\\
+            \var{eks}
           \end{array}
         \right)
       }
@@ -216,21 +248,30 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{sds}\\
+            \var{eks}
           \end{array}
         \right)
       }
     }
   \end{equation}
-
+  \nextdef
   \begin{equation}
     \label{eq:rule:delegation-scheduling-seq-ind}
-    \inference[SDELEGS-Ind]
+    \inference
     {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{sds}\\
+            \var{eks}
           \end{array}
         \right)
       }
@@ -238,15 +279,24 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{sds'}\\
+            \var{eks'}
           \end{array}
         \right)
       }
       &
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}
+            \var{sds'}\\
+            \var{eks'}
           \end{array}
         \right)
       }
@@ -254,16 +304,25 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap''}\\
+            \var{sds''}\\
+            \var{eks''}
           \end{array}
         \right)
       }
     }
     {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{sds}\\
+            \var{eks}
           \end{array}
         \right)
       }
@@ -271,7 +330,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap''}\\
+            \var{sds''}\\
+            \var{eks''}
           \end{array}
         \right)
       }
@@ -284,14 +344,15 @@ delegations have on the ledger.
 \begin{figure}
   \begin{equation}
     \label{eq:rule:delegation-seq-base}
-    \inference[ADELEGS-Base]
+    \inference
     {
     }
     {
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{dms}\\
+            \var{dws}
           \end{array}
         \right)
       }
@@ -299,21 +360,23 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{dms}\\
+            \var{dws}
           \end{array}
         \right)
       }
     }
   \end{equation}
-
+  \nextdef
   \begin{equation}
     \label{eq:rule:delegation-seq-ind}
-    \inference[ADELEGS-Ind]
+    \inference
     {
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{dms}\\
+            \var{dws}
           \end{array}
         \right)
       }
@@ -321,7 +384,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}\\
+            \var{dms'}\\
+            \var{dws'}
           \end{array}
         \right)
       }
@@ -329,7 +393,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap'}
+            \var{dms'}\\
+            \var{dws'}
           \end{array}
         \right)
       }
@@ -337,7 +402,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap''}\\
+            \var{dms''}\\
+            \var{dws''}
           \end{array}
         \right)
       }
@@ -346,7 +412,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap}
+            \var{dms}\\
+            \var{dws}
           \end{array}
         \right)
       }
@@ -354,7 +421,8 @@ delegations have on the ledger.
       {
         \left(
           \begin{array}{l}
-            \var{dmap''}\\
+            \var{dms''}\\
+            \var{dws''}
           \end{array}
         \right)
       }
