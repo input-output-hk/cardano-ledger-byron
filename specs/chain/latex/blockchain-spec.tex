@@ -79,7 +79,7 @@
 \newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\DelegState}{\type{DelegState}}
+\newcommand{\DelegState}{\type{DState}}
 
 %%
 %% Function and relation names
@@ -143,7 +143,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 29, 2018}
+\date{October 31, 2018}
 
 \maketitle
 
@@ -505,7 +505,7 @@ Figure~\ref{fig:init-bc-state}.
         {\begin{array}{c}
            \signmapname = \emptyset \\
            p = g_0 \\
-           ds = \emptyset
+           ds = \emptyset % TODO: Make this value abstract and explain it in prose
          \end{array}}
      \right)
    }
