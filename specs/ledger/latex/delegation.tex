@@ -108,7 +108,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
     }
     {
       {\begin{array}{l}
-       \mathcal{K}\\ 
+       \mathcal{K}\\
         e\\
         s\\
         d
@@ -180,7 +180,7 @@ it. \cref{fig:rules:delegation} models such change.
         \var{dmap}
       \end{array}
       \right)
-      \trans{deleg}{c}
+      \trans{adeleg}{c}
       \left(
       \begin{array}{lcl}
         \var{dmap} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}
@@ -190,4 +190,176 @@ it. \cref{fig:rules:delegation} models such change.
   \end{equation}
   \caption{Delegation inference rules}
   \label{fig:rules:delegation}
+\end{figure}
+
+\subsubsection{Delegation sequences}
+\label{sec:delegation-sequences}
+
+This section presents the rules that model the effect that sequences of
+delegations have on the ledger.
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:rule:delegation-scheduling-seq-base}
+    \inference[SDELEGS-Base]
+    {
+    }
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\epsilon}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+
+  \begin{equation}
+    \label{eq:rule:delegation-scheduling-seq-ind}
+    \inference[SDELEGS-Ind]
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\Gamma}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}\\
+          \end{array}
+        \right)
+      }
+      &
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}
+          \end{array}
+        \right)
+      }
+      \trans{sdeleg}{c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap''}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\Gamma; c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap''}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Delegation scheduling sequence rules}
+  \label{fig:rules:delegation-scheduling-seq}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:rule:delegation-seq-base}
+    \inference[ADELEGS-Base]
+    {
+    }
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\epsilon}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+
+  \begin{equation}
+    \label{eq:rule:delegation-seq-ind}
+    \inference[ADELEGS-Ind]
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\Gamma}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}\\
+          \end{array}
+        \right)
+      }
+      &
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap'}
+          \end{array}
+        \right)
+      }
+      \trans{adeleg}{c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap''}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\Gamma; c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dmap''}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Delegations sequence rules }
+  \label{fig:rules:delegation-seq}
 \end{figure}
