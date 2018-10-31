@@ -94,109 +94,37 @@
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
 
+\includeonly{delegation, blockchain-interface}
+
+%% Parameters that control floats placement. See https://robjhyndman.com/hyndsight/latex-floats/
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.7}
+
 \begin{document}
 
-%\input{frontmatter.tex}
+\input{frontmatter.tex}
 
 \tableofcontents
 \listoffigures
 
-\section{Introduction}
-\label{sec:introduction}
-%\input{intro.tex}
+\include{intro}
 
-\section{Notation}\label{sec:notation}
+\include{notation}
 
-\begin{description}
-\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
-  the subsets of $X$.
-\item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
-  sequences having elements taken from $\type{X}$. The empty sequence is
-  denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
-  the sequence that results from appending $\type{x} \in \type{X}$ to
-  $\Lambda$.
-\item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
-  Given a function $f$ we write $f~a$ for the application of $f$ to argument
-  $a$.
-\item[Fibre] Given a function $f: A \to B$ and $b\in B$, we write
-  $f^{-1}~b$ for the \textbf{fibre} of $f$ at $b$, which is defined by
-  $\{a \mid\ f a =  b\}$.
-\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
-    function} from $A$ to $B$, which can be seen as a map (dictionary) with
-  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
-  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
-\end{description}
+\include{crypto-primitives}
 
-\section{Cryptographic primitives}
-\label{sec:crypto-primitives}
+\include{serialisation}
 
-Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
-this document.
+\include{utxo}
 
-\begin{figure}
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{vk} & \SKey & \text{signing key}\\
-      \var{vk} & \VKey & \text{verifying key}\\
-      \var{hk} & \Hash & \text{hash of a key}\\
-      \sigma & \Sig  & \text{signature}\\
-      \var{d} & \Data  & \text{data}\\
-    \end{array}
-  \end{equation*}
-  \emph{Derived types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
-    \end{array}
-  \end{equation*}
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \hash{} & \VKey \to \Hash
-      & \text{hash function} \\
-      %
-      \fun{verify} & \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
-    \end{array}
-  \end{equation*}
-  \emph{Constraints}
-  \begin{align*}
-    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
-      \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
-  \end{align*}
-  \emph{Notation for serialized and verified data}
-  \begin{align*}
-    & \serialised{x} & \text{serialised representation of } x\\
-    & \mathcal{V}_{\var{vk}}{\serialised{m}}_{\sigma} = \verify{vk}{m}{\sigma}
-      & \text{shorthand notation for } \fun{verify}
-  \end{align*}
-  \caption{Cryptographic definitions}
-  \label{fig:crypto-defs}
-\end{figure}
+\include{delegation}
 
-\section{Serialization}
-\label{sec:serialization}
-
-\begin{todo}
-  Discuss here serialization and
-  \href{https://iohk.myjetbrains.com/youtrack/issue/CDEC-628}{composable
-    serialization}
-\end{todo}
-
-\section{UTxO}
-\label{sec:state-trans-utxo-1}
-%\input{utxo.tex}
-
-\section{Delegation}
-\label{sec:delegation}
-\input{delegation.tex}
-
-\section{Blockchain interface}
-\label{sec:blockchain-interface}
-\input{blockchain-interface.tex}
+\include{blockchain-interface}
 
 % \section{Blockchain layer}
 % \label{sec:blockchain-layer}

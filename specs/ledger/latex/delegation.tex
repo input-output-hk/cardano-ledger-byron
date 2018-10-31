@@ -1,3 +1,6 @@
+\section{Delegation}
+\label{sec:delegation}
+
 \newcommand{\DSEnv}{\type{DSEnv}}
 \newcommand{\DSState}{\type{DSState}}
 \newcommand{\DCert}{\type{DCert}}
@@ -28,7 +31,7 @@ become ``scheduled''. The definitions used in this rules are presented in
 $\trans{sdeleg}{\wcard}$ are presented in
 \cref{fig:ts-types:delegation-scheduling}.
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Abstract types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -67,7 +70,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
   \label{fig:defs:delegation-scheduling}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Delegation scheduling environments}
   \begin{equation*}
     \DSEnv =
@@ -95,7 +98,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
   \label{fig:ts-types:delegation-scheduling}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:delegation-scheduling}
     \inference
@@ -141,7 +144,7 @@ Once a scheduled certificate becomes active
 (see~\cref{sec:delegation-interface-rules}), the delegation map is changed by
 it. \cref{fig:rules:delegation} models such change.
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{align*}
     & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
     & \text{union override}\\
@@ -151,7 +154,7 @@ it. \cref{fig:rules:delegation} models such change.
   \label{fig:funcs:delegation}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Delegation states}
   \begin{align*}
     & \DState
@@ -170,10 +173,10 @@ it. \cref{fig:rules:delegation} models such change.
   \label{fig:ts-types:delegation}
 \end{figure}
 
-\begin{figure}
-  \begin{equation}\label{eq:delegation-change}
+\begin{figure}[htb]
+  \begin{equation}\label{eq:rule:delegation-change}
     \inference
-    {\var{vk_s} \mapsto s_p \Rightarrow s_p < s
+    {\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s
     }
     {
       \left(
@@ -192,9 +195,9 @@ it. \cref{fig:rules:delegation} models such change.
     }
   \end{equation}
   \nextdef
-  \begin{equation}\label{eq:delegation-nop}
+  \begin{equation}\label{eq:rule:delegation-nop}
     \inference
-    {\var{kv_s} \mapsto s_p \wedge s \leq s_p
+    {\var{kv_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p
     }
     {
       \left(
@@ -216,13 +219,15 @@ it. \cref{fig:rules:delegation} models such change.
   \label{fig:rules:delegation}
 \end{figure}
 
-\subsubsection{Delegation sequences}
+\clearpage
+
+\subsection{Delegation sequences}
 \label{sec:delegation-sequences}
 
 This section presents the rules that model the effect that sequences of
 delegations have on the ledger.
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:delegation-scheduling-seq-base}
     \inference
