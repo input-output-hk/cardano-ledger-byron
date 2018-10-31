@@ -107,7 +107,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
-    \inference[UTxO-inductive]
+    \inference
     { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pc}{tx} \leq \txfee{tx}\\
       \balance{(\txouts{tx})}  + \txfee{tx} =
         \balance{(\txins{tx} \restrictdom \var{utxo})}
@@ -207,7 +207,7 @@ different order). The choice here is arbitrary.
 \begin{figure}
   \begin{equation}
     \label{eq:utxo-witness-inductive}
-    \inference[UTxO-wit]
+    \inference
     { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot

@@ -1,3 +1,6 @@
+\section{Blockchain layer}
+\label{sec:blockchain-layer}
+
 \begin{note}
   This section provides a \textbf{proposal} on how the ledger rules can be used
   to build the blockchain ones. It was mainly developed to help me
@@ -29,7 +32,7 @@ after applying the transitions in a block.
   added to the ledger state, along with some kind of rule which
   combines voting with the UTxO rule:
   \begin{equation*}
-    \inference[Voting-combine]
+    \inference
     {
       \var{pc} \trans{voting}{} \var{pc'} &
       \var{pc'} \vdash \var{utxo} \trans{utxo}{} \var{utxo'}\\ ~ \\
@@ -38,7 +41,7 @@ after applying the transitions in a block.
   \end{equation*}
 \end{note}
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Abstract types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -99,7 +102,7 @@ after applying the transitions in a block.
 \begin{figure}
   \begin{equation}
     \label{eq:rule:chain-base}
-    \inference[Chain-base]
+    \inference
     {}
     {{\begin{array}{l}
          \Gkeys\\
@@ -123,7 +126,7 @@ after applying the transitions in a block.
 
   \begin{equation}
     \label{eq:rule:chain-extension}
-    \inference[Chain-ext]
+    \inference
     { \fun{bepoch}~b = \var{epo_c}
       & \bslot{b} = \var{sid_n} 
       & \var{sid_c} < \var{sid_n} \\
@@ -237,7 +240,7 @@ after applying the transitions in a block.
 \begin{figure}
   \begin{equation}
     \label{eq:rule:block-signing}
-    \inference[Chain-ext]
+    \inference
     {\var{vk_g} \mapsto vk_d \in \var{dmap} & \bwit{b} = (\var{vk_d}, \sigma)\\
       \size{\{vk_g\} \restrictdom signers} \leq K * t &
       \verify{vk_d}{\serialised{\bbody{b}}}{\sigma} \\
