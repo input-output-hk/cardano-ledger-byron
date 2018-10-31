@@ -90,20 +90,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
   \end{align*}
-
-  \begin{align*}
-    \var{ins} \restrictdom \var{utxo}
-    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \in \var{ins} \}
-    & \text{domain restriction}
-    \\
-    \var{ins} \subtractdom \var{utxo}
-    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \notin \var{ins} \}
-    & \text{domain exclusion}
-    \\
-    \var{utxo} \restrictrange \var{outs}
-    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ o \in \var{outs} \}
-    & \text{range restriction}
-  \end{align*}
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
 \end{figure}

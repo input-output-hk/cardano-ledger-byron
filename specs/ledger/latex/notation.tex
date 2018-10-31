@@ -17,5 +17,50 @@
 \item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
   keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
-  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
+  $a \mapsto b \in m$ is equivalent to $m~ a = b$. Given a set $A$,
+  $A \mapsto A$ represents the identity map on $A$:
+  $\{a \mapsto a \mid a \in A\}$. The $\emptyset$ symbol is also used to
+  represent the empty map as well.
+\item[Domain and range operations] Given a relation
+  $R \in \powerset A \times B$ we make use of the \textit{domain-restriction},
+  \textit{domain-exclusion}, and \textit{range-restriction} operators, which
+  are defined in \cref{fig:domain-and-range-ops}. Note that a map $A \mapsto B$
+  can be seen as a relation as well, which means that these operators can be
+  applied to maps as well.  
+\item[Integer ranges] Given $a, b \in \mathbb{R}$, $[a, b]$ denotes the
+  sequence $[i \mid a \leq i \leq b]$ . Ranges can have open ends: $[.., b]$
+  denotes sequence $[i \mid i \leq b]$, whereas $[a, ..]$ denotes sequence
+  $[i \mid a \leq i]$. Furthermore, sometimes we use $[a, b]$ to denote a set
+  instead of a sequence. The context in which it is used should provide enough
+  information about the specific type.
+  
+\item[Domain and range operations on sequences] We overload the $\restrictdom$,
+  $\subtractdom$, and $\restrictrange$ to operate over sequences. So for
+  instance given $S \in \seqof{A}$, and $R \in \seqof{(A \times B)}$:
+  $A \restrictdom R$ denotes the sequence
+  $[ (a, b) \mid (a, b) \in R, a \in S]$.
+\item[Wildcard variables] When a variable is not needed in a term, we replace
+  it by $\wcard$ to make it explicit that we do not use this variable in the
+  scope of the given term.
+\item[Implicit existential quantifications] Given a predicate
+  $P \in X \to Bool$, we use $P \wcard$ as a shorthand notation for
+  $\exists x \cdot P~x$.
 \end{description}
+
+\begin{figure}[htb]
+  \begin{align*}
+    \var{S} \restrictdom \var{R}
+    & = \{ (a, b) \mid (a, b) \in R, ~ a \in S \}
+    & \text{domain restriction}
+    \\
+    S \subtractdom R
+    & = \{ (a, b) \mid (a, b) \in R, ~ a \notin S \}
+    & \text{domain exclusion}
+    \\
+    R \restrictrange S
+    & = \{ (a, b) \mid (a, b) \in R, ~ b \in S \}
+    & \text{range restriction}
+  \end{align*}
+  \caption{Domain and range operations}
+  \label{fig:domain-and-range-ops}
+\end{figure}
