@@ -18,9 +18,7 @@ and the definitions used in this rule are presented in
 Figure~\ref{fig:defs:chain-extension}. Rule~\ref{eq:rule:chain-extension}
 relies on transitions $\trans{bdeleg}{}$, which specify the delegation
 behavior, and $\trans{butxo}{}$ which models the evolution of unspent outputs
-after applying the transitions in a block. Rules for delegation and unspent
-outputs in the context of a block are given in
-Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
+after applying the transitions in a block. 
 
 \begin{note}
   The protocol constants are currently modeled as a part of the
@@ -45,7 +43,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{b} & \Block & \text{block}\\
-      \var{s} & \SlotId & \text{slot id}\\
+      \var{s} & \Slot & \text{slot id}\\
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
@@ -53,8 +51,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
     \begin{array}{r@{~\in~}lr}
     \fun{bwit} & \Block \to (\VKey \times \Sig) & \text{block witness}\\
       \fun{bepoch} & \Block \to \Epoch & \text{block epoch}\\
-      \fun{bslot} & \Block \to \SlotId & \text{block slot id}\\
-    \fun{s_0} & \SlotId  & \text{slot zero (smallest slot id)}\\
+      \fun{bslot} & \Block \to \Slot & \text{block slot id}\\
+    \fun{s_0} & \Slot  & \text{slot zero (smallest slot id)}\\
     \end{array}
   \end{equation*}
   \caption{Blockchain extension definitions}
@@ -83,8 +81,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \var{utxo} & \UTxO & \text{blockchain unspent outputs}\\
         \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
         \var{signers} & \seqof{\VKeyGen} & \text{last $K$ blockchain signers}\\
-        \var{sid_c} & \SlotId & \text{current slot}\\
-        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
+        \var{sid_c} & \Slot & \text{current slot}\\
+        \var{pdlgs} & \Slot \mapsto \seqof{\DCert} & \text{pending delegations}\\
         \var{ekeys} & \Epoch \times \powerset{\VKeyGen} & \text{keys delegated in the current epoch}
       \end{array}
     \right)
@@ -276,285 +274,3 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
   \caption{Block signing rules}
   \label{fig:rules:block-signing}
 \end{figure}
-
-\subsection{Block delegation}
-\label{sec:block-delegation}
-
-The rule for delegation of certificates in a block is shown in
-Figure~\ref{fig:rules:block-delegation}, and the new definitions used in this
-rule are presented in Figure~\ref{fig:defs:block-delegation}.
-Rule~\ref{eq:rule:block-delegation} relies on an inference rule that models the
-state changes after applying a sequence of delegation certificates. Such rule
-is shown in Figure~\ref{fig:rules:delegation-sequence}.
-
-\begin{figure}
-  \emph{Abstract functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{bdlgs} & \Block \mapsto \seqof{\DCert} & \text{delegation certificates in the block}\\
-    \end{array}
-  \end{equation*}
-  \caption{Block delegation definitions}
-  \label{fig:defs:block-delegation}
-\end{figure}
-
-\begin{figure}
-  \emph{Block delegation environments}
-  \begin{equation*}
-    \BDEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{epo_c} & \Epoch & \text{current epoch}\\
-        \var{sid_c} & \SlotId & \text{current slot id}\\
-        \var{d} & \Epoch & \text{delegation liveness parameter}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  \emph{Block delegation states}
-  \begin{equation*}
-    \BDState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{dmap} & \VKeyGen \mapsto \VKey & \text{blockchain delegation map}\\
-        \var{pdlgs} & \SlotId \mapsto \seqof{\DCert} & \text{pending delegations}\\
-        \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
-      \end{array}
-    \right)
-  \end{equation*}
-  \emph{Block delegation transitions}
-  \begin{equation*}
-    \_ \vdash \_ \trans{bdeleg}{\_} \_ \in
-      \powerset (\BDEnv \times \BDState \times \Block \times \CEState)
-  \end{equation*}
-  \caption{Block delegation transition-system types}
-  \label{fig:ts-types:block-delegation}
-\end{figure}
-
-\begin{figure}
-  \begin{equation}
-    \label{eq:rule:block-delegation}
-    \inference[Block-dlg]
-    {
-      {\begin{array}{r@{~=~}l}
-         \var{pdlgs'} & \var{pdlgs} \unionoverride \{(\bslot{b} + d) \mapsto \bdlgs{b} \}\\
-         \var{spast} & \{ \var{sid} \mid \var{sid} \in \var \dom ~ \var{pdlgs'}
-                       ,~ \var{sid} \leq \var{sid_c}\}\\
-         \var{active} &  \fun{concat}~ [ \var{dlgs} \mid \var{sid} \mapsto \var{dlgs} \in \var{pdlgs}
-                                          ,~ \var{sid} \leq \var{sid_c}]
-      \end{array}} & \\
-      \var{epo_c} \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{ekeys}
-          \end{array}
-        \right)
-      }
-      \trans{epochs}{\bdlgs{b}}
-      {
-        \left(
-          \begin{array}{r}
-            \var{ekeys'}
-          \end{array}
-        \right)
-      } & 
-      {
-        \left(
-          \begin{array}{l}
-            \var{dmap}
-          \end{array}
-        \right)
-      }
-      \trans{delegs}{\var{active}}
-      {
-        \left(
-          \begin{array}{r}
-            \var{dmap'}
-          \end{array}
-        \right)
-      }     
-    }
-    {
-      \begin{array}{l}
-        \var{epo_c}\\
-        \var{sid_c}\\
-        d
-      \end{array}
-      \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{dmap}\\
-            \var{pdlgs}\\
-            \var{ekeys}
-          \end{array}
-        \right)
-      }
-      \trans{bdeleg}{b}
-      {
-        \left(
-          \begin{array}{r}
-            \var{dmap'}\\
-            \var{\var{spast} \subtractdom pdlgs'}\\
-            \var{ekeys'}
-          \end{array}
-        \right)
-      }
-    }
-  \end{equation}
-  \caption{Block delegation rules}
-  \label{fig:rules:block-delegation}
-\end{figure}
-
-\begin{figure}
-  \begin{equation}
-    \inference[Seq-delg-base]
-    {}
-    { \left(
-        \begin{array}{r}
-          \var{dmap}
-        \end{array}
-      \right)
-        \trans{delegs}{\epsilon}
-      \left(
-        \begin{array}{r}
-          \var{dmap}
-        \end{array}
-      \right)
-    }
-    \label{eq:rule:sequence-delegation-base}
-  \end{equation}
-
-  \begin{equation}
-    \inference[Seq-delg-ind]
-    { {\left(
-        \begin{array}{r}
-          \var{dmap}
-        \end{array}
-      \right)}
-      \trans{delegs}{\Gamma}
-      {\left(
-        \begin{array}{r}
-          \var{dmap'}
-        \end{array}
-      \right)}
-    &
-    {\left(
-        \begin{array}{r}
-          \var{dmap'}
-        \end{array}
-      \right)}
-      \trans{delegw}{c}
-      {\left(
-        \begin{array}{r}
-          \var{dmap''}
-        \end{array}
-      \right)}
-    }
-    { \left(
-        \begin{array}{r}
-          \var{dmap}
-        \end{array}
-      \right)
-      \trans{delegs}{\Gamma; c}
-      \left(
-        \begin{array}{r}
-          \var{dmap''}
-        \end{array}
-      \right)
-    }
-    \label{eq:rule:sequence-delegation-inductive}
-  \end{equation}
-  \caption{Delegation sequence rules}
-  \label{fig:rules:delegation-sequence}
-\end{figure}
-
-\begin{figure}
-  \begin{equation}
-    \inference[Seq-delg-base-0]
-    {e = epo_c}
-    { \var{epo_c} \vdash \left(
-        \begin{array}{r}
-          \var{(e, keys)}
-        \end{array}
-      \right)
-        \trans{depochs}{\epsilon}
-      \left(
-        \begin{array}{r}
-          \var{(e, keys)}
-        \end{array}
-      \right)
-    }
-    \label{eq:rule:depoch-sequence-base-0}
-  \end{equation}
-
-  \begin{equation}
-    \inference[Seq-delg-base-1]
-    {e \neq epo_c}
-    { \var{epo_c} \vdash \left(
-        \begin{array}{r}
-          \var{(e, keys)}
-        \end{array}
-      \right)
-        \trans{depochs}{\epsilon}
-      \left(
-        \begin{array}{r}
-          \var{(\var{epo_c}, \emptyset)}
-        \end{array}
-      \right)
-    }
-    \label{eq:rule:depoch-sequence-base-1}
-  \end{equation}
-  
-  \begin{equation}
-    \inference[Seq-delg-ind]
-    { \var{epo_c} \vdash
-      {\left(
-        \begin{array}{r}
-          \var{(e, keys)}
-        \end{array}
-      \right)}
-      \trans{depochs}{\Gamma}
-      {\left(
-        \begin{array}{r}
-          \var{(e', keys')}
-        \end{array}
-      \right)}
-    &
-    {\left(
-        \begin{array}{r}
-          \var{keys'}
-        \end{array}
-      \right)}
-      \trans{depoch}{c}
-      {\left(
-        \begin{array}{r}
-          \var{keys''}
-        \end{array}
-      \right)}
-    }
-    { \var{epo_c} \vdash \left(
-        \begin{array}{r}
-          \var{(e, keys)}
-        \end{array}
-      \right)
-      \trans{depochs}{\Gamma; c}
-      \left(
-        \begin{array}{r}
-          \var{(e', keys'')}
-        \end{array}
-      \right)
-    }
-    \label{eq:rule:depoch-sequence-inductive}
-  \end{equation}
-  \caption{Delegation epoch sequence rules}
-  \label{fig:rules:epoch-sequence}
-\end{figure}
-
-\subsection{Block UTxO}
-\label{sec:block-utxo}
-
-\begin{todo}
-  Block-UTxO rules will have the same structure as the rules presented in
-  Section~\ref{sec:block-delegation}.
-\end{todo}
