@@ -1,14 +1,14 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 -- | Small step state transition systems.
 module Control.State.Transition where
 
-import Control.Lens
+import           Control.Lens
 
 -- | State transition system.
 class (Show (PredicateFailure a))
@@ -22,10 +22,19 @@ class (Show (PredicateFailure a))
 
   -- | Descriptive type for the possible failures which might cause a transition
   -- to fail.
-  type PredicateFailure a :: *
+  data PredicateFailure a :: *
 
   -- | Rules governing transition under this system.
-  rules :: Rule a
+  rules :: [Rule a]
+
+-- | Rules generating initial states
+initialRules
+  :: STS a
+  => [Rule a]
+initialRules = filter isInitial rules
+  where
+    isInitial (Rule _ (Base _)) = True
+    isInitial _ = False
 
 -- | The union of the components of the system available for making judgments.
 type JudgmentContext sts = (Environment sts, State sts, Signal sts)
@@ -47,12 +56,16 @@ transition
   -> State sts
   -> Signal sts
   -> State sts
-transition (Transition f) env state sig = f env state sig
+transition (Transition f) = f
 
 -- | Embed one STS within another.
 class (STS sub, STS super) => Embed sub super where
   -- | Extract the state of the subsystem as a component of the super-system.
   stateLens :: Lens' (State super) (State sub)
+
+data PredicateResult sts
+  = Passed
+  | Failed (PredicateFailure sts)
 
 -- | The antecedent to a transition rule.
 data Antecedent sts where
@@ -64,18 +77,12 @@ data Antecedent sts where
     -> Antecedent sts
 
   Predicate
-    :: Environment sts
-    -> State sts
-    -> Signal sts
-    -> Bool
+    :: (   Environment sts
+        -> State sts
+        -> Signal sts
+        -> PredicateResult sts
+       )
     -> Antecedent sts
-
--- -- | Evaluate a transition under a sub-system as a predicate; that is, knowing the start
--- --   and end states, create a predicate asserting that this is a valid transition under
--- --   that system.
--- subTransP
---   :: Embed sub super
---   => Transition
 
 -- | The consequent to a transition rule.
 data Consequent sts where
