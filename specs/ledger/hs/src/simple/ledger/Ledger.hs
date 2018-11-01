@@ -1,9 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module Ledger
-  ( module Ledger
-  ) where
+module Ledger where
 
 import           Control.State.Transition
 import qualified Crypto.Hash as Crypto
@@ -50,28 +47,25 @@ instance STS UTXO where
 
   rules =
     [ Rule [] $ Base (UTxO Map.empty)
-    , Rule
-      [ Predicate $ \_ utxo tx -> validInputs tx utxo
-      , Predicate $ \pc _ tx ->
-          if pcMinFee pc tx <= txfee tx
-          then Passed
-          else Failed FeeTooLow
-      , Predicate $ \_ utxo tx -> noIncreasedBalance tx utxo
-      ]
-      ( Extension . Transition $
-        \pc utxo tx -> (txins tx ⋪ utxo) ∪ txouts tx
-      )
+    , utxoInductive
     ]
 
-validInputs :: Tx -> UTxO -> PredicateResult UTXO
-validInputs tx utxo =
-    if txins tx `Set.isSubsetOf` unspentInputs utxo
-    then Passed
-    else Failed BadInputs
-  where unspentInputs (UTxO utxo) = Map.keysSet utxo
-
-noIncreasedBalance :: Tx -> UTxO -> PredicateResult UTXO
-noIncreasedBalance tx utxo =
-  if balance (txouts tx) <= balance (txins tx ◁ utxo)
-  then Passed
-  else Failed IncreasedTotalBalance
+utxoInductive :: Rule UTXO
+utxoInductive = Rule
+  [ Predicate $ \_ utxo tx ->
+      if balance (txouts tx) <= balance (txins tx ◁ utxo)
+      then Passed
+      else Failed IncreasedTotalBalance
+  , Predicate $ \pc _ tx ->
+      if pcMinFee pc tx <= txfee tx
+      then Passed
+      else Failed FeeTooLow
+  , Predicate $ \_ utxo tx ->
+      let unspentInputs (UTxO utxo) = Map.keysSet utxo
+      in if txins tx `Set.isSubsetOf` unspentInputs utxo
+          then Passed
+          else Failed BadInputs
+  ]
+  ( Extension . Transition $
+    \pc utxo tx -> (txins tx ⋪ utxo) ∪ txouts tx
+  )

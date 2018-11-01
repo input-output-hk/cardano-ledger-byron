@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 -- | Small step state transition systems.
@@ -34,7 +35,7 @@ initialRules
 initialRules = filter isInitial rules
   where
     isInitial (Rule _ (Base _)) = True
-    isInitial _ = False
+    isInitial _                 = False
 
 -- | The union of the components of the system available for making judgments.
 type JudgmentContext sts = (Environment sts, State sts, Signal sts)
@@ -73,7 +74,9 @@ data Antecedent sts where
   -- | This rule is predicated upon a transition under a (sub-)system.
   SubTrans
     :: Embed sub sts
-    => Transition sub
+    => Getter (JudgmentContext sts) (Environment sub)
+    -> Getter (JudgmentContext sts) (Signal sub)
+    -> Rule sub
     -> Antecedent sts
 
   Predicate
