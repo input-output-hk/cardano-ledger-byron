@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveFunctor        #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE FlexibleContexts     #-}
@@ -7,12 +8,10 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE DeriveFunctor        #-}
 
 module Cardano.Chain.Block.Header
        ( Header
        , AHeader
-       , header
        , headerPrevHash
        , headerProof
 
@@ -52,14 +51,15 @@ module Cardano.Chain.Block.Header
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (Format, bprint, build, int)
-import qualified Formatting.Buildable as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import           Formatting (Format, bprint, build, int)
+import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Annotated (..), ByteSpan, Bi (..), Decoder, DecoderError (..),
-                     Dropper, Encoding, dropBytes, dropInt32, encodeListLen,
-                     enforceSize, serializeEncoding, decodeAnnotated)
+import           Cardano.Binary.Class (Annotated (..), Bi (..), ByteSpan,
+                     Decoder, DecoderError (..), Dropper, Encoding,
+                     decodeAnnotated, dropBytes, dropInt32, encodeListLen,
+                     enforceSize, serializeEncoding)
 import           Cardano.Chain.Block.Body (Body)
 import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
                      dropBoundaryExtraHeaderData)
@@ -77,8 +77,9 @@ import           Cardano.Chain.Slotting (SlotId (..), slotIdF)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
-                     SignTag (..), Signature, checkSig, checkSigAnnotated, checkSigRaw, hashHexF,
-                     isSelfSignedPsk, proxySign, proxyVerify, proxyVerifyAnnotated, psigPsk, sign,
+                     SignTag (..), Signature, checkSig, checkSigAnnotated,
+                     checkSigRaw, hashHexF, isSelfSignedPsk, proxySign,
+                     proxyVerify, proxyVerifyAnnotated, psigPsk, sign,
                      toPublic, unsafeAbstractHash)
 
 
@@ -88,23 +89,15 @@ import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
 
 type Header = AHeader ()
 
-header :: ProtocolMagic -> HeaderHash -> Proof -> ConsensusData -> ExtraHeaderData -> Header
-header pm hh p cd ehd = AHeader
-  pm
-  (Annotated hh ())
-  (Annotated p ())
-  cd
-  (Annotated ehd ())
-
 data AHeader a = AHeader
-  { headerProtocolMagic  :: !ProtocolMagic
-  , aHeaderPrevHash      :: !(Annotated HeaderHash a)
+  { headerProtocolMagic :: !ProtocolMagic
+  , aHeaderPrevHash     :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
-  , aHeaderProof         :: !(Annotated Proof a)
+  , aHeaderProof        :: !(Annotated Proof a)
   -- ^ Proof of body
-  , headerConsensusData  :: !(AConsensusData a)
+  , headerConsensusData :: !(AConsensusData a)
   -- ^ Consensus data to verify consensus algorithm
-  , aHeaderExtraData     :: !(Annotated ExtraHeaderData a)
+  , aHeaderExtraData    :: !(Annotated ExtraHeaderData a)
   -- ^ Any extra data
   } deriving (Eq, Show, Generic, NFData, Functor)
 
@@ -193,8 +186,12 @@ mkHeaderExplicit
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
-  header pm prevHash proof consensus extra
+mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra = AHeader
+  pm
+  (Annotated prevHash ())
+  (Annotated proof ())
+  consensus
+  (Annotated extra ())
  where
   proof = mkProof body
   makeSignature toSign (psk, _) =
@@ -209,28 +206,28 @@ mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
   leaderPk  = maybe (toPublic sk) snd pske
   consensus = consensusData slotId leaderPk difficulty signature
 
-headerSlot :: Header -> SlotId
+headerSlot :: AHeader a -> SlotId
 headerSlot = consensusSlot . headerConsensusData
 
-headerLeaderKey :: Header -> PublicKey
+headerLeaderKey :: AHeader a -> PublicKey
 headerLeaderKey = consensusLeaderKey . headerConsensusData
 
-headerDifficulty :: Header -> ChainDifficulty
+headerDifficulty :: AHeader a -> ChainDifficulty
 headerDifficulty = consensusDifficulty . headerConsensusData
 
-headerSignature :: Header -> BlockSignature
+headerSignature :: AHeader a -> BlockSignature
 headerSignature = consensusSignature . headerConsensusData
 
-headerBlockVersion :: Header -> BlockVersion
+headerBlockVersion :: AHeader a -> BlockVersion
 headerBlockVersion = ehdBlockVersion . headerExtraData
 
-headerSoftwareVersion :: Header -> SoftwareVersion
+headerSoftwareVersion :: AHeader a -> SoftwareVersion
 headerSoftwareVersion = ehdSoftwareVersion . headerExtraData
 
-headerAttributes :: Header -> Attributes ()
+headerAttributes :: AHeader a -> Attributes ()
 headerAttributes = ehdAttributes . headerExtraData
 
-headerEBDataProof :: Header -> Hash ExtraBodyData
+headerEBDataProof :: AHeader a -> Hash ExtraBodyData
 headerEBDataProof = ehdEBDataProof . headerExtraData
 
 data HeaderError
@@ -395,8 +392,8 @@ recoverSignedBytes h = Annotated toSign bytes
     toSign = ToSign
       (headerPrevHash h)
       (headerProof h)
-      (consensusSlot . headerConsensusData $ h)
-      (consensusDifficulty . headerConsensusData $ h)
+      (headerSlot h)
+      (headerDifficulty h)
       (headerExtraData h)
 
 -- | Data to be signed in 'Block'
@@ -435,12 +432,12 @@ consensusData sid pk cd bs = AConsensusData (Annotated sid ()) pk (Annotated cd 
 data AConsensusData a = AConsensusData
   { aConsensusSlot       :: !(Annotated SlotId a)
   -- ^ Id of the slot for which this block was generated
-  , consensusLeaderKey  :: !PublicKey
+  , consensusLeaderKey   :: !PublicKey
   -- ^ Public key of the slot leader. It's essential to have it here, because
   --   FTS gives us only hash of public key (aka 'StakeholderId').
   , aConsensusDifficulty :: !(Annotated ChainDifficulty a)
   -- ^ Difficulty of chain ending in this block
-  , consensusSignature  :: !BlockSignature
+  , consensusSignature   :: !BlockSignature
   -- ^ Signature given by slot leader
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData

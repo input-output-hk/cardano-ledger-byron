@@ -31,7 +31,7 @@ data Annotated b a = Annotated { unAnnotated :: !b, annotation :: !a }
   deriving anyclass NFData
 
 annotatedDecoder :: D.Decoder s a -> D.Decoder s (Annotated a ByteSpan)
-annotatedDecoder d = flip fmap (D.decodeWithByteSpan d) $ \(x, start, end) ->
+annotatedDecoder d = D.decodeWithByteSpan d <&> \(x, start, end) ->
   Annotated x (ByteSpan start end)
 
 decodeAnnotated :: (Bi a) => D.Decoder s (Annotated a ByteSpan)

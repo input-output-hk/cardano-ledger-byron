@@ -10,8 +10,8 @@ import qualified Data.ByteString.Lazy as BSL
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (Bi (..), DecoderError,
-                     decodeFullAnnotatedBytes, serializeEncoding)
+import           Cardano.Binary.Class (DecoderError, decodeFullAnnotatedBytes,
+                     serialize)
 import           Cardano.Chain.Block.Header (Header, HeaderError, decodeAHeader,
                      verifyAHeader)
 import           Cardano.Crypto (ProtocolMagic)
@@ -33,8 +33,7 @@ validateAnnotatedHeader = H.property $ do
   pm <- H.forAll genProtocolMagic
   sc <- H.forAll genSlotCount
   header <- H.forAll $ genHeader pm sc
-  let bytes = (serializeEncoding . encode) header
-  recover pm bytes === Right header
+  recover pm (serialize header) === Right header
   where
   recover :: ProtocolMagic -> BSL.ByteString -> Either Error Header
   recover pm bytes = do
