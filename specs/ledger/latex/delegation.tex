@@ -111,9 +111,9 @@ $\trans{sdeleg}{\wcard}$ are presented in
     \label{eq:rule:delegation-scheduling}
     \inference
     {
-      \dwit{c} = (\var{vk_s},~ \sigma)
+      (\var{vk_s},~ \sigma) = \dwit{c}
       & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
-      \dwho{c} = (\var{vk_s},~ \var{vk_d}) & \depoch{c} = e_d
+      (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
       & (e_d,~ \var{vk_s}) \notin \var{eks} & e < e_d \\ ~ \\
       (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
