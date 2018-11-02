@@ -44,7 +44,8 @@ $\trans{sdeleg}{\wcard}$ are presented in
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
       \var{e} & \Epoch & n & \mathbb{N} & \text{epoch}\\
-      \var{s} & \Slot & s & \mathbb{N} & \text{slot}
+      \var{s} & \Slot & s & \mathbb{N} & \text{slot}\\
+      \var{d} & \SlotCount & s & \mathbb{N} & \text{slot}                                         
     \end{array}
   \end{equation*}
 
@@ -79,7 +80,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
-        \var{d} & \Slot & \text{certificate liveness parameter}
+        \var{d} & \SlotCount & \text{certificate liveness parameter}
       \end{array}
     \right)
   \end{equation*}
