@@ -39,4 +39,4 @@ validateAnnotatedHeader = H.property $ do
   recover pm bytes = do
     header <- first ErrorD $ decodeFullAnnotatedBytes "Header" decodeAHeader bytes
     first ErrorH $ verifyAHeader pm header
-    pure $ map (const ()) header
+    pure $ void header
