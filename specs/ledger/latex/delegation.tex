@@ -17,7 +17,7 @@ There are several restrictions on a certificate posted on the blockchain:
 \item Only genesis keys can delegate.
 \item Certificates must be properly signed by the delegator.
 \item Any given key can delegate at most once per-epoch.
-\item The epochs in certificate cannot refer to past epochs. This mechanism
+\item The epochs in certificates cannot refer to past epochs. This mechanism
   prevents replay attacks.
 \item Two certificates for the same key issued in the same (current) slot
   cannot contain different epochs.
@@ -62,7 +62,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
       \fun{dwit} & \DCert \to (\VKeyGen \times \Sig)
       & \text{witness for the delegation certificate}\\
       \fun{dwho} & \DCert \mapsto (\VKeyGen \times \VKey)
-      & \text{who delegates to who in the certificate}\\
+      & \text{who delegates to whom in the certificate}\\
       \fun{depoch} & \DCert \mapsto \Epoch
       & \text{certificate epoch}
     \end{array}
