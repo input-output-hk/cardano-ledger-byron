@@ -68,8 +68,8 @@
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
 \newcommand{\bytes}{\textbf{Bytes}}
-\newcommand{\SubSo}{\type{SubS}_1}
-\newcommand{\SubSt}{\type{SubS}_2}
+\newcommand{\SubSone}{\type{SubS}_1}
+\newcommand{\SubStwo}{\type{SubS}_2}
 
 \NewDocumentCommand{\tion}{o m m m m}{
   \IfNoValueF{#1}{\var{#1}\vdash} \var{#3} \trans{#2}{#4} \var{#5}
@@ -251,45 +251,45 @@ acts as an introduction rule for $B$ as determined by the transition rules for
 system $S1$.
 
 When we want to describe a complete transition of a state with separately
-defined rules governing the transitions of distinct parts (substates), one (most
+defined rules governing the transitions of distinct parts (substates, i.e.
+disjoint sets of state variables), one (most
 unambiguous) approach we can take is to define the total transition
 by having a separate rule for each of the substate transitions we need this
-rule to reflect. In particular, let us consider two substates, $\SubSo$ and
-$\SubSt$, with $A, B \in \SubSo$ and $A', B' \in \SubSt$, with all other
+rule to reflect. In particular, let us consider two substates, $\SubSone$ and
+$\SubStwo$, with $A_1, B_1 \in \SubSone$ and $A_2, B_2 \in \SubStwo$, with all other
 notation as in the Example inference rule above. If we have one rule for
-the transitions of $\SubSo$, triggered by $z$, and one transition rule for $\SubSt$,
+the transitions of $\SubSone$, triggered by $z$, and one transition rule for $\SubStwo$,
 triggered by signal $z'$, to describe every transition
-of the form  $(A, A') \to (B, B')$,  we would make two rules:
+of the form  $(A_1, A_2) \to (B_1, B_2)$,  we would make two rules:
 
 \[
   \inference[ExampleS1]
-    {P(A) & z = f ~ s & \tion[E1_{s1}]{S1}{A}{z}{B}}
-    {\tion[E1]{S2}{(A,A')}{s}{(B,A')}}
+    {P(A_1) & z = f ~ s & \tion[E1_{s1}]{S1}{A_1}{z}{B_1}}
+    {\tion[E1]{S2}{(A_1,A_2)}{s}{(B_1,A_2)}}
 \]
 and
 \[
   \inference[ExampleS2]
-    {P(A') & z' = f' ~ s' & \tion[E1_{s2}]{S1'}{A'}{z'}{B'}}
-    {\tion[E1]{S2'}{(A,A')}{s'}{(A,B')}}
+    {P(A_2) & z' = f' ~ s' & \tion[E1_{s2}]{S1'}{A_2}{z'}{B_2}}
+    {\tion[E1]{S2'}{(A_1,A_2)}{s'}{(A_1,B_2)}}
 \]
 
-where $E1 = E1_{s1} \cup E1_{s2}$. These rules can be applied in sequence,
-to give the full $(A,A') \to (B,B')$ transition.
+\noindent where $E1 = E1_{s1} \cup E1_{s2}$. These rules can be applied in sequence,
+to give the full $(A_1, A_2) \to (B_1, B_2)$ transition.
 
-\begin{todo}
-Note that unless $s \wedge s'$ or some other representation of composition
-of the signals for the consequents in ExampleS1 and ExampleS2 is of the
-same type as $s$ and $s'$ (which is not the case if, for example,
-$s$ and $s'$ are certificates and we do not specify some way to build
-a new certificate that includes both),
-it does not seem like we can get away with
-having just one rule (or it may be the most straighforward option to
-describe the system, anyway).
+Note that unless $s \wedge s'$ (or some other representation of composition
+of the signals for the consequents in ExampleS1 and ExampleS2) is of the
+same type as $s$ and $s'$
+it does not make sense to define only one rule.
+Even if the type is correct, consider, for example, the case when
+$s$ and $s'$ are certificates. Suppose we have some map that takes two
+certificates and builds one $c(s, s')$, which triggeres a total state transition.
+Even in this case, we lose granularity by forcing the need for two certificates
+to trigger every transition.
 
-When the behaviour of the substates is
-independent of each other, giving the rules ExampleS1 and ExampleS2 is
-sufficient to describe every transition.
-\end{todo}
+Giving two independent rules (as in ExampleS1 and ExampleS2) is
+sufficient to describe every possible total state transition.
+
 
 \section{Serialisation}
 Various of our specifications will rely on a serialisation function which
