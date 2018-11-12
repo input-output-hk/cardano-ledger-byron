@@ -250,45 +250,77 @@ transitions to $B$ under the system $S1$, and, assuming $B$ is otherwise free
 acts as an introduction rule for $B$ as determined by the transition rules for
 system $S1$.
 
-When we want to describe a complete transition of a state with separately
-defined rules governing the transitions of distinct parts (substates, i.e.
-disjoint sets of state variables), one (most
-unambiguous) approach we can take is to define the total transition
-by having a separate rule for each of the substate transitions we need this
-rule to reflect. In particular, let us consider two substates, $\SubSone$ and
-$\SubStwo$, with $A_1, B_1 \in \SubSone$ and $A_2, B_2 \in \SubStwo$, with all other
-notation as in the Example inference rule above. If we have one rule for
-the transitions of $\SubSone$, triggered by $z$, and one transition rule for $\SubStwo$,
-triggered by signal $z'$, to describe every transition
-of the form  $(A_1, A_2) \to (B_1, B_2)$,  we would make two rules:
+In order to study the functionality of the complete system, it is often useful
+to look at transitions of subsets of its state variables. These may be triggered
+by different signals, and require different subsets of environment variables
+than the system as a whole, thus naturally prompting us to describe them
+by more specialized rules. To describe a complete state transition, we can
+then combine these rules in different ways.
 
-\[
-  \inference[ExampleS1]
-    {P(A_1) & z = f ~ s & \tion[E1_{s1}]{S1}{A_1}{z}{B_1}}
-    {\tion[E1]{S2}{(A_1,A_2)}{s}{(B_1,A_2)}}
-\]
-and
-\[
-  \inference[ExampleS2]
-    {P(A_2) & z' = f' ~ s' & \tion[E1_{s2}]{S1'}{A_2}{z'}{B_2}}
-    {\tion[E1]{S2'}{(A_1,A_2)}{s'}{(A_1,B_2)}}
-\]
+Since we are using static sets of inference rules to model a reactive system,
+it is important to make precise what we mean when we have two or more
+transitions in the antecedent, possibly triggered by different signals.
+Let us first consider the case where we define two transitions of two
+sets of state variables,
+$A_1 \to B_1$ and $A_2 \to B_2$. Suppose these are both triggered by the same signal $c$,
+and we wish to express that upon arrivan of a signal $c$,
+there is indeed a complete and inseparable state change, with no intermediate
+$(A_1, B_2)$ state. Here, we can give the complete state transition as a
+rule where the consequent transition $(A_1, A_2, ...) \to (B_1, B_2, ...)$ is triggered
+by that same signal $c$ (or some related signal $f(c)$).
 
-\noindent where $E1 = E1_{s1} \cup E1_{s2}$. These rules can be applied in sequence,
-to give the full $(A_1, A_2) \to (B_1, B_2)$ transition.
+Note that even here we must be somewhat careful to make sure both rules are
+triggered by the particular value $c = V$, as opposed to one firing as
+a result of $c = V$, and the other only when $c = V' \neq V$. In this case,
+the rule will still not be wrong, only redundant, and should be replaced by
+two separate rules with only one of $A_1 \to B_1$ or $A_2 \to B_2$ in
+the antecedent in each.
 
-Note that unless $s \wedge s'$ (or some other representation of composition
-of the signals for the consequents in ExampleS1 and ExampleS2) is of the
-same type as $s$ and $s'$
-it does not make sense to define only one rule.
-Even if the type is correct, consider, for example, the case when
-$s$ and $s'$ are certificates. Suppose we have some map that takes two
-certificates and builds one $c(s, s')$, which triggeres a total state transition.
-Even in this case, we lose granularity by forcing the need for two certificates
-to trigger every transition.
+Now, when we define an inference rule for a complete state transition that
+is defined in terms of two or more transitions of subsets of state variables,
+the first thing we must consider is the signal. Suppose the triggers for the
+two antecedent transitions are $c$ and $c'$. The type of the total transition
+signal is likely to be some combination of $c$ and $c'$, or more generally,
+$f(c,c')$, which is necessarily of the type of the complete state transition
+signal.
 
-Giving two independent rules (as in ExampleS1 and ExampleS2) is
-sufficient to describe every possible total state transition.
+Note here that if a total state transition is triggered by different types of
+events, such as either by the arrival of
+a new transaction to be processed or a change in time, for example, we cannot
+describe this using only one rule. In this instance, we may define a new type
+for the signal for a total state transition, wherein each term of this type is
+really a time change \textit{or} the arrival of a transaction. A signal $c$
+of this type will never trigger both transitions, and thus we will require
+separate inference rules for the two cases.
+
+Generally speaking, the most useful case where we want to define $f(c,c')$ to give
+a total state transition is when processing sets or lists of new information
+(e.g. transactions), so that $f(tx, tx') = tx :: tx' :: []$. However, this is
+only needed in the case when it is essential that the total state transition
+signal is a list.
+Otherwise, the usual composition of inference rules is sufficiently expressive.
+
+To summarize, in most cases, a set of rules governing the transitions of a
+state of a system should be made up of inference rules with only one
+transition in the antecedent, and the signal for the consequent transition
+should be triggered by some embedding of the antecedent transition signal $c \in C$
+into a more general type of transition signal for the whole system, as in
+$C \subseteq C'$. Only in the cases where a signal is intended to trigger a
+complete and inseparable (no intermediate states) transition do we want to
+have two transitions of subsets of state variables with signal $c$ in the antecedent,
+and a $c$-triggered transition in the consequent.
+
+Because there is no notion of 'simultaneous' in a static system, signals
+are processed (i.e. applied to states) individually and according to when
+the collection of state and environment variables allows for the application
+of a given signal. It is
+not of much use to have two distinct, non-composable signals in the antecedent
+because only the information in one at a time can be applied to result in a state change.
+We may, in fact, lose information in the process of building a two (or more) signal rule.
+If these signals are composable, we may use inference rule composition instead.
+Thus, the use of the template as in the Example inference rule above covers
+the majority of cases of constructions of system transition rules we will
+make use of. Any deviations from this format must be justified.
 
 
 \section{Serialisation}
