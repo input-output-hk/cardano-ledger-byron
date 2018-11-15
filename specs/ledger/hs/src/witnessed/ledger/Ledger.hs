@@ -1,14 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 module Ledger where
 
 import Control.Lens
 import Control.State.Transition
+import Control.State.Transition.Generator
 import Data.List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
+import qualified Hedgehog.Gen as Gen
 import Ledger.Abstract
 import Ledger.Simple (UTXO, utxoInductive)
 import qualified Ledger.Simple
@@ -62,3 +63,20 @@ witnessed (TxWits tx wits) utxo =
     isJust $ find (isWitness tx input utxo) witnesses
   isWitness tx' input unspent (Wit key sig) =
     verify key tx' sig && authTxin key input unspent
+
+----------------------------------------------------------------------------------------
+-- Ledger generator
+----------------------------------------------------------------------------------------
+
+instance ProgressiveGen UTXOW where
+  data GenState UTXOW = GenState
+    { -- | Potential witnesses for transations.
+      witnesses :: [Wit]
+    }
+
+sigGen :: GenM UTXOW TxWits
+sigGen = undefined
+
+----------------------------------------------------------------------------------------
+-- Ledger goblins
+----------------------------------------------------------------------------------------
