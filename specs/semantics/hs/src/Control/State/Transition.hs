@@ -163,3 +163,13 @@ applySTSIndifferently ctx =
     map (applyRuleIndifferently env) initialRules
   applySTSIndifferently' STransition jc =
     map (applyRuleIndifferently jc) transitionRules
+
+applyRule
+  :: forall s rtype
+   . (STS s, RuleTypeRep rtype)
+  => RuleContext rtype s
+  -> Rule s rtype (State s)
+  -> Either [PredicateFailure s] (State s)
+applyRule jc r =
+  let (st, pfs) = applyRuleIndifferently jc r
+  in if (null pfs) then Right st else Left pfs
