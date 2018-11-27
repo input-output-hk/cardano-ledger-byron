@@ -23,7 +23,7 @@ breedStsGoblins
    . (STS s, Goblin Bool (Signal s))
   => Gen (JudgmentContext s) -- ^ Generator for a scenario
   -> PredicateFailure s -- ^ Failure we are looking for
-  -> IO ()
+  -> IO (Population Bool)
 breedStsGoblins jcGen wantedFailure =
   let
     popsize    = 101
@@ -74,7 +74,8 @@ breedStsGoblins jcGen wantedFailure =
       $ nextGeneration Maximizing fitness select 0 crossover mutate
      where
       converged =
-        IfObjective $ \fitvals -> maximum fitvals == minimum fitvals
+        IfObjective $ \fitvals -> maximum fitvals >= 104.0
   in do
     population <- runGA initialize evolve
-    print (bestFirst Minimizing $ population)
+    print (bestFirst Maximizing $ population)
+    return population

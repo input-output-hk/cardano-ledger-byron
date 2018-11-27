@@ -21,6 +21,7 @@ library
                        Control.State.Transition.Generator
                        Control.State.Transition.Goblin
                        Control.State.Transition.Goblin.BreedingPit
+                       Control.State.Transition.Goblin.Explainer
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
@@ -33,6 +34,7 @@ library
                      , moo
                      , mtl
                      , transformers >= 0.5
+                     , tree-diff
                      , typerep-map
   hs-source-dirs:      src
   default-language:    Haskell2010
