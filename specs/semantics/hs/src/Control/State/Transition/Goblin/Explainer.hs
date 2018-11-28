@@ -18,45 +18,39 @@ import qualified Hedgehog.Internal.Tree as ITree
 
 explainGoblin
   :: forall s
-   . ( STS s
-     , Goblin Bool (Signal s)
-     , ToExpr (Signal s)
-     )
+   . (STS s, Goblin Bool (Signal s), ToExpr (Signal s))
   => Signal s
   -> GoblinData Bool
   -> Maybe (Edit EditExpr)
 explainGoblin sig goblin =
-      fmap ITree.nodeValue
+  fmap ITree.nodeValue
     . runIdentity
     . runMaybeT
     . ITree.runTree
     . IGen.runGenT genSize genSeed
     $ do
-      newSig <- evalStateT (tinker sig) goblin
-      return $ ediff sig newSig
-  where
-    genSize    = Range.Size 1
-    genSeed    = Seed 12345 12345
+        newSig <- evalStateT (tinker sig) goblin
+        return $ ediff sig newSig
+ where
+  genSize = Range.Size 1
+  genSeed = Seed 12345 12345
 
 explainGoblinGen
   :: forall s
-   . ( STS s
-     , Goblin Bool (Signal s)
-     , ToExpr (Signal s)
-     )
+   . (STS s, Goblin Bool (Signal s), ToExpr (Signal s))
   => Gen (Signal s)
   -> GoblinData Bool
   -> Maybe (Edit EditExpr)
 explainGoblinGen sigGen goblin =
-      fmap ITree.nodeValue
+  fmap ITree.nodeValue
     . runIdentity
     . runMaybeT
     . ITree.runTree
     . IGen.runGenT genSize genSeed
     $ do
-      sig <- sigGen
-      newSig <- evalStateT (tinker sig) goblin
-      return $ ediff sig newSig
-  where
-    genSize    = Range.Size 1
-    genSeed    = Seed 12345 12345
+        sig    <- sigGen
+        newSig <- evalStateT (tinker sig) goblin
+        return $ ediff sig newSig
+ where
+  genSize = Range.Size 1
+  genSeed = Seed 12345 12345

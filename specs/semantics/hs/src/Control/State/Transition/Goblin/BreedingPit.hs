@@ -44,7 +44,7 @@ breedStsGoblins jcGen wantedFailure =
         . IGen.runGenT genSize genSeed
         $ do
             (env, initState, sig) <- jcGen
-            newSig <- evalStateT (tinker sig) gd
+            newSig                <- evalStateT (tinker sig) gd
             -- Apply the signal to the state (and environment)
             let
               jc      = (env, initState, newSig)
@@ -72,9 +72,7 @@ breedStsGoblins jcGen wantedFailure =
     mutate     = pointMutate 0.01
     evolve     = loop (Generations maxiters `Or` converged)
       $ nextGeneration Maximizing fitness select 0 crossover mutate
-     where
-      converged =
-        IfObjective $ \fitvals -> maximum fitvals >= 104.0
+      where converged = IfObjective $ \fitvals -> minimum fitvals >= 104.0
   in do
     population <- runGA initialize evolve
     print (bestFirst Maximizing $ population)
