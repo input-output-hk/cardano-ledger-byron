@@ -19,6 +19,12 @@ steps:
     agents:
       system: x86_64-linux
 
+  - label: 'specs'
+    command:
+      - "nix build -f pkgs.nix haskell.packages.ghc861.small-steps"
+      - "nix build -f pkgs.nix haskell.packages.ghc861.cs-ledger"
+      - "nix build -f pkgs.nix haskell.packages.ghc861.cs-blockchain"
+
   - label: 'brittany'
     command:
       - "nix-build scripts/brittany -o check-brittany"
