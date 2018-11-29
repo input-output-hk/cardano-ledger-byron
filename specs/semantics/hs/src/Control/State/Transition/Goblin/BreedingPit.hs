@@ -8,7 +8,6 @@ import Control.Monad (join)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans.Maybe (runMaybeT)
 import Control.State.Transition
-import Control.State.Transition.Goblin
 import Data.Either (lefts)
 import Data.Functor.Identity (runIdentity)
 import qualified Data.TypeRepMap as TM
@@ -17,6 +16,7 @@ import qualified Hedgehog.Internal.Gen as IGen
 import qualified Hedgehog.Internal.Tree as ITree
 import qualified Hedgehog.Range as Range
 import Moo.GeneticAlgorithm.Binary
+import Test.Goblin
 
 breedStsGoblins
   :: forall s

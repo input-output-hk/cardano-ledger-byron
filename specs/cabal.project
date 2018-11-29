@@ -6,3 +6,8 @@ source-repository-package
       type:     git
       location: https://github.com/astanin/moo
       tag: aba2ff1d9a0f1e38947038c0b320b1fc70884905
+
+source-repository-package
+      type:     git
+      location: https://github.com/input-output-hk/goblins
+      tag: 972f80d603e5f988e16fa4b9a9645dbfc4edd654

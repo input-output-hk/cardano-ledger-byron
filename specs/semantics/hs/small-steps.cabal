@@ -19,15 +19,14 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Control.State.Transition
                        Control.State.Transition.Generator
-                       Control.State.Transition.Goblin
                        Control.State.Transition.Goblin.BreedingPit
-                       Control.State.Transition.Goblin.Explainer
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
                      , capability
                      , containers
                      , data-default
+                     , goblins
                      , hedgehog
                      , lens
                      , mmorph
