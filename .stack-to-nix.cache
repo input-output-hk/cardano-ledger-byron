@@ -1,0 +1,6 @@
+https://github.com/input-output-hk/cardano-prelude 0c3c12ff4b95644c22731f979be0e2e6ebb8fe63 . 16cgbhmhczv616rimzx7gqxi6dlldmfh5jwslfhh3q04lp2m97qr cardano-prelude .stack.nix/cardano-prelude.nix
+https://github.com/input-output-hk/cardano-prelude 0c3c12ff4b95644c22731f979be0e2e6ebb8fe63 test 16cgbhmhczv616rimzx7gqxi6dlldmfh5jwslfhh3q04lp2m97qr cardano-prelude-test .stack.nix/cardano-prelude-test.nix
+https://github.com/well-typed/cborg 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d cborg 1khd1v9yh6jdkcvzvknvhxpc1qvxvww0pp7c43w4hbvdyhs1q8wh cborg .stack.nix/cborg.nix
+https://github.com/input-output-hk/cardano-crypto e87fcd3fea18f664d6e4f39c11abb8cafbd25785 . 0ax9gxbr3qnji1jwz2rz97573lkyi4128m2ck90bi1x15p4bm65y cardano-crypto .stack.nix/cardano-crypto.nix
+https://github.com/avieth/plutus-prototype d094be301195fcd8ab864d793f114970426a4478 . 1s932rghn4zn441waansp408b5bwk20rc1wsa5693a2nwnp4dijw plutus-prototype .stack.nix/plutus-prototype.nix
+https://github.com/input-output-hk/haskell-hedgehog.git 2e741bb53afb085741807018948ae17d956c53af hedgehog 0l0d1n2b68m0628j4yi214q5fy6pz777qfj1bc1lrra8scs5gcxh hedgehog .stack.nix/hedgehog.nix
