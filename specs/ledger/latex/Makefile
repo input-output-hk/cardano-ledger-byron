@@ -7,6 +7,9 @@
 # Document name
 DOCNAME = ledger-spec
 
+COMMON = "../../common/latex"
+TEXINPUTS = "$(COMMON):"
+
 # You want latexmk to *always* run, because make does not have all the info.
 # Also, include non-file targets in .PHONY so they are run regardless of any
 # file of the given name existing.
@@ -32,9 +35,11 @@ all: $(DOCNAME).pdf
 # missing file reference and interactively asking you for an alternative.
 
 $(DOCNAME).pdf: $(DOCNAME).tex
+	TEXINPUTS=$(TEXINPUTS) BIBINPUTS=$(TEXINPUTS) \
 	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 watch: $(DOCNAME).tex
+	TEXINPUTS=$(TEXINPUTS) BIBINPUTS=$(TEXINPUTS) \
 	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 clean:
