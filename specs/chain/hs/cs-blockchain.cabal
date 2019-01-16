@@ -29,6 +29,7 @@ library
                      , containers
                      , cryptonite
                      , cs-ledger
+                     , hedgehog
                      , lens
                      , memory
                      , small-steps

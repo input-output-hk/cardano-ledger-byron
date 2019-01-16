@@ -1,8 +1,9 @@
 -- | Defines basic types for working with the ledger and the blockchain
 module Types
-  ( BC
-  , BlockIx(..)
-  , ProtParams(..)
+  ( BlockIx(..)
+  , PParams(PParams)
+  , maxBlockSize
+  , maxHeaderSize
   , Block(..)
   )
 where
@@ -15,14 +16,13 @@ import Ledger.Delegation (DCert)
 import Ledger.Signatures (Hash)
 
 
--- | Phantom type for the blockchain extension transition system
-data BC
-
 newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord)
 
-data ProtParams = MkProtParams
+data PParams = PParams
   { maxBlockSize  :: !Natural
+  -- ^ Maximum block size in bytes.
   , maxHeaderSize :: !Natural
+  -- ^ Maximum block header size in bytes.
   }
 
 -- | Block type for two kinds of blocks: a genesis block and a

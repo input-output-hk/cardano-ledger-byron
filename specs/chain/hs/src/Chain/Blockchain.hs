@@ -8,21 +8,43 @@ module Chain.Blockchain where
 import Control.Lens
 import qualified Data.Map.Strict as Map
 import Data.Bits (shift)
-import Data.Set (Set)
 import Numeric.Natural
-
 import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
+import Hedgehog.Gen (integral, double)
+import Hedgehog.Range (constant, linear)
+
+import Control.State.Transition
+  ( Embed
+  , Environment
+  , IRC(IRC)
+  , PredicateFailure
+  , STS
+  , Signal
+  , State
+  , TRC(TRC)
+  , (?!)
+  , judgmentContext
+  , initialRules
+  , trans
+  , transitionRules
+  , wrapFailed
+  )
+import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
 import Chain.GenesisBlock (genesisBlock)
-import Control.State.Transition
 import Data.Maybe (fromJust, listToMaybe, isJust)
-import Data.Queue
-import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify, VKeyGenesis)
-import Ledger.Delegation (DCert, DIState, DELEG, DIEnv, delegationMap)
+import Data.Queue (Queue, headQueue, sizeQueue, pushQueue)
+import Ledger.Core (SlotCount(SlotCount), verify, VKeyGenesis)
+import Ledger.Delegation (DIState, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
-import Types (BC, Block(..), BlockIx(..), ProtParams(..))
-
+import Types
+  ( Block(..)
+  , BlockIx(..)
+  , PParams(PParams)
+  , maxBlockSize
+  , maxHeaderSize
+  )
 
 -- | Returns a key from a map for a given value.
 maybeMapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> Maybe k
@@ -80,10 +102,14 @@ incIxMap ix = Map.adjust (pushQueue ix)
 -- | Environment for blockchain rules
 data BlockchainEnv = MkBlockChainEnv
   {
-    bcEnvPp    :: ProtParams
+    bcEnvPp    :: PParams
   , bcEnvDIEnv :: DIEnv
   , bcEnvK     :: SlotCount
+  -- ^ Size of the moving window: how many block-signers before the current
+  -- block do we consider when computing the total proportion of blocks a given
+  -- key signed (see 'bcEnvT').
   , bcEnvT     :: T
+  -- ^ Percentage of blocks (normalized to [0, 1]) that any given key can sign.
   }
 
 -- | Extends a chain by a block
@@ -98,6 +124,9 @@ extendChain (env, st, b@(RBlock{})) dis =
     vk_s           = mapKeyForValue vk_d . (^. delegationMap) $ ds
     m'             = incIxMap ix vk_s (trimIx m k ix)
   in (m', p', dis)
+
+-- | Block chain extension rules
+data BC
 
 instance STS BC where
   -- | The state comprises a map of genesis block verification keys to a queue
@@ -148,7 +177,7 @@ instance STS BC where
       validBlockSize (env, _, b@(RBlock {})) =
            bSize b <= blockSizeLimit b (bcEnvPp env)
          where
-           blockSizeLimit :: Block -> ProtParams -> Natural
+           blockSizeLimit :: Block -> PParams -> Natural
            blockSizeLimit (GBlock {}) pp = maxBlockSize pp
            blockSizeLimit b@(RBlock {}) pp =
              if rbIsEBB b
@@ -180,3 +209,23 @@ instance STS BC where
 
 instance Embed DELEG BC where
   wrapFailed = LedgerFailure
+
+--------------------------------------------------------------------------------
+-- Generators
+--------------------------------------------------------------------------------
+
+instance HasTrace BC where
+  initEnvGen
+    = MkBlockChainEnv
+    -- In the testnet the maximum block size is set to 2000000 and the maximum
+    -- header size is set to 2000, so we have to make sure we cover those
+    -- values here. The upper bound is arbitrary though.
+    <$> (PParams <$> integral (constant 0 4000000) <*> integral (constant 0 4000))
+    <*> initEnvGen @DELEG
+    -- The size of the rolling widow is arbitrarily determined.
+    <*> (SlotCount <$> integral (linear 0 10))
+    -- The percentage of the slots will typically be between 1/5 and 1/4,
+    -- however we want to stretch that range a bit for testing purposes.
+    <*> (MkT <$> double (constant (1/6) (1/3)))
+
+  sigGen _e _st = undefined
