@@ -1,4 +1,5 @@
 { pkgs ? import ../../../pkgs.nix
+, specLatexCommon ? pkgs.copyPathToStore ../../common/latex
 }:
 
 with pkgs;
@@ -26,7 +27,7 @@ stdenv.mkDerivation {
                       latexmk
                       ;
                   })
-
+                specLatexCommon
                 ];
   src = ./.;
   buildPhase = "make";
