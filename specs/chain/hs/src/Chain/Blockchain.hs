@@ -32,7 +32,6 @@ import Control.State.Transition
   )
 import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
-import Chain.GenesisBlock (genesisBlock)
 import Data.Maybe (fromJust, listToMaybe, isJust)
 import Data.Queue (Queue, headQueue, sizeQueue, pushQueue)
 import Ledger.Core (SlotCount(SlotCount), verify, VKeyGenesis)
@@ -44,6 +43,7 @@ import Types
   , PParams(PParams)
   , maxBlockSize
   , maxHeaderSize
+  , genesisHash
   )
 
 -- | Returns a key from a map for a given value.
@@ -59,17 +59,23 @@ mapKeyForValue v = fromJust . maybeMapKeyForValue v
 
 -- | Computes the hash of a block
 hashBlock :: Block -> Hash
-hashBlock b@(RBlock{}) = hashlazy (pack . show $ i) where MkBlockIx i = rbIx b
-hashBlock b@(GBlock{}) = gbHash b
+hashBlock = hashlazy . pack . show
+-- TODO: we might want to serialize this properly, without using show...
 
 -- | Computes the block size in bytes
 bSize :: Block -> Natural
-bSize b@(GBlock{}) = gbSize b
-bSize b@(RBlock{}) = rbSize b
+bSize (EBB{}) = 1
+bSize b = 42 + (fromIntegral . length . rbCerts $ b)
+  -- For now just a constant plus the number of delegation certificates. We
+  -- might change this abstract size computation once things become clearer.
 
 -- | Computes the block header size in bytes
 bHeaderSize :: Block -> Natural
-bHeaderSize b@(GBlock{}) = gbHeaderSize b
+bHeaderSize b@(EBB{}) = 0
+-- In the current rules we don't need the header size of an EBB, so we might
+-- want to redefine the `Block` type and make this function more explicit on
+-- the types it takes. We might want to define Block as Either EBB RBlock, and
+-- define this function on RBlock's only.
 bHeaderSize b@(RBlock{}) = rbHeaderSize b
 
 -- | The 't' parameter in K * t in the range 0.2 <= t <= 0.25
@@ -116,7 +122,7 @@ data BlockchainEnv = MkBlockChainEnv
 extendChain :: (Environment BC, State BC, Signal BC) -> DIState -> State BC
 extendChain (env, st, b@(RBlock{})) dis =
   let
-    p'             = b
+    p'             = hashBlock b
     (dienv, k, t ) = (bcEnvDIEnv env, bcEnvK env, bcEnvT env)
     (m    , p, ds) = st
     vk_d           = rbSigner b
@@ -132,7 +138,7 @@ instance STS BC where
   -- | The state comprises a map of genesis block verification keys to a queue
   -- of at most K blocks each key signed in a sliding window of size K,
   -- the previous block and the delegation interface state
-  type State BC = (KeyToQMap, Block, DIState)
+  type State BC = (KeyToQMap, Hash, DIState)
   -- | Transitions in the system are triggered by a new block
   type Signal BC = Block
   -- | The environment consists of K and t parameters. To support a state
@@ -155,7 +161,7 @@ instance STS BC where
     [ do
         IRC env <- judgmentContext
         initDIState <- trans @DELEG $ IRC (bcEnvDIEnv env)
-        return (Map.empty, genesisBlock, initDIState)
+        return (Map.empty, genesisHash, initDIState)
     ]
   transitionRules =
     [ do
@@ -171,15 +177,14 @@ instance STS BC where
     ]
     where
       -- valid predecessor
-      validPredecessor (_, (_, p, _), b@(RBlock {})) =
-         hashBlock p == rbHash b
+      validPredecessor (_, (_, prevBlockHash, _), b@(RBlock {})) =
+         prevBlockHash == rbHash b
       -- has a block size within protocol limits
-      validBlockSize (env, _, b@(RBlock {})) =
-           bSize b <= blockSizeLimit b (bcEnvPp env)
+      validBlockSize (env, _, b) =
+           bSize b <= blockSizeLimit (bcEnvPp env)
          where
-           blockSizeLimit :: Block -> PParams -> Natural
-           blockSizeLimit (GBlock {}) pp = maxBlockSize pp
-           blockSizeLimit b@(RBlock {}) pp =
+           blockSizeLimit :: PParams -> Natural
+           blockSizeLimit pp =
              if rbIsEBB b
                then 1 `shift` 21
                else maxBlockSize pp

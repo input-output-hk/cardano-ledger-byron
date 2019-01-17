@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Defines basic types for working with the ledger and the blockchain
 module Types
   ( BlockIx(..)
@@ -5,18 +6,21 @@ module Types
   , maxBlockSize
   , maxHeaderSize
   , Block(..)
+  , genesisHash
   )
 where
 
 import Data.Set (Set)
 import Numeric.Natural
+import Crypto.Hash (hash)
+import Data.ByteString (ByteString)
 
 import Ledger.Core (VKey, Sig, Slot, VKeyGenesis)
 import Ledger.Delegation (DCert)
 import Ledger.Signatures (Hash)
 
 
-newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord)
+newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord, Show)
 
 data PParams = PParams
   { maxBlockSize  :: !Natural
@@ -25,17 +29,19 @@ data PParams = PParams
   -- ^ Maximum block header size in bytes.
   }
 
+genesisHash :: Hash
+-- Not sure we need a concrete hash in the specs ...
+genesisHash = hash ("" :: ByteString)
+
 -- | Block type for two kinds of blocks: a genesis block and a
 -- non-genesis block
 data Block
-  -- a genesis block
-  = GBlock {
-      gbKeys :: Set VKeyGenesis
-    , gbHash :: Hash -- ^ Hash of itself
-    , gbSize :: Natural -- ^ Size of the genesis block
-    , gbHeaderSize :: Natural -- ^ Size of the header of the genesis block
+  -- | Epoch boundary block
+  = EBB {
+    prevHash :: Hash
+    -- ^ Hash of the previous block. This will be the @genesisHash@
     }
-  -- a non-genesis block
+  -- | Regular block
   | RBlock {
       rbHash   :: Hash -- ^ Hash of the predecessor block
     , rbIx     :: BlockIx -- ^ Index of the block
@@ -50,4 +56,4 @@ data Block
     , rbIsEBB  :: Bool -- ^ Indicates if this is an epoch boundary block
     , rbSize   :: Natural -- ^ Size of the block
     , rbHeaderSize :: Natural -- ^ Size of the header of the block
-    }
+    } deriving (Show)
