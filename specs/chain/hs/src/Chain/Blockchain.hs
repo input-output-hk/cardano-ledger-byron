@@ -1,18 +1,21 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
-
+{-# LANGUAGE OverloadedStrings #-}
 module Chain.Blockchain where
 
 import Control.Lens
-import qualified Data.Map.Strict as Map
+import Crypto.Hash (hash, hashlazy)
 import Data.Bits (shift)
-import Numeric.Natural
-import Crypto.Hash (hashlazy)
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy.Char8 (pack)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (listToMaybe)
 import Hedgehog.Gen (integral, double)
 import Hedgehog.Range (constant, linear)
+import Numeric.Natural
 
 import Control.State.Transition
   ( Embed
@@ -32,78 +35,90 @@ import Control.State.Transition
   )
 import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
-import Data.Maybe (fromJust, listToMaybe, isJust)
-import Data.Queue (Queue, headQueue, sizeQueue, pushQueue)
-import Ledger.Core (SlotCount(SlotCount), verify, VKeyGenesis)
-import Ledger.Delegation (DIState, DELEG, DIEnv, delegationMap)
-import Ledger.Signatures (Hash)
-import Types
-  ( Block(..)
-  , BlockIx(..)
-  , PParams(PParams)
-  , maxBlockSize
-  , maxHeaderSize
-  , genesisHash
+import Ledger.Core
+  ( Epoch
+  , Sig
+  , Slot
+  , SlotCount(SlotCount)
+  , VKey
+  , VKeyGenesis
+  , VKeyGenesis
+  , verify
   )
+import Ledger.Delegation (DIState, DELEG, DIEnv, delegationMap, DCert)
+import Ledger.Signatures (Hash)
+
+-- | Protocol parameters.
+--
+data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
+  { maxBlockSize  :: !Natural
+  -- ^ Maximum block size in bytes.
+  , maxHeaderSize :: !Natural
+  -- ^ Maximum block header size in bytes.
+  }
+
+genesisHash :: Hash
+-- Not sure we need a concrete hash in the specs ...
+genesisHash = hash ("" :: ByteString)
+
+data BlockHeader
+  = BlockHeader
+  { _prevHHash :: Hash
+    -- ^ Hash of the previous block header, or 'genesisHash' in case of the
+    -- first block in a chain.
+  , _bSlot :: Slot
+    -- ^ Absolute slot for which the block was generated.
+  , _bEpoch :: Epoch
+    -- ^ Epoch for which the block was generated.
+
+  , _bIssuer :: VKey
+    -- ^ Block issuer.
+
+  , _bSig :: Sig VKey
+    -- ^ Signature of the block by its issuer.
+
+    -- TODO: BlockVersion – the block version; see Software and block versions.
+    -- Block version can be associated with a set of protocol rules. Rules
+    -- associated with _mehBlockVersion from a block are the rules used to
+    -- create that block (i.e. the block must adhere to these rules).
+
+    -- TODO: SoftwareVersion – the software version (see the same link); the
+    -- version of software that created the block
+  } deriving (Eq, Show)
+
+makeLenses ''BlockHeader
+
+data BlockBody
+  = BlockBody
+  { _bDCerts  :: [DCert]
+  -- ^ Delegation certificates.
+  } deriving (Eq, Show)
+
+makeLenses ''BlockBody
+
+-- | A block in the chain. The specification only models regular blocks since
+-- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
+data Block
+  = Block
+  { _bHeader :: BlockHeader
+  , _bBody :: BlockBody
+  } deriving (Eq, Show)
+
+makeLenses ''Block
 
 -- | Returns a key from a map for a given value.
 maybeMapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> Maybe k
 maybeMapKeyForValue v = listToMaybe . map fst . Map.toList . Map.filter (== v)
-
--- | Unsafely returns a key from a map for a given value. It assumes there is
--- exactly one key mapping to the given value. If there is no such key, it will
--- result in a runtime exception.
-mapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> k
-mapKeyForValue v = fromJust . maybeMapKeyForValue v
-
 
 -- | Computes the hash of a block
 hashBlock :: Block -> Hash
 hashBlock = hashlazy . pack . show
 -- TODO: we might want to serialize this properly, without using show...
 
--- | Computes the block size in bytes
-bSize :: Block -> Natural
-bSize (EBB{}) = 1
-bSize b = 42 + (fromIntegral . length . rbCerts $ b)
-  -- For now just a constant plus the number of delegation certificates. We
-  -- might change this abstract size computation once things become clearer.
-
--- | Computes the block header size in bytes
-bHeaderSize :: Block -> Natural
-bHeaderSize b@(EBB{}) = 0
--- In the current rules we don't need the header size of an EBB, so we might
--- want to redefine the `Block` type and make this function more explicit on
--- the types it takes. We might want to define Block as Either EBB RBlock, and
--- define this function on RBlock's only.
-bHeaderSize b@(RBlock{}) = rbHeaderSize b
-
 -- | The 't' parameter in K * t in the range 0.2 <= t <= 0.25
 -- that limits the number of blocks a signer can signed in a
 -- block sliding window of size K
 newtype T = MkT Double deriving (Eq, Ord)
-
--- Gives a map from delegator keys to a queue of block IDs of blocks that
--- the given key (indirectly) signed in the block sliding window of size K
-type KeyToQMap = Map.Map VKeyGenesis (Queue BlockIx)
-
-
--- | Remove the oldest entry in the queues in the range of the map if it is
---   more than *K* blocks away from the given block index
-trimIx :: KeyToQMap -> SlotCount -> BlockIx -> KeyToQMap
-trimIx m (SlotCount k) ix = foldl (flip f) m (Map.keysSet m)
- where
-  f :: VKeyGenesis -> KeyToQMap -> KeyToQMap
-  f = Map.adjust (qRestrict ix)
-  qRestrict :: BlockIx -> Queue BlockIx -> Queue BlockIx
-  qRestrict (MkBlockIx ix') q = case headQueue q of
-    Nothing               -> q
-    Just (MkBlockIx h, r) -> if h + k < ix' then r else q
-
--- | Updates a map of genesis verification keys to their signed blocks in
--- a sliding window by adding a block index to a specified key's list
-incIxMap :: BlockIx -> VKeyGenesis -> KeyToQMap -> KeyToQMap
-incIxMap ix = Map.adjust (pushQueue ix)
 
 -- | Environment for blockchain rules
 data BlockchainEnv = MkBlockChainEnv
@@ -118,34 +133,31 @@ data BlockchainEnv = MkBlockChainEnv
   -- ^ Percentage of blocks (normalized to [0, 1]) that any given key can sign.
   }
 
--- | Extends a chain by a block
-extendChain :: (Environment BC, State BC, Signal BC) -> DIState -> State BC
-extendChain (env, st, b@(RBlock{})) dis =
-  let
-    p'             = hashBlock b
-    (dienv, k, t ) = (bcEnvDIEnv env, bcEnvK env, bcEnvT env)
-    (m    , p, ds) = st
-    vk_d           = rbSigner b
-    ix             = rbIx b
-    vk_s           = mapKeyForValue vk_d . (^. delegationMap) $ ds
-    m'             = incIxMap ix vk_s (trimIx m k ix)
-  in (m', p', dis)
-
 -- | Block chain extension rules
-data BC
+data CEState
+  = CEState
+  { _signers :: [VKeyGenesis]
+  , _prevBlockHash :: Hash
+  , _pps :: PParams
+  , _delegState :: DIState
+  }
 
-instance STS BC where
+makeLenses ''CEState
+
+data CHAIN
+
+instance STS CHAIN where
   -- | The state comprises a map of genesis block verification keys to a queue
   -- of at most K blocks each key signed in a sliding window of size K,
   -- the previous block and the delegation interface state
-  type State BC = (KeyToQMap, Hash, DIState)
+  type State CHAIN = CEState
   -- | Transitions in the system are triggered by a new block
-  type Signal BC = Block
+  type Signal CHAIN = Block
   -- | The environment consists of K and t parameters. To support a state
   -- transition subsystem, the environment also includes the environment of the
   -- subsystem.
-  type Environment BC = BlockchainEnv
-  data PredicateFailure BC
+  type Environment CHAIN = BlockchainEnv
+  data PredicateFailure CHAIN
     = InvalidPredecessor
     | NoDelegationRight
     | InvalidBlockSignature
@@ -161,65 +173,28 @@ instance STS BC where
     [ do
         IRC env <- judgmentContext
         initDIState <- trans @DELEG $ IRC (bcEnvDIEnv env)
-        return (Map.empty, genesisHash, initDIState)
+        return undefined
     ]
   transitionRules =
     [ do
         TRC jc <- judgmentContext
-        validPredecessor jc ?! InvalidPredecessor
-        validBlockSize jc ?! InvalidBlockSize
-        validHeaderSize jc ?! InvalidHeaderSize
-        hasRight jc ?! NoDelegationRight
-        validSignature jc ?! InvalidBlockSignature
-        lessThanLimitSigned jc
-        dis <- trans @DELEG $ TRC (proj jc)
-        return $ extendChain jc dis
+        undefined
     ]
-    where
-      -- valid predecessor
-      validPredecessor (_, (_, prevBlockHash, _), b@(RBlock {})) =
-         prevBlockHash == rbHash b
-      -- has a block size within protocol limits
-      validBlockSize (env, _, b) =
-           bSize b <= blockSizeLimit (bcEnvPp env)
-         where
-           blockSizeLimit :: PParams -> Natural
-           blockSizeLimit pp =
-             if rbIsEBB b
-               then 1 `shift` 21
-               else maxBlockSize pp
-      -- has a block header size within protocol limits
-      validHeaderSize (env, _, b@(RBlock {})) =
-        bHeaderSize b <= maxHeaderSize (bcEnvPp env)
-      -- has a delegation right
-      hasRight (_, (_, _, ds), b@(RBlock {})) =
-        isJust $ maybeMapKeyForValue (rbSigner b) (ds ^. delegationMap)
-      -- valid signature
-      validSignature (_, _, b@(RBlock {})) =
-         verify (rbSigner b) (rbData b) (rbSig b)
-      -- the delegator has not signed more than an allowed number of blocks
-      -- in a sliding window of the last k blocks
-      lessThanLimitSigned (env, st, b@(RBlock {})) =
-        let
-          (m, _, ds) = st
-          (SlotCount k, MkT t) = (bcEnvK env, bcEnvT env)
-          vk_d = rbSigner b
-          dsm = ds ^. delegationMap
-        in case maybeMapKeyForValue vk_d dsm of
-          Nothing   -> False ?! NoDelegationRight
-          Just vk_s ->
-            fromIntegral (sizeQueue (m Map.! vk_s)) <= fromIntegral k * t
-              ?! SignedMaximumNumberBlocks
-      proj (env, (_, _, d), b@(RBlock {})) = (bcEnvDIEnv env, d, rbCerts b)
 
-instance Embed DELEG BC where
+instance Embed DELEG CHAIN where
   wrapFailed = LedgerFailure
 
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
 
-instance HasTrace BC where
+-- | Verification keys located in the genesis block
+--
+-- initVKeys :: Set VKeyGenesis
+-- initVKeys = fromList $ map (VKeyGenesis . VKey . Owner) [1 .. 7]
+
+
+instance HasTrace CHAIN where
   initEnvGen
     = MkBlockChainEnv
     -- In the testnet the maximum block size is set to 2000000 and the maximum
