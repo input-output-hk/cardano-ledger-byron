@@ -6,14 +6,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Chain.Blockchain where
 
-import Control.Lens
+import Control.Lens (makeLenses, (^.))
 import Crypto.Hash (hash, hashlazy)
 import Data.Bits (shift)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy.Char8 (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
-import Hedgehog.Gen (integral, double)
+import Data.Set (Set)
+import Hedgehog.Gen (integral, double, set)
 import Hedgehog.Range (constant, linear)
 import Numeric.Natural
 
@@ -36,26 +37,49 @@ import Control.State.Transition
 import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
 import Ledger.Core
-  ( Epoch
+  ( Epoch(Epoch)
   , Sig
-  , Slot
+  , Slot(Slot)
   , SlotCount(SlotCount)
   , VKey
   , VKeyGenesis
   , VKeyGenesis
   , verify
   )
-import Ledger.Delegation (DIState, DELEG, DIEnv, delegationMap, DCert)
+import Ledger.Core.Generator (vkgenesisGen)
+import Ledger.Delegation
+  ( DCert
+  , DELEG
+  , DIEnv
+  , DIState
+  , DSEnv (DSEnv)
+  , _dSEnvAllowedDelegators
+  , _dSEnvEpoch
+  , _dSEnvLiveness
+  , _dSEnvSlot
+  , delegationMap
+  )
 import Ledger.Signatures (Hash)
 
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { maxBlockSize  :: !Natural
-  -- ^ Maximum block size in bytes.
-  , maxHeaderSize :: !Natural
-  -- ^ Maximum block header size in bytes.
-  }
+  { _maxBlockSize  :: !Natural
+  -- ^ Maximum (abstract) block size in words.
+  , _maxHeaderSize :: !Natural
+  -- ^ Maximum (abstract) block header size in words.
+  , _dLiveness :: !SlotCount
+  -- ^ Delegation liveness parameter: number of slots it takes a delegation
+  -- certificate to take effect.
+  , _bkSgnCntW :: !Natural
+  -- ^ Size of the moving window to count signatures.
+  , _bkSgnCntT :: !Double
+  -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
+  -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
+  -- and 1/4.
+  } deriving (Eq, Show)
+
+makeLenses ''PParams
 
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
@@ -115,35 +139,31 @@ hashBlock :: Block -> Hash
 hashBlock = hashlazy . pack . show
 -- TODO: we might want to serialize this properly, without using show...
 
--- | The 't' parameter in K * t in the range 0.2 <= t <= 0.25
--- that limits the number of blocks a signer can signed in a
--- block sliding window of size K
-newtype T = MkT Double deriving (Eq, Ord)
+-- | Blockchain extension environment.
+data CEEnv -- TODO: note that we only have to define an environment to be able
+           -- to fit the generators framework as it is at the moment. This
+           -- environment won't be used by the rules once the initial state is
+           -- determined from it (actually copied).
+  = CEEnv  { _initPps :: PParams
+    -- ^ Initial protocol par_dSEnvAllowedDelegatorsameters.
+  , _gKeys ::  Set VKeyGenesis
+    -- ^ Initial genesis keys.
+  } deriving (Eq, Show)
 
--- | Environment for blockchain rules
-data BlockchainEnv = MkBlockChainEnv
-  {
-    bcEnvPp    :: PParams
-  , bcEnvDIEnv :: DIEnv
-  , bcEnvK     :: SlotCount
-  -- ^ Size of the moving window: how many block-signers before the current
-  -- block do we consider when computing the total proportion of blocks a given
-  -- key signed (see 'bcEnvT').
-  , bcEnvT     :: T
-  -- ^ Percentage of blocks (normalized to [0, 1]) that any given key can sign.
-  }
+makeLenses ''CEEnv
 
--- | Block chain extension rules
+-- | Blockchain extension state.
 data CEState
   = CEState
   { _signers :: [VKeyGenesis]
-  , _prevBlockHash :: Hash
+  , _lastHHash :: Hash
   , _pps :: PParams
   , _delegState :: DIState
   }
 
 makeLenses ''CEState
 
+-- | Block chain extension rules
 data CHAIN
 
 instance STS CHAIN where
@@ -156,7 +176,7 @@ instance STS CHAIN where
   -- | The environment consists of K and t parameters. To support a state
   -- transition subsystem, the environment also includes the environment of the
   -- subsystem.
-  type Environment CHAIN = BlockchainEnv
+  type Environment CHAIN = CEEnv
   data PredicateFailure CHAIN
     = InvalidPredecessor
     | NoDelegationRight
@@ -172,8 +192,19 @@ instance STS CHAIN where
   initialRules =
     [ do
         IRC env <- judgmentContext
-        initDIState <- trans @DELEG $ IRC (bcEnvDIEnv env)
-        return undefined
+        let dsenv
+              = DSEnv
+              { _dSEnvAllowedDelegators = env ^. gKeys
+              , _dSEnvEpoch = Epoch 0
+              , _dSEnvSlot = Slot 0
+              , _dSEnvLiveness = env ^. initPps . dLiveness}
+        initDIState <- trans @DELEG $ IRC dsenv
+        return CEState
+          { _signers = []
+          , _lastHHash = genesisHash
+          , _pps = env ^. initPps
+          , _delegState = initDIState
+          }
     ]
   transitionRules =
     [ do
@@ -196,16 +227,31 @@ instance Embed DELEG CHAIN where
 
 instance HasTrace CHAIN where
   initEnvGen
-    = MkBlockChainEnv
-    -- In the testnet the maximum block size is set to 2000000 and the maximum
-    -- header size is set to 2000, so we have to make sure we cover those
-    -- values here. The upper bound is arbitrary though.
-    <$> (PParams <$> integral (constant 0 4000000) <*> integral (constant 0 4000))
-    <*> initEnvGen @DELEG
+    = do
+    -- In mainet the maximum header size is set to 2000000 and the maximum
+    -- block size is also set to 2000000, so we have to make sure we cover
+    -- those values here. The upper bound is arbitrary though.
+    mHSz <- integral (constant 0 4000000)
+    mBSz <- integral (constant 0 4000000)
+    -- The delegation liveness parameter is arbitrarily determined.
+    d <- SlotCount <$> integral (linear 0 10)
     -- The size of the rolling widow is arbitrarily determined.
-    <*> (SlotCount <$> integral (linear 0 10))
+    w <- integral (linear 0 10)
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
-    <*> (MkT <$> double (constant (1/6) (1/3)))
+    t <- double (constant (1/6) (1/3))
+    let initPPs
+          = PParams
+          { _maxHeaderSize = mHSz
+          , _maxBlockSize = mBSz
+          , _dLiveness = d
+          , _bkSgnCntW = w
+          , _bkSgnCntT = t
+          }
+    gKeys <- set (linear 1 7) vkgenesisGen
+    return CEEnv
+      { _initPps = initPPs
+      , _gKeys = gKeys
+      }
 
   sigGen _e _st = undefined
