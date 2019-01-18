@@ -1,0 +1,158 @@
+diff --git a/System/Process.hs b/System/Process.hs
+index 2678a93..d03dc6e 100644
+--- a/System/Process.hs
++++ b/System/Process.hs
+@@ -43,6 +43,7 @@ module System.Process (
+     readCreateProcessWithExitCode,
+     readProcessWithExitCode,
+     withCreateProcess,
++    cleanupProcess,
+
+     -- ** Related utilities
+     showCommandForUser,
+@@ -245,7 +246,12 @@ withCreateProcess_ fun c action =
+     C.bracketOnError (createProcess_ fun c) cleanupProcess
+                      (\(m_in, m_out, m_err, ph) -> action m_in m_out m_err ph)
+
+-
++-- | Cleans up the process.
++--
++-- This function is meant to be invoked from any application level cleanup
++-- handler. It terminates the process, and closes any 'CreatePipe' 'handle's.
++--
++-- @since 1.6.4.0
+ cleanupProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
+                -> IO ()
+ cleanupProcess (mb_stdin, mb_stdout, mb_stderr,
+@@ -728,8 +734,10 @@ getProcessExitCode ph@(ProcessHandle _ delegating_ctlc _) = tryLockWaitpid $ do
+ -- has indeed terminated, use 'getProcessExitCode'.
+ --
+ -- On Unix systems, 'terminateProcess' sends the process the SIGTERM signal.
+--- On Windows systems, the Win32 @TerminateProcess@ function is called, passing
+--- an exit code of 1.
++-- On Windows systems, if `use_process_jobs` is `True` then the Win32 @TerminateJobObject@
++-- function is called to kill all processes associated with the job and passing the
++-- exit code of 1 to each of them. Otherwise if `use_process_jobs` is `False` then the
++-- Win32 @TerminateProcess@ function is called, passing an exit code of 1.
+ --
+ -- Note: on Windows, if the process was a shell command created by
+ -- 'createProcess' with 'shell', or created by 'runCommand' or
+diff --git a/System/Process/Common.hs b/System/Process/Common.hs
+index b424764..fe55889 100644
+--- a/System/Process/Common.hs
++++ b/System/Process/Common.hs
+@@ -44,7 +44,7 @@ import GHC.IO.Handle.Internals
+ import GHC.IO.Handle.Types hiding (ClosedHandle)
+ import System.IO.Error
+ import Data.Typeable
+-import GHC.IO.IOMode
++import System.IO (IOMode)
+
+ -- We do a minimal amount of CPP here to provide uniform data types across
+ -- Windows and POSIX.
+diff --git a/System/Process/Windows.hsc b/System/Process/Windows.hsc
+index 6c92b02..23498f5 100644
+--- a/System/Process/Windows.hsc
++++ b/System/Process/Windows.hsc
+@@ -34,7 +34,7 @@ import GHC.IO.Exception
+ import GHC.IO.Handle.FD
+ import GHC.IO.Handle.Types hiding (ClosedHandle)
+ import System.IO.Error
+-import GHC.IO.IOMode
++import System.IO (IOMode(..))
+
+ import System.Directory         ( doesFileExist )
+ import System.Environment       ( getEnv )
+@@ -208,7 +208,7 @@ waitForJobCompletion job io timeout =
+                  then Just <$> peek p_exitCode
+                  else return Nothing
+
+-insertItem :: Eq k => MVar [(k, v)] -> k -> v -> IO ()
++insertItem :: MVar [(k, v)] -> k -> v -> IO ()
+ insertItem env_ k v = modifyMVar_ env_ (return . ((k, v):))
+
+ getItem :: Eq k => MVar [(k, v)] -> k -> IO v
+--- a/cbits/runProcess.c
++++ b/cbits/runProcess.c
+@@ -111,6 +111,18 @@ runInteractiveProcess (char *const args[],
+     r = pipe(forkCommunicationFds);
+     if (r == -1) {
+         *failed_doing = "runInteractiveProcess: pipe";
++        if (fdStdIn == -1) {
++            close(fdStdInput[0]);
++            close(fdStdInput[1]);
++        }
++        if (fdStdOut == -1) {
++            close(fdStdOutput[0]);
++            close(fdStdOutput[1]);
++        }
++        if (fdStdErr == -1) {
++            close(fdStdError[0]);
++            close(fdStdError[1]);
++        }
+         return -1;
+     }
+
+diff --git a/changelog.md b/changelog.md
+index 851c3ca..d4c43ae 100644
+--- a/changelog.md
++++ b/changelog.md
+@@ -1,5 +1,13 @@
+ # Changelog for [`process` package](http://hackage.haskell.org/package/process)
+
++## Unreleased changes
++
++* Bug fix: Don't leak pipes on failure
++  [#122](https://github.com/haskell/process/issues/122)
++* Expose `cleanupProcess` from `System.Process`
++  [#130](https://github.com/haskell/process/pull/130)
++* Drop support for GHC before 7.10.3
++
+ ## 1.6.3.0 *January 2018*
+
+ * Added `getPid` and export of platform specific `Pid` type
+diff --git a/process.cabal b/process.cabal
+index cb6cbb3..350591a 100644
+--- a/process.cabal
++++ b/process.cabal
+@@ -46,8 +46,9 @@ library
+         InterruptibleFFI
+         RecordWildCards
+         Trustworthy
+-    if impl(ghc>=7.9)
+-        other-extensions: Safe
++        Safe
++    if impl(ghc<7.10.3)
++        buildable: False
+
+     exposed-modules:
+         System.Cmd
+@@ -61,7 +62,7 @@ library
+         cpp-options: -DWINDOWS
+     else
+         other-modules: System.Process.Posix
+-        build-depends: unix >= 2.5 && < 2.8
++        build-depends: unix >= 2.5 && < 2.9
+
+     c-sources:
+         cbits/runProcess.c
+@@ -74,7 +75,7 @@ library
+
+     ghc-options: -Wall
+
+-    build-depends: base      >= 4.4 && < 4.12,
++    build-depends: base      >= 4.8.2 && < 4.13,
+                    directory >= 1.1 && < 1.4,
+                    filepath  >= 1.2 && < 1.5,
+                    deepseq   >= 1.1 && < 1.5
+@@ -84,7 +85,9 @@ test-suite test
+   hs-source-dirs: test
+   main-is: main.hs
+   type: exitcode-stdio-1.0
+-  build-depends: base
++  -- Add otherwise redundant bounds on base since GHC's build system runs
++  -- `cabal check`, which mandates bounds on base.
++  build-depends: base >= 4 && < 5
+                , bytestring
+                , directory
+                , process
