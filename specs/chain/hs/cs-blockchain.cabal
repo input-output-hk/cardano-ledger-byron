@@ -31,3 +31,5 @@ library
                      , lens
                      , memory
                      , small-steps
+                     -- Cardano deps
+                     , cardano-prelude

@@ -18,6 +18,8 @@ import Hedgehog.Gen (integral, double, set)
 import Hedgehog.Range (constant, linear)
 import Numeric.Natural
 
+import Cardano.Prelude (HeapWords, heapWords, heapWords2, heapWords4)
+
 import Control.State.Transition
   ( Embed
   , Environment
@@ -64,9 +66,9 @@ import Ledger.Signatures (Hash)
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { _maxBlockSize  :: !Natural
+  { _maxBkSz  :: !Natural
   -- ^ Maximum (abstract) block size in words.
-  , _maxHeaderSize :: !Natural
+  , _maxHrdSz :: !Natural
   -- ^ Maximum (abstract) block header size in words.
   , _dLiveness :: !SlotCount
   -- ^ Delegation liveness parameter: number of slots it takes a delegation
@@ -197,7 +199,8 @@ instance STS CHAIN where
               { _dSEnvAllowedDelegators = env ^. gKeys
               , _dSEnvEpoch = Epoch 0
               , _dSEnvSlot = Slot 0
-              , _dSEnvLiveness = env ^. initPps . dLiveness}
+              , _dSEnvLiveness = env ^. initPps . dLiveness
+              }
         initDIState <- trans @DELEG $ IRC dsenv
         return CEState
           { _signers = []
@@ -208,22 +211,40 @@ instance STS CHAIN where
     ]
   transitionRules =
     [ do
-        TRC jc <- judgmentContext
+        TRC (_, st, b) <- judgmentContext
+        bSize b <= st ^. pps . maxBkSz ?! InvalidBlockSize
         undefined
     ]
 
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerFailure
 
+-- | Compute the size (in words) that a block takes.
+bSize :: Block -> Natural
+bSize = fromInteger . toInteger . heapWords
+
+instance HeapWords Block where
+  heapWords b = heapWords2 (b ^. bHeader) (b ^. bBody)
+
+instance HeapWords BlockHeader where
+  heapWords header
+    -- The constant 12 is was taken from:
+    --
+    -- https://github.com/input-output-hk/cardano-chain/pull/244/files#diff-2955aa8b04471dc586f90cb5f22948beR118
+    --
+    -- 12 = 8 words of digest + 4 words for hash
+    = 12
+    + heapWords4 (header ^. bSlot)
+                 (header ^. bEpoch)
+                 (header ^. bIssuer)
+                 (header ^. bSig)
+
+instance HeapWords BlockBody where
+  heapWords body = undefined
+
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
-
--- | Verification keys located in the genesis block
---
--- initVKeys :: Set VKeyGenesis
--- initVKeys = fromList $ map (VKeyGenesis . VKey . Owner) [1 .. 7]
-
 
 instance HasTrace CHAIN where
   initEnvGen
@@ -242,8 +263,8 @@ instance HasTrace CHAIN where
     t <- double (constant (1/6) (1/3))
     let initPPs
           = PParams
-          { _maxHeaderSize = mHSz
-          , _maxBlockSize = mBSz
+          { _maxHrdSz = mHSz
+          , _maxBkSz = mBSz
           , _dLiveness = d
           , _bkSgnCntW = w
           , _bkSgnCntT = t
