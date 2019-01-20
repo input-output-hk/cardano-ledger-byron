@@ -40,7 +40,7 @@ let
   };
 
   mapped-pkgs = mapTestOn (nix-tools-pkgs supportedSystems);
-  mapped-pkgs-mingw32 = mapTestOnCross lib.systems.examples.mingwW64 (nix-tools-pkgs [ "x86_64-linux" "x86_64-darwin" ]);
+  mapped-pkgs-mingw32 = mapTestOnCross lib.systems.examples.mingwW64 (nix-tools-pkgs [ "x86_64-linux" ]);
 
   mapped-pkgs-all
     = lib.recursiveUpdate
