@@ -39,6 +39,8 @@ let
         # clock hasn't had a release since 2016(!) that is for three(3) years
         # now.
         packages.clock.patches = [ ./patches/clock-0.7.2.patch ];
+        # nix calles this package crypto
+        packages.cryptonite-openssl.patches = [ ./patches/cryptonite-openssl-0.7.patch ];
       }
     ];
   };
