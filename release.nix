@@ -2,7 +2,7 @@ let
   localLib = import ./lib.nix;
 in
 { system ? builtins.currentSystem
-, config ? {}
+, config ? import ./nix/config.nix
 , pkgs ? localLib.iohkNix.getPkgs { inherit system config; }
 
 , chain ? { outPath = ./.; rev = "abcdef"; }
@@ -10,7 +10,7 @@ in
 , scrubJobs ? true
 , supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
 , nixpkgsArgs ? {
-    config = { allowUnfree = false; inHydra = true; };
+    config = config // { allowUnfree = false; inHydra = true; };
   }
 }:
 with (import (localLib.iohkNix.nixpkgs + "/pkgs/top-level/release-lib.nix") {
@@ -63,7 +63,6 @@ in fix (self: latex-specs // mapped-pkgs-all
     name = "cardano-chain-required-checks";
     constituents = with self;
       [ byronLedgerSpec byronChainSpec semanticsSpec
-        chain-pkgs
         forceNewEval
         nix-tools.libs.cardano-chain.x86_64-linux
         nix-tools.libs.cardano-chain.x86_64-darwin

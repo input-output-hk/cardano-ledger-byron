@@ -4,9 +4,7 @@ in
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
-# TODO: for cross to actually start working iohk-nix needs to support
-#       crossSystem.
-, pkgs ? localLib.iohkNix.getPkgs { inherit system config; }
+, pkgs ? localLib.iohkNix.getPkgs { inherit system crossSystem config; }
 }:
 with builtins; with pkgs.lib;
 let  nix-tools = import ./nix/pkgs.nix { nixpkgs = _: pkgs; };
