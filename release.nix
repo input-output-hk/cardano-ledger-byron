@@ -19,7 +19,7 @@ with (import (localLib.iohkNix.nixpkgs + "/pkgs/top-level/release-lib.nix") {
 });
 with pkgs.lib;
 let
-  packages = [ "cardano-chain" ];
+  packages = [ "cardano-chain" "cs-ledger" "small-steps" "cs-blockchain" ];
 
   traceId = x: builtins.trace (builtins.deepSeq x x) x;
 

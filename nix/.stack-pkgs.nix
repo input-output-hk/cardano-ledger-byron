@@ -17,6 +17,7 @@
         cardano-crypto-test = ./.stack.nix/cardano-crypto-test.nix;
         cs-ledger = ./.stack.nix/cs-ledger.nix;
         small-steps = ./.stack.nix/small-steps.nix;
+        cs-blockchain = ./.stack.nix/cs-blockchain.nix;
         cardano-prelude = ./.stack.nix/cardano-prelude.nix;
         cardano-prelude-test = ./.stack.nix/cardano-prelude-test.nix;
         cborg = ./.stack.nix/cborg.nix;

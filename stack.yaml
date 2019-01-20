@@ -9,6 +9,7 @@ packages:
   - crypto/test
   - specs/ledger/hs
   - specs/semantics/hs
+  - specs/chain/hs
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
