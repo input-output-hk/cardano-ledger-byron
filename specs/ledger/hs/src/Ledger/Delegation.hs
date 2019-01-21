@@ -82,6 +82,8 @@ import Control.Lens
   , to
   )
 
+import Cardano.Prelude (HeapWords, heapWords, heapWords4)
+
 import Control.State.Transition
   ( Embed
   , Environment
@@ -135,6 +137,13 @@ data DCert = DCert
   } deriving (Show, Eq)
 
 makeLenses ''DCert
+
+instance HeapWords DCert where
+  heapWords dcert
+    = heapWords4 (dcert ^. dbody)
+                 (dcert ^. dwit)
+                 (dcert ^. dwho)
+                 (dcert ^. depoch)
 
 -- | Key that is delegating.
 delegator :: DCert -> VKeyGenesis

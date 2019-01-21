@@ -10,7 +10,7 @@ extra-deps:
 - sequence-0.9.8
 - tasty-hedgehog-0.2.0.0
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: e2d1dfb1ebfd9a8b1a2357bad1bdbdf9d5a7a17b
+  commit: be0836078ca0c8e521376baf7cf9a01abdd3664b
   subdirs:
     - .
     - test

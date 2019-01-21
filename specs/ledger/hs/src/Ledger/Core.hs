@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ledger.Core where
 
 import qualified Crypto.Hash as Crypto
@@ -10,6 +11,8 @@ import qualified Data.Map.Strict as Map
 import GHC.Natural (minusNaturalMaybe)
 import Numeric.Natural (Natural)
 
+import Cardano.Prelude (HeapWords, heapWords, heapWords2)
+
 import Ledger.Signatures
 
 -- | Hash part of the ledger paylod
@@ -21,7 +24,9 @@ class HasHash a where
 ---------------------------------------------------------------------------------
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Ord, HeapWords)
+
+
 
 class HasOwner a where
   owner :: a -> Owner
@@ -33,7 +38,7 @@ instance HasOwner SKey where
   owner (SKey o) = o
 
 -- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+newtype VKey = VKey Owner deriving (Show, Eq, Ord, HeapWords)
 
 instance HasHash VKey where
   hash = Crypto.hash
@@ -47,7 +52,7 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis VKey
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HeapWords)
 
 instance HasOwner VKeyGenesis where
   owner (VKeyGenesis vk) = owner vk
@@ -63,6 +68,9 @@ keyPair o = KeyPair (SKey o) (VKey o)
 -- |A digital signature.
 data Sig a = Sig a Owner deriving (Show, Eq, Ord)
 
+instance HeapWords a => HeapWords (Sig a) where
+  heapWords (Sig a o) = 1 + heapWords2 a o
+
 -- |Produce a digital signature
 sign :: SKey -> a -> Sig a
 sign (SKey k) d = Sig d k
@@ -76,10 +84,10 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Natural
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HeapWords)
 
 newtype Slot = Slot Natural
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HeapWords)
 
 -- | A number of slots.
 --

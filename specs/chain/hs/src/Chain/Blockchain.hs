@@ -18,7 +18,7 @@ import Hedgehog.Gen (integral, double, set)
 import Hedgehog.Range (constant, linear)
 import Numeric.Natural
 
-import Cardano.Prelude (HeapWords, heapWords, heapWords2, heapWords4)
+import Cardano.Prelude (HeapWords, heapWords, heapWords1, heapWords2, heapWords4)
 
 import Control.State.Transition
   ( Embed
@@ -89,18 +89,18 @@ genesisHash = hash ("" :: ByteString)
 
 data BlockHeader
   = BlockHeader
-  { _prevHHash :: Hash
+  { _prevHHash :: !Hash
     -- ^ Hash of the previous block header, or 'genesisHash' in case of the
     -- first block in a chain.
-  , _bSlot :: Slot
+  , _bSlot :: !Slot
     -- ^ Absolute slot for which the block was generated.
-  , _bEpoch :: Epoch
+  , _bEpoch :: !Epoch
     -- ^ Epoch for which the block was generated.
 
-  , _bIssuer :: VKey
+  , _bIssuer :: !VKey
     -- ^ Block issuer.
 
-  , _bSig :: Sig VKey
+  , _bSig :: !(Sig VKey)
     -- ^ Signature of the block by its issuer.
 
     -- TODO: BlockVersion – the block version; see Software and block versions.
@@ -240,7 +240,7 @@ instance HeapWords BlockHeader where
                  (header ^. bSig)
 
 instance HeapWords BlockBody where
-  heapWords body = undefined
+  heapWords body = heapWords1 (body ^. bDCerts)
 
 --------------------------------------------------------------------------------
 -- Generators
