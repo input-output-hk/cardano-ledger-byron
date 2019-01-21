@@ -1,16 +1,20 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Chain.Blockchain where
 
-import Control.Lens (makeLenses, (^.))
+import Control.Lens (makeLenses, (^.), makeFields, (&), (.~))
 import Crypto.Hash (hash, hashlazy)
 import Data.Bits (shift)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy.Char8 (pack)
+import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import Data.Set (Set)
@@ -79,6 +83,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4.
+  , _bkSlotsPerEpoch :: !SlotCount
   } deriving (Eq, Show)
 
 makeLenses ''PParams
@@ -92,8 +97,9 @@ data BlockHeader
   { _prevHHash :: !Hash
     -- ^ Hash of the previous block header, or 'genesisHash' in case of the
     -- first block in a chain.
-  , _bSlot :: !Slot
-    -- ^ Absolute slot for which the block was generated.
+  , _bRelSlot :: !Slot
+    -- ^ Relative slot for which the block was generated. This counts the
+    -- number of slots into the current epoch.
   , _bEpoch :: !Epoch
     -- ^ Epoch for which the block was generated.
 
@@ -146,7 +152,8 @@ data CEEnv -- TODO: note that we only have to define an environment to be able
            -- to fit the generators framework as it is at the moment. This
            -- environment won't be used by the rules once the initial state is
            -- determined from it (actually copied).
-  = CEEnv  { _initPps :: PParams
+  = CEEnv
+  { _initPps :: PParams
     -- ^ Initial protocol par_dSEnvAllowedDelegatorsameters.
   , _gKeys ::  Set VKeyGenesis
     -- ^ Initial genesis keys.
@@ -157,27 +164,26 @@ makeLenses ''CEEnv
 -- | Blockchain extension state.
 data CEState
   = CEState
-  { _signers :: [VKeyGenesis]
-  , _lastHHash :: Hash
-  , _pps :: PParams
-  , _delegState :: DIState
+  { _cEStateCurrSlot :: Slot
+    -- ^ Current absolute slot.
+  , _cEStateCurrEpoch :: Epoch
+  , _cEStateLastHHash :: Hash
+  , _cEStateSigners :: [VKeyGenesis]
+  , _cEStatePps :: PParams
+  , _cEStateDelegState :: DIState
   }
 
-makeLenses ''CEState
+makeFields ''CEState
 
--- | Block chain extension rules
+--------------------------------------------------------------------------------
+-- | Blockchain extension rules
+--------------------------------------------------------------------------------
 data CHAIN
 
 instance STS CHAIN where
-  -- | The state comprises a map of genesis block verification keys to a queue
-  -- of at most K blocks each key signed in a sliding window of size K,
-  -- the previous block and the delegation interface state
   type State CHAIN = CEState
   -- | Transitions in the system are triggered by a new block
   type Signal CHAIN = Block
-  -- | The environment consists of K and t parameters. To support a state
-  -- transition subsystem, the environment also includes the environment of the
-  -- subsystem.
   type Environment CHAIN = CEEnv
   data PredicateFailure CHAIN
     = InvalidPredecessor
@@ -203,10 +209,12 @@ instance STS CHAIN where
               }
         initDIState <- trans @DELEG $ IRC dsenv
         return CEState
-          { _signers = []
-          , _lastHHash = genesisHash
-          , _pps = env ^. initPps
-          , _delegState = initDIState
+          { _cEStateCurrSlot = Slot 0
+          , _cEStateCurrEpoch = Epoch 0
+          , _cEStateLastHHash = genesisHash
+          , _cEStateSigners = []
+          , _cEStatePps = env ^. initPps
+          , _cEStateDelegState = initDIState
           }
     ]
   transitionRules =
@@ -234,7 +242,7 @@ instance HeapWords BlockHeader where
     --
     -- 12 = 8 words of digest + 4 words for hash
     = 12
-    + heapWords4 (header ^. bSlot)
+    + heapWords4 (header ^. bRelSlot)
                  (header ^. bEpoch)
                  (header ^. bIssuer)
                  (header ^. bSig)
@@ -261,6 +269,8 @@ instance HasTrace CHAIN where
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
     t <- double (constant (1/6) (1/3))
+    -- The slots per-epoch is arbitrarily determined.
+    spe <- SlotCount <$> integral (linear 0 1000)
     let initPPs
           = PParams
           { _maxHrdSz = mHSz
@@ -268,11 +278,65 @@ instance HasTrace CHAIN where
           , _dLiveness = d
           , _bkSgnCntW = w
           , _bkSgnCntT = t
+          , _bkSlotsPerEpoch = spe
           }
-    gKeys <- set (linear 1 7) vkgenesisGen
+    initGKeys <- set (linear 1 7) vkgenesisGen
     return CEEnv
       { _initPps = initPPs
-      , _gKeys = gKeys
+      , _gKeys = initGKeys
       }
 
   sigGen _e _st = undefined
+
+--------------------------------------------------------------------------------
+-- | Block epoch change rules
+--------------------------------------------------------------------------------
+data BEC
+
+data BECState
+  = BECState
+  { _bECStateCurrSlot :: Slot
+    -- ^ Current absolute slot.
+  , _bECStateCurrEpoch :: Epoch
+  }
+
+makeFields ''BECState
+
+instance STS BEC where
+  type Environment BEC = PParams
+  type State BEC = BECState
+  type Signal BEC = Block
+  data PredicateFailure BEC
+    = NoSlotInc
+    { _becCurrSlot :: Slot
+    -- ^ Current slot in the state.
+    , _becSignalSlot :: Slot
+    -- ^ Slot we saw in the signal.
+    }
+    -- ^ We haven't seen an increment in the slot
+    | PastEpoch
+    { _becCurrEpoch :: Epoch
+    , _becSignalEpoch :: Epoch
+    }
+    -- ^ Epoch in the signal occurs in the past.
+    deriving (Eq, Show)
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (cPps, st, b) <- judgmentContext
+        let es = cPps ^. bkSlotsPerEpoch
+            e  = st ^. currEpoch
+            e' = b ^. bHeader . bEpoch
+        e <= e' ?! PastEpoch e e'
+        let
+          slot = st ^. currSlot
+          slot' :: Slot
+          -- TODO: This doesn't seem right, but neither does unpacking an
+          -- `Epoch`, `Slot` and `SlotCount`.
+          slot' = Slot $
+            coerce e' -  coerce e * coerce es + coerce (b ^. bHeader . bRelSlot)
+        slot < slot' ?! NoSlotInc slot slot'
+        return $ st & currSlot .~ slot'
+                    & currEpoch .~ e'
+
+    ]
