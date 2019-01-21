@@ -147,6 +147,62 @@ hashBlock :: Block -> Hash
 hashBlock = hashlazy . pack . show
 -- TODO: we might want to serialize this properly, without using show...
 
+--------------------------------------------------------------------------------
+-- | Block epoch change rules
+--------------------------------------------------------------------------------
+data BEC
+
+data BECState
+  = BECState
+  { _bECStateCurrSlot :: Slot
+    -- ^ Current absolute slot.
+  , _bECStateCurrEpoch :: Epoch
+  }
+
+makeFields ''BECState
+
+instance STS BEC where
+  type Environment BEC = PParams
+  type State BEC = BECState
+  type Signal BEC = Block
+  data PredicateFailure BEC
+    = NoSlotInc
+    { _becCurrSlot :: Slot
+    -- ^ Current slot in the state.
+    , _becSignalSlot :: Slot
+    -- ^ Slot we saw in the signal.
+    }
+    -- ^ We haven't seen an increment in the slot
+    | PastEpoch
+    { _becCurrEpoch :: Epoch
+    , _becSignalEpoch :: Epoch
+    }
+    -- ^ Epoch in the signal occurs in the past.
+    deriving (Eq, Show)
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (cPps, st, b) <- judgmentContext
+        let es = cPps ^. bkSlotsPerEpoch
+            e  = st ^. currEpoch
+            e' = b ^. bHeader . bEpoch
+        e <= e' ?! PastEpoch e e'
+        let
+          slot = st ^. currSlot
+          slot' :: Slot
+          -- TODO: This doesn't seem right, but neither does unpacking an
+          -- `Epoch`, `Slot` and `SlotCount`.
+          slot' = Slot $
+            coerce e' -  coerce e * coerce es + coerce (b ^. bHeader . bRelSlot)
+        slot < slot' ?! NoSlotInc slot slot'
+        return $ st & currSlot .~ slot'
+                    & currEpoch .~ e'
+
+    ]
+
+--------------------------------------------------------------------------------
+-- | Blockchain extension rules
+--------------------------------------------------------------------------------
 -- | Blockchain extension environment.
 data CEEnv -- TODO: note that we only have to define an environment to be able
            -- to fit the generators framework as it is at the moment. This
@@ -175,9 +231,6 @@ data CEState
 
 makeFields ''CEState
 
---------------------------------------------------------------------------------
--- | Blockchain extension rules
---------------------------------------------------------------------------------
 data CHAIN
 
 instance STS CHAIN where
@@ -193,6 +246,7 @@ instance STS CHAIN where
     | InvalidHeaderSize
     | SignedMaximumNumberBlocks
     | LedgerFailure (PredicateFailure DELEG)
+    | BECFailure (PredicateFailure BEC)
     deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
@@ -221,11 +275,18 @@ instance STS CHAIN where
     [ do
         TRC (_, st, b) <- judgmentContext
         bSize b <= st ^. pps . maxBkSz ?! InvalidBlockSize
-        undefined
+        let subSt = BECState (st ^. currSlot) (st ^. currEpoch)
+        becSt <- trans @BEC $ TRC (st ^. pps, subSt, b)
+        return $ st
+               & currSlot .~ (becSt ^. currSlot)
+               & currEpoch .~ (becSt ^. currEpoch)
     ]
 
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerFailure
+
+instance Embed BEC CHAIN where
+  wrapFailed = BECFailure
 
 -- | Compute the size (in words) that a block takes.
 bSize :: Block -> Natural
@@ -287,56 +348,3 @@ instance HasTrace CHAIN where
       }
 
   sigGen _e _st = undefined
-
---------------------------------------------------------------------------------
--- | Block epoch change rules
---------------------------------------------------------------------------------
-data BEC
-
-data BECState
-  = BECState
-  { _bECStateCurrSlot :: Slot
-    -- ^ Current absolute slot.
-  , _bECStateCurrEpoch :: Epoch
-  }
-
-makeFields ''BECState
-
-instance STS BEC where
-  type Environment BEC = PParams
-  type State BEC = BECState
-  type Signal BEC = Block
-  data PredicateFailure BEC
-    = NoSlotInc
-    { _becCurrSlot :: Slot
-    -- ^ Current slot in the state.
-    , _becSignalSlot :: Slot
-    -- ^ Slot we saw in the signal.
-    }
-    -- ^ We haven't seen an increment in the slot
-    | PastEpoch
-    { _becCurrEpoch :: Epoch
-    , _becSignalEpoch :: Epoch
-    }
-    -- ^ Epoch in the signal occurs in the past.
-    deriving (Eq, Show)
-  initialRules = []
-  transitionRules =
-    [ do
-        TRC (cPps, st, b) <- judgmentContext
-        let es = cPps ^. bkSlotsPerEpoch
-            e  = st ^. currEpoch
-            e' = b ^. bHeader . bEpoch
-        e <= e' ?! PastEpoch e e'
-        let
-          slot = st ^. currSlot
-          slot' :: Slot
-          -- TODO: This doesn't seem right, but neither does unpacking an
-          -- `Epoch`, `Slot` and `SlotCount`.
-          slot' = Slot $
-            coerce e' -  coerce e * coerce es + coerce (b ^. bHeader . bRelSlot)
-        slot < slot' ?! NoSlotInc slot slot'
-        return $ st & currSlot .~ slot'
-                    & currEpoch .~ e'
-
-    ]
