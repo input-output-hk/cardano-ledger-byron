@@ -72,7 +72,7 @@ import Ledger.Signatures (Hash)
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   { _maxBkSz  :: !Natural
   -- ^ Maximum (abstract) block size in words.
-  , _maxHrdSz :: !Natural
+  , _maxHdrSz :: !Natural
   -- ^ Maximum (abstract) block header size in words.
   , _dLiveness :: !SlotCount
   -- ^ Delegation liveness parameter: number of slots it takes a delegation
@@ -142,14 +142,15 @@ makeLenses ''Block
 maybeMapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> Maybe k
 maybeMapKeyForValue v = listToMaybe . map fst . Map.toList . Map.filter (== v)
 
--- | Computes the hash of a block
-hashBlock :: Block -> Hash
-hashBlock = hashlazy . pack . show
+-- | Computes the hash of a header.
+hashHeader :: BlockHeader -> Hash
+hashHeader = hashlazy . pack . show
 -- TODO: we might want to serialize this properly, without using show...
 
 --------------------------------------------------------------------------------
 -- | Block epoch change rules
 --------------------------------------------------------------------------------
+
 data BEC
 
 data BECState
@@ -201,8 +202,38 @@ instance STS BEC where
     ]
 
 --------------------------------------------------------------------------------
+-- | Block head rules
+--------------------------------------------------------------------------------
+
+-- | Compute the size (in words) that a block header.
+bHeaderSize :: BlockHeader -> Natural
+bHeaderSize = fromInteger . toInteger . heapWords
+
+data BHEAD
+
+instance STS BHEAD where
+  type Environment BHEAD = PParams
+  type State BHEAD = Hash
+  type Signal BHEAD = BlockHeader
+  data PredicateFailure BHEAD
+    = HashesDontMatch -- TODO: Add fields so that users know the two hashes that don't match
+    | HeaderSizeTooBig -- TODO: Add more information here as well.
+    deriving (Eq, Show)
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (cPps, h, bh) <- judgmentContext
+        let sMax = cPps ^. maxHdrSz
+        bHeaderSize bh <= sMax ?! HeaderSizeTooBig
+        bh ^. prevHHash == h ?! HashesDontMatch
+        return $ hashHeader bh
+    ]
+
+
+--------------------------------------------------------------------------------
 -- | Blockchain extension rules
 --------------------------------------------------------------------------------
+
 -- | Blockchain extension environment.
 data CEEnv -- TODO: note that we only have to define an environment to be able
            -- to fit the generators framework as it is at the moment. This
@@ -234,10 +265,9 @@ makeFields ''CEState
 data CHAIN
 
 instance STS CHAIN where
-  type State CHAIN = CEState
-  -- | Transitions in the system are triggered by a new block
-  type Signal CHAIN = Block
   type Environment CHAIN = CEEnv
+  type State CHAIN = CEState
+  type Signal CHAIN = Block
   data PredicateFailure CHAIN
     = InvalidPredecessor
     | NoDelegationRight
@@ -247,6 +277,7 @@ instance STS CHAIN where
     | SignedMaximumNumberBlocks
     | LedgerFailure (PredicateFailure DELEG)
     | BECFailure (PredicateFailure BEC)
+    | BHEADFailure (PredicateFailure BHEAD)
     deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
@@ -277,9 +308,11 @@ instance STS CHAIN where
         bSize b <= st ^. pps . maxBkSz ?! InvalidBlockSize
         let subSt = BECState (st ^. currSlot) (st ^. currEpoch)
         becSt <- trans @BEC $ TRC (st ^. pps, subSt, b)
+        h' <- trans @BHEAD $ TRC (st ^. pps, st ^. lastHHash, b ^. bHeader)
         return $ st
                & currSlot .~ (becSt ^. currSlot)
                & currEpoch .~ (becSt ^. currEpoch)
+               & lastHHash .~ h'
     ]
 
 instance Embed DELEG CHAIN where
@@ -287,6 +320,9 @@ instance Embed DELEG CHAIN where
 
 instance Embed BEC CHAIN where
   wrapFailed = BECFailure
+
+instance Embed BHEAD CHAIN where
+  wrapFailed = BHEADFailure
 
 -- | Compute the size (in words) that a block takes.
 bSize :: Block -> Natural
@@ -334,7 +370,7 @@ instance HasTrace CHAIN where
     spe <- SlotCount <$> integral (linear 0 1000)
     let initPPs
           = PParams
-          { _maxHrdSz = mHSz
+          { _maxHdrSz = mHSz
           , _maxBkSz = mBSz
           , _dLiveness = d
           , _bkSgnCntW = w
