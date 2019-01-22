@@ -1,12 +1,13 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Chain.Blockchain where
 
 import Control.Lens (makeLenses, (^.), makeFields, (&), (.~))
@@ -15,8 +16,11 @@ import Data.Bits (shift)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Coerce (coerce)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
+import Data.Sequence (Seq, (|>))
+import qualified Data.Sequence as S
 import Data.Set (Set)
 import Hedgehog.Gen (integral, double, set)
 import Hedgehog.Range (constant, linear)
@@ -34,8 +38,9 @@ import Control.State.Transition
   , State
   , TRC(TRC)
   , (?!)
-  , judgmentContext
+  , failBecause
   , initialRules
+  , judgmentContext
   , trans
   , transitionRules
   , wrapFailed
@@ -77,7 +82,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _dLiveness :: !SlotCount
   -- ^ Delegation liveness parameter: number of slots it takes a delegation
   -- certificate to take effect.
-  , _bkSgnCntW :: !Natural
+  , _bkSgnCntW :: !Int
   -- ^ Size of the moving window to count signatures.
   , _bkSgnCntT :: !Double
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
@@ -229,18 +234,64 @@ instance STS BHEAD where
         return $ hashHeader bh
     ]
 
+--------------------------------------------------------------------------------
+-- | Signers counting rule
+--------------------------------------------------------------------------------
 
+data SIGCNT
+
+data SCEnv
+  = SCEnv
+  { _sCEnvPps :: PParams
+  , _sCEnvDms :: Map VKeyGenesis VKey
+  }
+
+makeFields ''SCEnv
+
+instance STS SIGCNT where
+  type Environment SIGCNT = SCEnv
+  type State SIGCNT = Seq VKeyGenesis
+  type Signal SIGCNT = VKey
+  data PredicateFailure SIGCNT
+    = TooManyIssuedBlocks VKeyGenesis -- The given genesis key issued too many blocks.
+    | NotADelegate
+    -- ^ The key signing the block is not a delegate of a genesis key.
+    | TooManyDelegators
+    -- ^ The key signing the block is delegated by multiple genesis keys.
+    deriving (Eq, Show)
+
+  initialRules = []
+
+  transitionRules =
+    [ do
+        TRC (env, sgs, vk) <- judgmentContext
+        let w = env ^. pps . bkSgnCntW
+            t = env ^. pps . bkSgnCntT
+        case Map.keys (Map.filter (== vk) (env ^.dms)) of
+          [] -> do
+            failBecause NotADelegate
+            return sgs -- TODO: this is a quite inconvenient encoding for this transition system!
+          [vkG] -> do
+            let sgs' = S.drop (S.length sgs + 1 - w) (sgs |> vkG)
+                nrSignedBks = fromIntegral (S.length (S.filter (==vkG) sgs'))
+            nrSignedBks <= fromIntegral w * t ?! TooManyIssuedBlocks vkG
+            return sgs'
+          (_:_) -> do
+            failBecause TooManyDelegators
+            return sgs
+    ]
 --------------------------------------------------------------------------------
 -- | Blockchain extension rules
 --------------------------------------------------------------------------------
 
 -- | Blockchain extension environment.
-data CEEnv -- TODO: note that we only have to define an environment to be able
-           -- to fit the generators framework as it is at the moment. This
-           -- environment won't be used by the rules once the initial state is
-           -- determined from it (actually copied).
+data CEEnv
   = CEEnv
-  { _initPps :: PParams
+  { _initPps :: PParams -- TODO: it can be confusing to have this in the
+                        -- environment. It will be used by the initial rule
+                        -- only, and then we'll have to drag it for eternity.
+                        -- The state contains the up to date protocol
+                        -- parameters.
     -- ^ Initial protocol par_dSEnvAllowedDelegatorsameters.
   , _gKeys ::  Set VKeyGenesis
     -- ^ Initial genesis keys.
@@ -255,7 +306,7 @@ data CEState
     -- ^ Current absolute slot.
   , _cEStateCurrEpoch :: Epoch
   , _cEStateLastHHash :: Hash
-  , _cEStateSigners :: [VKeyGenesis]
+  , _cEStateSigners :: Seq VKeyGenesis
   , _cEStatePps :: PParams
   , _cEStateDelegState :: DIState
   }
@@ -278,6 +329,7 @@ instance STS CHAIN where
     | LedgerFailure (PredicateFailure DELEG)
     | BECFailure (PredicateFailure BEC)
     | BHEADFailure (PredicateFailure BHEAD)
+    | SIGCNTFailure (PredicateFailure SIGCNT)
     deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
@@ -304,15 +356,29 @@ instance STS CHAIN where
     ]
   transitionRules =
     [ do
-        TRC (_, st, b) <- judgmentContext
+        TRC (env, st, b) <- judgmentContext
         bSize b <= st ^. pps . maxBkSz ?! InvalidBlockSize
         let subSt = BECState (st ^. currSlot) (st ^. currEpoch)
         becSt <- trans @BEC $ TRC (st ^. pps, subSt, b)
         h' <- trans @BHEAD $ TRC (st ^. pps, st ^. lastHHash, b ^. bHeader)
+        let scEnv = SCEnv (st ^. pps) (st ^. delegState . delegationMap)
+        sgs' <- trans @SIGCNT
+                      $ TRC (scEnv, st ^. signers, b ^. bHeader . bIssuer)
+        let diEnv
+              = DSEnv
+              { _dSEnvAllowedDelegators = env ^. gKeys
+              , _dSEnvEpoch = st ^. currEpoch
+              , _dSEnvSlot = st ^. currSlot
+              , _dSEnvLiveness = st ^. pps . dLiveness
+              }
+        ds' <- trans @DELEG
+                     $ TRC (diEnv, st ^. delegState, b ^. bBody . bDCerts)
         return $ st
                & currSlot .~ (becSt ^. currSlot)
                & currEpoch .~ (becSt ^. currEpoch)
                & lastHHash .~ h'
+               & signers .~ sgs'
+               & delegState .~ ds'
     ]
 
 instance Embed DELEG CHAIN where
@@ -323,6 +389,9 @@ instance Embed BEC CHAIN where
 
 instance Embed BHEAD CHAIN where
   wrapFailed = BHEADFailure
+
+instance Embed SIGCNT CHAIN where
+  wrapFailed = SIGCNTFailure
 
 -- | Compute the size (in words) that a block takes.
 bSize :: Block -> Natural
