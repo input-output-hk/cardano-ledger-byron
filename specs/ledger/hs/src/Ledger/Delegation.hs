@@ -56,6 +56,7 @@ module Ledger.Delegation
   , scheduledDelegations
   -- * Generators
   , dcertGen
+  , dcertsGen
   )
 where
 

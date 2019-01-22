@@ -22,8 +22,8 @@ import Data.Maybe (listToMaybe)
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 import Data.Set (Set)
-import Hedgehog.Gen (integral, double, set)
-import Hedgehog.Range (constant, linear)
+import Hedgehog.Gen (integral, double, set, frequency, element)
+import Hedgehog.Range (constant, linear, exponential)
 import Numeric.Natural
 
 import Cardano.Prelude (HeapWords, heapWords, heapWords1, heapWords2, heapWords4)
@@ -49,12 +49,13 @@ import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
 import Ledger.Core
   ( Epoch(Epoch)
-  , Sig
+  , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
   , VKey
   , VKeyGenesis
   , VKeyGenesis
+  , owner
   , verify
   )
 import Ledger.Core.Generator (vkgenesisGen)
@@ -69,6 +70,7 @@ import Ledger.Delegation
   , _dSEnvLiveness
   , _dSEnvSlot
   , delegationMap
+  , dcertsGen
   )
 import Ledger.Signatures (Hash)
 
@@ -107,10 +109,8 @@ data BlockHeader
     -- number of slots into the current epoch.
   , _bEpoch :: !Epoch
     -- ^ Epoch for which the block was generated.
-
   , _bIssuer :: !VKey
     -- ^ Block issuer.
-
   , _bSig :: !(Sig VKey)
     -- ^ Signature of the block by its issuer.
 
@@ -452,4 +452,33 @@ instance HasTrace CHAIN where
       , _gKeys = initGKeys
       }
 
-  sigGen _e _st = undefined
+  sigGen env st = do
+    -- We'd expect the slot increment to be close to 1, even for large Gen's
+    -- size numbers
+    slotInc <- integral (exponential 1 10)
+    -- We'd expect the epoch not to change most of the times, and if it changes
+    -- it should increase by one (most of the times).
+    epochInc <- frequency [ (90, pure 0)
+                          , (5, pure 1)
+                          , (5, integral (constant 2 10) )]
+    -- Get some random issuer from the delegates of the delegation map.
+    vkI <- element $ Map.elems (st ^. delegState . delegationMap)
+    let dsEnv
+          = DSEnv
+          { _dSEnvAllowedDelegators = undefined
+          , _dSEnvEpoch = undefined
+          , _dSEnvSlot = undefined
+          , _dSEnvLiveness = st ^. pps . dLiveness }
+    dCerts <- dcertsGen dsEnv
+    let bh
+          = BlockHeader
+          { _prevHHash = st ^. lastHHash
+          , _bRelSlot = undefined
+          , _bEpoch = undefined
+          , _bIssuer = vkI
+          , _bSig = Sig vkI (owner vkI)
+          }
+        bb
+          = BlockBody
+          { _bDCerts = dCerts }
+    return $ Block bh bb
