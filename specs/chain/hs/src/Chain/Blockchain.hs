@@ -26,8 +26,6 @@ import Hedgehog.Gen (integral, double, set, frequency, element)
 import Hedgehog.Range (constant, linear, exponential)
 import Numeric.Natural
 
-import Cardano.Prelude (HeapWords, heapWords, heapWords1, heapWords2, heapWords4)
-
 import Control.State.Transition
   ( Embed
   , Environment
@@ -72,85 +70,28 @@ import Ledger.Delegation
   , delegationMap
   , dcertsGen
   )
+import Ledger.Update
+  ( PParams(PParams)
+  , _bkSgnCntT
+  , _bkSgnCntW
+  , _bkSlotsPerEpoch
+  , _dLiveness
+  , _maxBkSz
+  , _maxHdrSz
+  , dLiveness
+  , maxHdrSz
+  , maxBkSz
+  , bkSgnCntT
+  , bkSgnCntW
+  , bkSlotsPerEpoch
+  )
 import Ledger.Signatures (Hash)
 
--- | Protocol parameters.
---
-data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { _maxBkSz  :: !Natural
-  -- ^ Maximum (abstract) block size in words.
-  , _maxHdrSz :: !Natural
-  -- ^ Maximum (abstract) block header size in words.
-  , _dLiveness :: !SlotCount
-  -- ^ Delegation liveness parameter: number of slots it takes a delegation
-  -- certificate to take effect.
-  , _bkSgnCntW :: !Int
-  -- ^ Size of the moving window to count signatures.
-  , _bkSgnCntT :: !Double
-  -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
-  -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
-  -- and 1/4.
-  , _bkSlotsPerEpoch :: !SlotCount
-  } deriving (Eq, Show)
-
-makeLenses ''PParams
+import Cardano.Spec.Chain.STS.Block
 
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
 genesisHash = hash ("" :: ByteString)
-
-data BlockHeader
-  = BlockHeader
-  { _prevHHash :: !Hash
-    -- ^ Hash of the previous block header, or 'genesisHash' in case of the
-    -- first block in a chain.
-  , _bRelSlot :: !Slot
-    -- ^ Relative slot for which the block was generated. This counts the
-    -- number of slots into the current epoch.
-  , _bEpoch :: !Epoch
-    -- ^ Epoch for which the block was generated.
-  , _bIssuer :: !VKey
-    -- ^ Block issuer.
-  , _bSig :: !(Sig VKey)
-    -- ^ Signature of the block by its issuer.
-
-    -- TODO: BlockVersion – the block version; see Software and block versions.
-    -- Block version can be associated with a set of protocol rules. Rules
-    -- associated with _mehBlockVersion from a block are the rules used to
-    -- create that block (i.e. the block must adhere to these rules).
-
-    -- TODO: SoftwareVersion – the software version (see the same link); the
-    -- version of software that created the block
-  } deriving (Eq, Show)
-
-makeLenses ''BlockHeader
-
-data BlockBody
-  = BlockBody
-  { _bDCerts  :: [DCert]
-  -- ^ Delegation certificates.
-  } deriving (Eq, Show)
-
-makeLenses ''BlockBody
-
--- | A block in the chain. The specification only models regular blocks since
--- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
-data Block
-  = Block
-  { _bHeader :: BlockHeader
-  , _bBody :: BlockBody
-  } deriving (Eq, Show)
-
-makeLenses ''Block
-
--- | Returns a key from a map for a given value.
-maybeMapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> Maybe k
-maybeMapKeyForValue v = listToMaybe . map fst . Map.toList . Map.filter (== v)
-
--- | Computes the hash of a header.
-hashHeader :: BlockHeader -> Hash
-hashHeader = hashlazy . pack . show
--- TODO: we might want to serialize this properly, without using show...
 
 --------------------------------------------------------------------------------
 -- | Block epoch change rules
@@ -167,52 +108,48 @@ data BECState
 
 makeFields ''BECState
 
-instance STS BEC where
-  type Environment BEC = PParams
-  type State BEC = BECState
-  type Signal BEC = Block
-  data PredicateFailure BEC
-    = NoSlotInc
-    { _becCurrSlot :: Slot
-    -- ^ Current slot in the state.
-    , _becSignalSlot :: Slot
-    -- ^ Slot we saw in the signal.
-    }
-    -- ^ We haven't seen an increment in the slot
-    | PastEpoch
-    { _becCurrEpoch :: Epoch
-    , _becSignalEpoch :: Epoch
-    }
-    -- ^ Epoch in the signal occurs in the past.
-    deriving (Eq, Show)
-  initialRules = []
-  transitionRules =
-    [ do
-        TRC (cPps, st, b) <- judgmentContext
-        let es = cPps ^. bkSlotsPerEpoch
-            e  = st ^. currEpoch
-            e' = b ^. bHeader . bEpoch
-        e <= e' ?! PastEpoch e e'
-        let
-          slot = st ^. currSlot
-          slot' :: Slot
-          -- TODO: This doesn't seem right, but neither does unpacking an
-          -- `Epoch`, `Slot` and `SlotCount`.
-          slot' = Slot $
-            coerce e' -  coerce e * coerce es + coerce (b ^. bHeader . bRelSlot)
-        slot < slot' ?! NoSlotInc slot slot'
-        return $ st & currSlot .~ slot'
-                    & currEpoch .~ e'
+-- instance STS BEC where
+--   type Environment BEC = PParams
+--   type State BEC = BECState
+--   type Signal BEC = Block
+--   data PredicateFailure BEC
+--     = NoSlotInc
+--     { _becCurrSlot :: Slot
+--     -- ^ Current slot in the state.
+--     , _becSignalSlot :: Slot
+--     -- ^ Slot we saw in the signal.
+--     }
+--     -- ^ We haven't seen an increment in the slot
+--     | PastEpoch
+--     { _becCurrEpoch :: Epoch
+--     , _becSignalEpoch :: Epoch
+--     }
+--     -- ^ Epoch in the signal occurs in the past.
+--     deriving (Eq, Show)
+--   initialRules = []
+--   transitionRules =
+--     [ do
+--         TRC (cPps, st, b) <- judgmentContext
+--         let es = cPps ^. bkSlotsPerEpoch
+--             e  = st ^. currEpoch
+--             e' = b ^. bHeader . bEpoch
+--         e <= e' ?! PastEpoch e e'
+--         let
+--           slot = st ^. currSlot
+--           slot' :: Slot
+--           -- TODO: This doesn't seem right, but neither does unpacking an
+--           -- `Epoch`, `Slot` and `SlotCount`.
+--           slot' = Slot $
+--             coerce e' -  coerce e * coerce es + coerce (b ^. bHeader . bRelSlot)
+--         slot < slot' ?! NoSlotInc slot slot'
+--         return $ st & currSlot .~ slot'
+--                     & currEpoch .~ e'
 
-    ]
+--     ]
 
 --------------------------------------------------------------------------------
 -- | Block head rules
 --------------------------------------------------------------------------------
-
--- | Compute the size (in words) that a block header.
-bHeaderSize :: BlockHeader -> Natural
-bHeaderSize = fromInteger . toInteger . heapWords
 
 data BHEAD
 
@@ -327,7 +264,6 @@ instance STS CHAIN where
     | InvalidHeaderSize
     | SignedMaximumNumberBlocks
     | LedgerFailure (PredicateFailure DELEG)
-    | BECFailure (PredicateFailure BEC)
     | BHEADFailure (PredicateFailure BHEAD)
     | SIGCNTFailure (PredicateFailure SIGCNT)
     deriving (Eq, Show)
@@ -358,8 +294,8 @@ instance STS CHAIN where
     [ do
         TRC (env, st, b) <- judgmentContext
         bSize b <= st ^. pps . maxBkSz ?! InvalidBlockSize
-        let subSt = BECState (st ^. currSlot) (st ^. currEpoch)
-        becSt <- trans @BEC $ TRC (st ^. pps, subSt, b)
+        -- let subSt = BECState (st ^. currSlot) (st ^. currEpoch)
+        -- becSt <- trans @BEC $ TRC (st ^. pps, subSt, b)
         h' <- trans @BHEAD $ TRC (st ^. pps, st ^. lastHHash, b ^. bHeader)
         let scEnv = SCEnv (st ^. pps) (st ^. delegState . delegationMap)
         sgs' <- trans @SIGCNT
@@ -374,8 +310,8 @@ instance STS CHAIN where
         ds' <- trans @DELEG
                      $ TRC (diEnv, st ^. delegState, b ^. bBody . bDCerts)
         return $ st
-               & currSlot .~ (becSt ^. currSlot)
-               & currEpoch .~ (becSt ^. currEpoch)
+--               & currSlot -- .~ (becSt ^. currSlot)
+--               & currEpoch -- .~ (becSt ^. currEpoch)
                & lastHHash .~ h'
                & signers .~ sgs'
                & delegState .~ ds'
@@ -384,37 +320,11 @@ instance STS CHAIN where
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerFailure
 
-instance Embed BEC CHAIN where
-  wrapFailed = BECFailure
-
 instance Embed BHEAD CHAIN where
   wrapFailed = BHEADFailure
 
 instance Embed SIGCNT CHAIN where
   wrapFailed = SIGCNTFailure
-
--- | Compute the size (in words) that a block takes.
-bSize :: Block -> Natural
-bSize = fromInteger . toInteger . heapWords
-
-instance HeapWords Block where
-  heapWords b = heapWords2 (b ^. bHeader) (b ^. bBody)
-
-instance HeapWords BlockHeader where
-  heapWords header
-    -- The constant 12 is was taken from:
-    --
-    -- https://github.com/input-output-hk/cardano-chain/pull/244/files#diff-2955aa8b04471dc586f90cb5f22948beR118
-    --
-    -- 12 = 8 words of digest + 4 words for hash
-    = 12
-    + heapWords4 (header ^. bRelSlot)
-                 (header ^. bEpoch)
-                 (header ^. bIssuer)
-                 (header ^. bSig)
-
-instance HeapWords BlockBody where
-  heapWords body = heapWords1 (body ^. bDCerts)
 
 --------------------------------------------------------------------------------
 -- Generators
@@ -473,8 +383,7 @@ instance HasTrace CHAIN where
     let bh
           = BlockHeader
           { _prevHHash = st ^. lastHHash
-          , _bRelSlot = undefined
-          , _bEpoch = undefined
+          , _bSlot = undefined
           , _bIssuer = vkI
           , _bSig = Sig vkI (owner vkI)
           }
