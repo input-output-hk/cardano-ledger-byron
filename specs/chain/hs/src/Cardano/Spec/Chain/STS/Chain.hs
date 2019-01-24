@@ -138,10 +138,10 @@ instance HasTrace CHAIN where
           , _bkSlotsPerEpoch = spe
           }
     initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
-    initSlot <- undefined
+    initSlot <- Slot <$> Gen.integral (Range.linear 0 100)
     return (initSlot, initGKeys, initPPs)
 
-  sigGen _ (_e, Slot s, h, _gks, ds, us) = do
+  sigGen (_, gks, _) (e, Slot s, h, _sgs, ds, us) = do
     -- We'd expect the slot increment to be close to 1, even for large Gen's
     -- size numbers
     slotInc <- Gen.integral (Range.exponential 1 10)
@@ -149,9 +149,9 @@ instance HasTrace CHAIN where
     vkI <- Gen.element $ Map.elems (ds ^. dms)
     let dsEnv
           = DSEnv
-          { _dSEnvAllowedDelegators = undefined
-          , _dSEnvEpoch = undefined
-          , _dSEnvSlot = undefined
+          { _dSEnvAllowedDelegators = gks
+          , _dSEnvEpoch = e
+          , _dSEnvSlot = Slot s
           , _dSEnvLiveness = us ^. dLiveness }
     dCerts <- dcertsGen dsEnv
     let bh

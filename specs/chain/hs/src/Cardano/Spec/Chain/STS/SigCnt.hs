@@ -29,6 +29,13 @@ instance STS SIGCNT where
     = TooManyIssuedBlocks VKeyGenesis -- The given genesis key issued too many blocks.
     | NotADelegate
     -- ^ The key signing the block is not a delegate of a genesis key.
+    | NonInjectiveDelegationMap
+    -- ^ Delegation rules should restrict the delegation map to be injective.
+    --
+    -- Should not be needed once
+    -- https://github.com/input-output-hk/cardano-chain/issues/257 gets
+    -- resolved.
+
     deriving (Eq, Show)
 
   initialRules = []
@@ -52,7 +59,7 @@ instance STS SIGCNT where
           [] -> do
             failBecause NotADelegate
             return sgs -- TODO: this is a quite inconvenient encoding for this transition system!
-          _ -> error $  "Delegation rules should restrict the delegation map "
-                     ++ " to be an injective."
-                     ++ " See https://github.com/input-output-hk/cardano-chain/issues/257"
+          _ -> do
+            failBecause NonInjectiveDelegationMap
+            return sgs
     ]
