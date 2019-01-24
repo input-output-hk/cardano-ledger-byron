@@ -5,8 +5,9 @@ module Cardano.Spec.Chain.STS.Epoch where
 import Data.Map.Strict (Map)
 
 import Control.State.Transition
-
 import Ledger.Core
+
+import Cardano.Spec.Chain.STS.Block
 
 data EPOCH
 
@@ -22,10 +23,3 @@ instance STS EPOCH where
         TRC (_, _, s) <- judgmentContext
         return $! sEpoch s
     ]
-
--- | Compute the epoch for the given _absolute_ slot
-sEpoch :: Slot -> Epoch
-sEpoch (Slot s) = Epoch $ s `div` slotsPerEpoch
-  where
-    -- Hardcoded number of slots per epoch, as per Byron.
-    slotsPerEpoch = 21600

@@ -10,8 +10,8 @@ import Data.Sequence (Seq, (|>))
 
 import Control.State.Transition
 import Ledger.Core
-import Ledger.Update (PParams, maxHdrSz)
-import Ledger.Signatures (Hash)
+import Ledger.Signatures
+import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Epoch
@@ -28,8 +28,8 @@ instance STS BHEAD where
     = ( Epoch
       , Slot
       , Hash
-      , PParams
       , Seq VKeyGenesis
+      , PParams
       )
 
   type Signal BHEAD = BlockHeader
@@ -51,13 +51,13 @@ instance STS BHEAD where
   transitionRules =
     [ do
         TRC ( (sNow, dms)
-            , (eLast, sLast, hp, us, sgs)
+            , (eLast, sLast, hLast, sgs, us)
             , bh ) <- judgmentContext
         -- Check header size
         let sMax = us ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         -- Check that the previous hash matches
-        bh ^. prevHHash == hp ?! HashesDontMatch
+        bh ^. prevHHash == hLast ?! HashesDontMatch
         -- Check sanity of current slot
         let sNext = bh ^. bSlot
         sLast < sNext ?! SlotDidNotIncrease
@@ -69,8 +69,8 @@ instance STS BHEAD where
         return $! ( eNext
                   , sNext
                   , hashHeader bh
-                  , us
                   , sgs'
+                  , us
                   )
     ]
 

@@ -22,6 +22,7 @@ library
                      , Cardano.Spec.Chain.STS.BBody
                      , Cardano.Spec.Chain.STS.BHead
                      , Cardano.Spec.Chain.STS.Block
+                     , Cardano.Spec.Chain.STS.Chain
                      , Cardano.Spec.Chain.STS.Epoch
                      , Cardano.Spec.Chain.STS.SigCnt
   -- other-extensions:

@@ -15,9 +15,9 @@ import Cardano.Prelude
   , heapWords3
   )
 
-import Ledger.Core (Slot, Epoch, VKey, Sig)
-import Ledger.Delegation (DCert)
-import Ledger.Signatures (Hash)
+import Ledger.Core
+import Ledger.Delegation
+import Ledger.Signatures
 
 data BlockHeader
   = BlockHeader
@@ -90,3 +90,11 @@ bHeaderSize = fromInteger . toInteger . heapWords
 hashHeader :: BlockHeader -> Hash
 hashHeader = hashlazy . pack . show
 -- TODO: we might want to serialize this properly, without using show...
+
+
+-- | Compute the epoch for the given _absolute_ slot
+sEpoch :: Slot -> Epoch
+sEpoch (Slot s) = Epoch $ s `div` slotsPerEpoch
+  where
+    -- Hardcoded number of slots per epoch, as per Byron.
+    slotsPerEpoch = 21600

@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+
 module Ledger.Delegation
   ( -- * Delegation scheduling
     SDELEG
@@ -54,6 +56,7 @@ module Ledger.Delegation
   -- * State lens type classes
   , HasScheduledDelegations
   , scheduledDelegations
+  , dms
   -- * Generators
   , dcertGen
   , dcertsGen
@@ -196,6 +199,10 @@ data DIState = DIState
   } deriving (Show, Eq)
 
 makeFields ''DIState
+
+dms :: HasDelegationMap a (Map VKeyGenesis VKey)
+    => Lens' a (Map VKeyGenesis VKey)
+dms = delegationMap
 
 dIStateDSState :: Lens' DIState DSState
 dIStateDSState = lens
@@ -405,10 +412,10 @@ instance STS DELEG where
         TRC (env, st, sig) <- judgmentContext
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
-        dms <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
+        as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
         return $ DIState
-          (dms ^. delegationMap)
-          (dms ^. lastDelegation)
+          (as ^. delegationMap)
+          (as ^. lastDelegation)
           (filter (aboutSlot (env ^. slot) (env ^. liveness) . fst)
             $ sds ^. scheduledDelegations)
           (Set.filter ((<= (env ^. epoch)) . fst)
