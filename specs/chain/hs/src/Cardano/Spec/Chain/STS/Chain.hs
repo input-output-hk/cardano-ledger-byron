@@ -84,8 +84,8 @@ instance STS CHAIN where
           , b ) <- judgmentContext
 
         (eNext, sNext, h', sgs', us') <- trans @BHEAD $ TRC ( (sNow, ds ^. dms)
-                                                           , (eLast, sLast, hLast, sgs, us)
-                                                           , b ^. bHeader)
+                                                            , (eLast, sLast, hLast, sgs, us)
+                                                            , b ^. bHeader )
 
         ds' <- trans @BBODY $ TRC ( (eNext, sNext, us, gks)
                                   , ds
@@ -127,7 +127,7 @@ instance HasTrace CHAIN where
     -- however we want to stretch that range a bit for testing purposes.
     t <- Gen.double (Range.constant (1/6) (1/3))
     -- The slots per-epoch is arbitrarily determined.
-    spe <- SlotCount <$> Gen.integral (Range.linear 0 1000)
+    spe <- SlotCount <$> Gen.integral (Range.linear 1 1000)
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
@@ -138,13 +138,15 @@ instance HasTrace CHAIN where
           , _bkSlotsPerEpoch = spe
           }
     initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
-    initSlot <- Slot <$> Gen.integral (Range.linear 0 100)
+    -- If we want to generate large traces, we need to set up the value of the
+    -- "clock-slot" to a sufficiently large value.
+    initSlot <- Slot <$> Gen.integral (Range.constant 10000 100000)
     return (initSlot, initGKeys, initPPs)
 
   sigGen (_, gks, _) (e, Slot s, h, _sgs, ds, us) = do
     -- We'd expect the slot increment to be close to 1, even for large Gen's
     -- size numbers
-    slotInc <- Gen.integral (Range.exponential 1 10)
+    slotInc <- Gen.integral (Range.exponential 1 5)
     -- Get some random issuer from the delegates of the delegation map.
     vkI <- Gen.element $ Map.elems (ds ^. dms)
     let dsEnv
