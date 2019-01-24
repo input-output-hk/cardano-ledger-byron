@@ -3,6 +3,7 @@
 module Cardano.Spec.Chain.STS.Epoch where
 
 import Data.Map.Strict (Map)
+
 import Control.State.Transition
 
 import Ledger.Core

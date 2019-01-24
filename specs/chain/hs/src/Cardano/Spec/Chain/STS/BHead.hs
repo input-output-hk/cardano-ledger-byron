@@ -9,7 +9,6 @@ import Data.Map.Strict (Map)
 import Data.Sequence (Seq, (|>))
 
 import Control.State.Transition
-
 import Ledger.Core
 import Ledger.Update (PParams, maxHdrSz)
 import Ledger.Signatures (Hash)
