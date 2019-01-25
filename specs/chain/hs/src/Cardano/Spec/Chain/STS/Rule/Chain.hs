@@ -140,13 +140,14 @@ instance HasTrace CHAIN where
     initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the
     -- "clock-slot" to a sufficiently large value.
-    initSlot <- Slot <$> Gen.integral (Range.constant 10000 100000)
+    initSlot <- Slot <$>
+      Gen.integral (Range.constant 32768 2147483648)
     return (initSlot, initGKeys, initPPs)
 
   sigGen (_, gks, _) (e, Slot s, h, _sgs, ds, us) = do
     -- We'd expect the slot increment to be close to 1, even for large Gen's
-    -- size numbers
-    slotInc <- Gen.integral (Range.exponential 1 5)
+    -- size numbers.
+    slotInc <- Gen.integral (Range.exponential 0 10)
     -- Get some random issuer from the delegates of the delegation map.
     vkI <- Gen.element $ Map.elems (ds ^. dms)
     let dsEnv

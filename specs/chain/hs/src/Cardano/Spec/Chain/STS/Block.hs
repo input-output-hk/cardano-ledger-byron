@@ -3,7 +3,7 @@
 module Cardano.Spec.Chain.STS.Block where
 
 import Control.Lens ((^.), makeLenses, view)
-import Crypto.Hash (hash, hashlazy)
+import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
 import Numeric.Natural (Natural)
 

@@ -6,7 +6,7 @@ module Cardano.Spec.Chain.STS.Rule.BHead where
 
 import Control.Lens ((^.))
 import Data.Map.Strict (Map)
-import Data.Sequence (Seq, (|>))
+import Data.Sequence (Seq)
 
 import Control.State.Transition
 import Ledger.Core
@@ -60,8 +60,7 @@ instance STS BHEAD where
         bh ^. prevHHash == hLast ?! HashesDontMatch
         -- Check sanity of current slot
         let sNext = bh ^. bSlot
--- Commenting out the above line should break 'slotsIncrease' but it doesn't!
---         sLast < sNext ?! SlotDidNotIncrease
+        sLast < sNext ?! SlotDidNotIncrease
         sNext <= sNow ?! SlotInTheFuture
         -- Perform an epoch transition
         eNext <-  trans @EPOCH $ TRC (dms, eLast, sNext)

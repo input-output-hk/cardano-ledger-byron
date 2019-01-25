@@ -2,8 +2,16 @@
 module Cardano.Spec.Chain.STS.Properties where
 
 import Control.Lens ((^..))
-import Data.List.Ordered (isSorted)
-import Hedgehog (MonadTest, Property, forAll, property, (===), assert)
+import Data.List.Ordered (sort, nub)
+import Hedgehog
+  ( MonadTest
+  , Property
+  , (===)
+  , assert
+  , forAll
+  , property
+  , withTests
+  )
 
 import Control.State.Transition.Generator
 import Control.State.Transition.Trace
@@ -15,6 +23,7 @@ slotsIncrease :: Property
 slotsIncrease = property $ forAll trace >>= slotsIncreaseInTrace
 
 slotsIncreaseInTrace :: MonadTest m => Trace CHAIN -> m ()
-slotsIncreaseInTrace tr = assert . isSorted $ slots
+slotsIncreaseInTrace tr = assert $ slots == sortedSlots && nub slots == slots
   where blocks = traceSignals NewestFirst tr
         slots = blocks ^.. traverse . bHeader . bSlot
+        sortedSlots = sort slots
