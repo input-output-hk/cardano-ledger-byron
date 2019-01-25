@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Spec.Chain.STS.BHead where
+module Cardano.Spec.Chain.STS.Rule.BHead where
 
 import Control.Lens ((^.))
 import Data.Map.Strict (Map)
@@ -14,8 +14,8 @@ import Ledger.Signatures
 import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.Epoch
-import Cardano.Spec.Chain.STS.SigCnt
+import Cardano.Spec.Chain.STS.Rule.Epoch
+import Cardano.Spec.Chain.STS.Rule.SigCnt
 
 data BHEAD
 

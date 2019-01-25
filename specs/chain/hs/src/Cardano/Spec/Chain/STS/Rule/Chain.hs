@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Spec.Chain.STS.Chain where
+module Cardano.Spec.Chain.STS.Rule.Chain where
 
 import Control.Lens ((^.))
 import qualified Crypto.Hash
@@ -24,8 +24,8 @@ import Ledger.Signatures
 import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.BHead
-import Cardano.Spec.Chain.STS.BBody
+import Cardano.Spec.Chain.STS.Rule.BHead
+import Cardano.Spec.Chain.STS.Rule.BBody
 
 data CHAIN
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Epoch where
+module Cardano.Spec.Chain.STS.Rule.Epoch where
 
 import Data.Map.Strict (Map)
 

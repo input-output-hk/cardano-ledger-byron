@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.SigCnt where
+module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
 import Control.Lens ((^.))
 import qualified Data.Map.Strict as Map

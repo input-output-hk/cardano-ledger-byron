@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Cardano.Spec.Chain.STS.BBody where
+module Cardano.Spec.Chain.STS.Rule.BBody where
 
 import Control.Lens ((^.))
 import Data.Set (Set)
@@ -17,7 +17,12 @@ import Cardano.Spec.Chain.STS.Block
 data BBODY
 
 instance STS BBODY where
-  type Environment BBODY = (Epoch, Slot, PParams, Set VKeyGenesis)
+  type Environment BBODY
+    = ( Epoch
+      , Slot
+      , PParams
+      , Set VKeyGenesis
+      )
 
   type State BBODY = DIState
 

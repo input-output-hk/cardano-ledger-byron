@@ -17,13 +17,13 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules: Cardano.Spec.Chain.STS.BBody
-                 , Cardano.Spec.Chain.STS.BHead
-                 , Cardano.Spec.Chain.STS.Block
-                 , Cardano.Spec.Chain.STS.Chain
-                 , Cardano.Spec.Chain.STS.Epoch
-                 , Cardano.Spec.Chain.STS.SigCnt
-  other-modules:       Data.Queue
+  exposed-modules: Cardano.Spec.Chain.STS.Block
+                 , Cardano.Spec.Chain.STS.Rule.BBody
+                 , Cardano.Spec.Chain.STS.Rule.BHead
+                 , Cardano.Spec.Chain.STS.Rule.Chain
+                 , Cardano.Spec.Chain.STS.Rule.Epoch
+                 , Cardano.Spec.Chain.STS.Rule.SigCnt
+  --other-modules:
   -- other-extensions:
   hs-source-dirs:      src
   default-language:    Haskell2010
