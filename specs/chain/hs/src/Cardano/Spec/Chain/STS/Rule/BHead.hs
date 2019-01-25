@@ -60,7 +60,8 @@ instance STS BHEAD where
         bh ^. prevHHash == hLast ?! HashesDontMatch
         -- Check sanity of current slot
         let sNext = bh ^. bSlot
-        sLast < sNext ?! SlotDidNotIncrease
+-- Commenting out the above line should break 'slotsIncrease' but it doesn't!
+--         sLast < sNext ?! SlotDidNotIncrease
         sNext <= sNow ?! SlotInTheFuture
         -- Perform an epoch transition
         eNext <-  trans @EPOCH $ TRC (dms, eLast, sNext)

@@ -63,6 +63,8 @@ test-suite chain-spec-test
                      , tasty
                      , tasty-hunit
                      , tasty-hedgehog
+
+                     , data-ordlist
                      -- local deps
                      , cs-blockchain
                      , small-steps
