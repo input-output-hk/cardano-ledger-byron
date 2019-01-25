@@ -9,6 +9,7 @@ import nixpkgs {
           ghc861 = pkgs.haskell.packages.ghc861.override {
             overrides = self: super: {
               basement = self.callHackage "basement" "0.0.8" {};
+              aeson = self.callHackage "aeson" "1.3.1.1" {};
               nonempty-containers = self.callCabal2nix "nonempty-containers"
                               (pkgs.fetchFromGitHub { owner = "mstksg";
                                                       repo = "nonempty-containers";
