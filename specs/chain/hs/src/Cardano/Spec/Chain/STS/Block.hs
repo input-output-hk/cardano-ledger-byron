@@ -2,7 +2,7 @@
 
 module Cardano.Spec.Chain.STS.Block where
 
-import Control.Lens (makeLenses, (^.))
+import Control.Lens ((^.), makeLenses, view)
 import Crypto.Hash (hash, hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
 import Numeric.Natural (Natural)
@@ -15,6 +15,7 @@ import Cardano.Prelude
   , heapWords3
   )
 
+import Control.State.Transition.Generator
 import Ledger.Core
 import Ledger.Delegation
 import Ledger.Signatures
@@ -98,3 +99,6 @@ sEpoch (Slot s) = Epoch $ s `div` slotsPerEpoch
   where
     -- Hardcoded number of slots per epoch, as per Byron.
     slotsPerEpoch = 21600
+
+instance HasSizeInfo Block where
+  isTrivial = null . view (bBody . bDCerts)
