@@ -32,13 +32,9 @@ data BlockHeader
   , _bSig :: !(Sig VKey)
     -- ^ Signature of the block by its issuer.
 
-    -- TODO: BlockVersion – the block version; see Software and block versions.
-    -- Block version can be associated with a set of protocol rules. Rules
-    -- associated with _mehBlockVersion from a block are the rules used to
-    -- create that block (i.e. the block must adhere to these rules).
+    -- TODO: BlockVersion – the protocol (block) version that created the block
 
-    -- TODO: SoftwareVersion – the software version (see the same link); the
-    -- version of software that created the block
+    -- TODO: SoftwareVersion – the software version that created the block
   } deriving (Eq, Show)
 
 makeLenses ''BlockHeader
