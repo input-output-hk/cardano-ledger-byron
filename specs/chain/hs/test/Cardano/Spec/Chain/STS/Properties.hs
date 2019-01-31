@@ -1,4 +1,4 @@
-
+{-# LANGUAGE TypeFamilies #-}
 module Cardano.Spec.Chain.STS.Properties where
 
 import Control.Lens ((^..))
@@ -6,11 +6,9 @@ import Data.List.Ordered (sort, nub)
 import Hedgehog
   ( MonadTest
   , Property
-  , (===)
   , assert
   , forAll
   , property
-  , withTests
   )
 
 import Control.State.Transition.Generator
