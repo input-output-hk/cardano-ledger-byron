@@ -7,12 +7,6 @@ packages:
   - specs/semantics/hs
 
 extra-deps:
-  - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 7f8544ae9e162b6664f07093227edb148f1c8a5b
-    subdirs:
-      - .
-      - test
-
   - git: https://github.com/input-output-hk/cardano-chain
     commit: 4d9eec080374179bf15bf9c4fca09cc7d73e5f53
     subdirs:
