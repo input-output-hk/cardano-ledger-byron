@@ -164,9 +164,12 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Validation
 
+                       Test.Cardano.Chain.Block.Validation.Spec
+
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Common.Lovelace
+                       Test.Cardano.Chain.Common.Utils
 
                        Test.Cardano.Chain.Delegation.Bi
                        Test.Cardano.Chain.Delegation.Example
@@ -213,6 +216,7 @@ test-suite cardano-chain-test
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , cs-blockchain
                      , cs-ledger
                      , directory
                      , filepath
@@ -220,6 +224,7 @@ test-suite cardano-chain-test
                      , hedgehog
                      , optparse-applicative
                      , resourcet
+                     , small-steps
                      , streaming
                      , text
                      , time
