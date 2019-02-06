@@ -23,6 +23,7 @@ flag development
 
 library
   exposed-modules:     Cardano.Spec.Chain.STS.Block
+                     , Cardano.Spec.Chain.STS.BlockC
                      , Cardano.Spec.Chain.STS.Rule.BBody
                      , Cardano.Spec.Chain.STS.Rule.BHead
                      , Cardano.Spec.Chain.STS.Rule.Chain
