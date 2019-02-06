@@ -14,7 +14,6 @@ import Cardano.Prelude hiding (trace)
 import Hedgehog
   ( MonadTest
   , Property
-  , assert
   , checkParallel
   , discover
   , forAll
@@ -37,11 +36,13 @@ tests = checkParallel $$discover
 -- after being interpreted must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
+  -- TODO: remove this duplication - see test/Test/Cardano/Chain/Block/Validation.hs
+  -- Get the 'Genesis.Config' from the mainnet genesis JSON
   config <- readMainetCfg
-  forAll trace >>= areValidated config
+  forAll trace >>= passConcreteValidation config
   where
-    areValidated :: MonadTest m => Genesis.Config -> Trace CHAIN -> m ()
-    areValidated config tr = do
+    passConcreteValidation :: MonadTest m => Genesis.Config -> Trace CHAIN -> m ()
+    passConcreteValidation config tr = do
       let
         res = foldM interpretAndUpdate initSt $ traceSignals OldestFirst tr
       either (panic . show) (const $ pure ()) res

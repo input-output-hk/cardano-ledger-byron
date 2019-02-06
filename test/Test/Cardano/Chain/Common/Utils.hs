@@ -12,7 +12,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 --
 -- An error is thrown if it is not possible to elaborate a genesis
 -- configuration from the genesis file.
-readMainetCfg :: IO Genesis.Config
+readMainetCfg :: MonadIO m => m Genesis.Config
 readMainetCfg =
   either
     (panic "TODO: Add buildable instance for Genesis.ConfigurationError")
