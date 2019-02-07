@@ -45,7 +45,7 @@ prop_generatedChainsAreValidated = property $ do
       initSt <- evalEither $ Concrete.initialChainValidationState config
       let
         res = foldM elaborateAndUpdate initSt $ traceSignals OldestFirst tr
-      either (panic . show) (const $ pure ()) res
+      void $ evalEither res
       where
 
         elaborateAndUpdate
