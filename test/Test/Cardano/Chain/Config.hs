@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Chain.Common.Utils
+module Test.Cardano.Chain.Config
   (readMainetCfg)
 where
 

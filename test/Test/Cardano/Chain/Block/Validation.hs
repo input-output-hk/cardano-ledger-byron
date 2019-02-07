@@ -58,7 +58,7 @@ import Cardano.Mirror (mainnetEpochFiles)
 
 import Test.Cardano.Crypto.Gen (genPublicKey)
 import Test.Options (TestScenario(..))
-import Test.Cardano.Chain.Common.Utils (readMainetCfg)
+import Test.Cardano.Chain.Config (readMainetCfg)
 
 -- | These tests perform chain validation over mainnet epoch files
 --

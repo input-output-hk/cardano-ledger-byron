@@ -16,6 +16,7 @@ import Hedgehog
   , Property
   , checkParallel
   , discover
+  , evalEither
   , forAll
   , property
   )
@@ -27,42 +28,38 @@ import Cardano.Chain.Block as Concrete
 import Cardano.Spec.Chain.STS.Rule.Chain
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 
-import Test.Cardano.Chain.Common.Utils (readMainetCfg)
+import Test.Cardano.Chain.Config (readMainetCfg)
 
 tests :: IO Bool
 tests = checkParallel $$discover
 
 -- | Every abstract chain that was generated according to the inference rules,
--- after being interpreted must be validated by the concrete block validator.
+-- after being elaborateed must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
-  -- TODO: remove this duplication - see test/Test/Cardano/Chain/Block/Validation.hs
-  -- Get the 'Genesis.Config' from the mainnet genesis JSON
   config <- readMainetCfg
   forAll trace >>= passConcreteValidation config
   where
     passConcreteValidation :: MonadTest m => Genesis.Config -> Trace CHAIN -> m ()
     passConcreteValidation config tr = do
+      initSt <- evalEither $ Concrete.initialChainValidationState config
       let
-        res = foldM interpretAndUpdate initSt $ traceSignals OldestFirst tr
+        res = foldM elaborateAndUpdate initSt $ traceSignals OldestFirst tr
       either (panic . show) (const $ pure ()) res
       where
 
-        interpretAndUpdate
+        elaborateAndUpdate
           :: Concrete.ChainValidationState
           -> Abstract.Block
           -> Either Concrete.ChainValidationError Concrete.ChainValidationState
-        interpretAndUpdate cst ast =
-          Concrete.updateChain config cst (interpret cst ast)
+        elaborateAndUpdate cst ast =
+          Concrete.updateChain config cst (elaborate cst ast)
 
-        initSt = either (panic . show) identity $
-          Concrete.initialChainValidationState config
-
-    -- TODO: this will be replaced with the actual interpreter.
-    -- TODO: the interpreter might need some other parameters, like the
+    -- TODO: this will be replaced with the actual elaborate function.
+    -- TODO: the elaborate function might need some other parameters, like the
     -- previous block.
-    interpret
+    elaborate
       :: Concrete.ChainValidationState
       -> Abstract.Block
       -> Concrete.ABlock ByteString
-    interpret = undefined
+    elaborate = undefined
