@@ -164,6 +164,7 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Validation
 
+                       Test.Cardano.Chain.Block.Elaboration
                        Test.Cardano.Chain.Block.Validation.Spec
 
                        Test.Cardano.Chain.Common.Example

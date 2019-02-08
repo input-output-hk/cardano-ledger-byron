@@ -34,7 +34,7 @@ tests :: IO Bool
 tests = checkParallel $$discover
 
 -- | Every abstract chain that was generated according to the inference rules,
--- after being elaborateed must be validated by the concrete block validator.
+-- after being elaborated must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
   config <- readMainetCfg
