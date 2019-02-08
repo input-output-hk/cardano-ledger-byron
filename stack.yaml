@@ -36,5 +36,8 @@ extra-deps:
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
 
+  # To be able to use `stack hoogle`
+  - haskell-src-exts-1.21.0
+
 nix:
   shell-file: scripts/nix/stack-shell.nix
