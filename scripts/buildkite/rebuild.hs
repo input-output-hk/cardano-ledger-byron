@@ -10,6 +10,7 @@ import Safe
 import System.Exit (exitWith)
 import Turtle
 
+
 data BuildkiteEnv = BuildkiteEnv
   { bkBuildNum :: Int
   , bkPipeline :: Text
@@ -30,23 +31,33 @@ main = do
   bk          <- getBuildkiteEnv
   cacheConfig <- getCacheConfig bk
   cacheDownloadStep cacheConfig
-  buildResult <- buildStep
-  cacheUploadStep cacheConfig
-  exitWith buildResult
 
-buildStep :: IO ExitCode
-buildStep = do
+  buildResult <- buildSubdir "binary" .&&. buildSubdir "crypto" .&&. buildStep
+    (Just ["--scenario=ContinuousIntegration"])
+
+  cacheUploadStep cacheConfig
+
+  exitWith buildResult
+ where
+  buildSubdir :: Turtle.FilePath -> IO ExitCode
+  buildSubdir dir = do
+    cd dir
+    res <- buildStep Nothing
+    cd ".."
+    pure res
+
+buildStep :: Maybe [Text] -> IO ExitCode
+buildStep testArgs = do
   echo "+++ Build and test"
-  test "cardano-binary" .&&. test "cardano-crypto-wrapper" .&&. test
-    "cardano-chain"
+  build .&&. test
  where
   cfg = ["--dump-logs", "--color", "always"]
   stackBuild args = run "stack" $ cfg ++ ["build", "--fast"] ++ args
   buildArgs    = ["--bench", "--no-run-benchmarks", "--no-haddock-deps"]
   buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
   build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
-  test pkg = stackBuild
-    [pkg, "--test", "--jobs", "1", "--ta", "--scenario=ContinuousIntegration"]
+  test =
+    stackBuild $ ["--test", "--jobs", "1"] ++ maybe [] ("--ta" :) testArgs
 
 -- buildkite agents have S3 creds installed, but under different names
 awsCreds :: IO ()
@@ -124,10 +135,10 @@ cacheS3 CICacheConfig {..} baseBranch cmd = void $ run "cache-s3" args
       ++ cmds
       ++ ml baseBranchArg
   baseBranchArg = format ("--base-branch=" % s) <$> baseBranch
-  maxSize       = format ("--max-size=" % s) <$> ccMaxSize
-  regionArg     = format ("--region=" % s) <$> ccRegion
-  cmds          = ("-c" : T.words cmd)
-  ml            = maybe [] pure
+  maxSize   = format ("--max-size=" % s) <$> ccMaxSize
+  regionArg = format ("--region=" % s) <$> ccRegion
+  cmds      = ("-c" : T.words cmd)
+  ml        = maybe [] pure
 
 run :: Text -> [Text] -> IO ExitCode
 run cmd args = do
