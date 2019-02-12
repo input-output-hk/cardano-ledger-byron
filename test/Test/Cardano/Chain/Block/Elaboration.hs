@@ -10,12 +10,13 @@
 -- rules for the block chain (also called the blockchain specification).
 module Test.Cardano.Chain.Block.Elaboration
   ( elaborate
+  , elaborateBS
   )
 where
 
 import Cardano.Prelude hiding (to)
 
-import Control.Lens ((^.), to, makeLenses, (.~))
+import Control.Lens ((^.), to, makeLenses, (.~), (^..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
@@ -51,35 +52,16 @@ import Test.Cardano.Chain.Interpreter
  -- TODO: discuss with Ru whether the genesis hash can be in the
  -- 'ChainValidationState'.
 
--- | Elaboration environment. It contains the abstract environment of the chain
--- extension rules, plus additional information needed to elaborate an abstract
--- block into a concrete.
---
-data Environment
-  = Environment
-  { _chainEnv :: !(Transition.Environment CHAIN)
-
-  -- TODO: I'm not sure this is needed it: if you want to cache concrete keys,
-  -- then this will probably become an environment.
-
-  -- , _vKeys    :: !(Set Abstract.VKey)
-  -- -- ^ All the keys defined in the environment. This will be probab
-  -- , _avkToCvk :: !(Map Abstract.VKey (CC.XPub, CC.XPrv))
-  -- -- ^ Abstract verifying key to concrete signing and verifying keys.
-  }
-
-makeLenses ''Environment
-
 elaborate
   :: Genesis.GenesisHash -- TODO: Do we want this to coincide with the hash of
                          -- the abstract environment? (and in such case we
                          -- wouldn't need this parameter)
-  -> Environment
+  -> Transition.Environment CHAIN
   -> Transition.State CHAIN
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ()
-elaborate genesisHash env ast st ab
+elaborate genesisHash (_, _, pps) ast st ab
   = Concrete.ABlock
   { Concrete.blockHeader = bh0
   , Concrete.blockBody = bb0
@@ -117,7 +99,7 @@ elaborate genesisHash env ast st ab
       = fromMaybe (Genesis.getGenesisHash genesisHash) $ Concrete.cvsPreviousHash st
 
     sid = Slotting.unflattenSlotId
-      (coerce (env ^. chainEnv . pps . bkSlotsPerEpoch))
+      (coerce (pps ^. bkSlotsPerEpoch))
       -- TODO: I don't like this inconsistency between qualifying and not, but
       -- some qualifying some identifiers can get too awkward. And using this
       -- with lenses gets even worse.
@@ -127,11 +109,30 @@ elaborate genesisHash env ast st ab
 
     (_, ssk) = interpretKeyPair $ vKeyPair $ issuer
 
-    -- See test/Test/Cardano/Chain/Interpreter.hs
     cDCert :: Maybe Delegation.Certificate
     cDCert = Just $ interpretDCert $ rcDCert issuer ast
 
-    bb0 = undefined
+    bb0
+      = Concrete.ABody
+      { Concrete.bodyTxPayload = Txp.ATxPayload []
+      , Concrete.bodySscPayload = Ssc.SscPayload
+      , Concrete.bodyDlgPayload = Delegation.UnsafeAPayload dcerts ()
+      , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
+      }
+
+    dcerts = ab ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to interpretDCert)
+
+elaborateBS
+  :: Genesis.GenesisHash -- TODO: Do we want this to coincide with the hash of
+                         -- the abstract environment? (and in such case we
+                         -- wouldn't need this parameter)
+  -> Transition.Environment CHAIN
+  -> Transition.State CHAIN
+  -> Concrete.ChainValidationState
+  -> Abstract.Block
+  -> Concrete.ABlock ByteString
+elaborateBS genesisHash aenv ast st ab
+  = annotateBlock $ elaborate genesisHash aenv ast st ab
 
 annotateBlock
   :: Concrete.Block

@@ -10,6 +10,7 @@ module Test.Cardano.Chain.Block.Validation.Spec
 where
 
 import Cardano.Prelude hiding (trace)
+import Control.Lens ((^.))
 
 import Hedgehog
   ( MonadTest
@@ -23,12 +24,15 @@ import Hedgehog
 
 import qualified Cardano.Chain.Genesis as Genesis
 import Control.State.Transition.Generator
+import qualified Control.State.Transition as Transition
 import Control.State.Transition.Trace
+import qualified Control.State.Transition.Trace as Trace
 import Cardano.Chain.Block as Concrete
 import Cardano.Spec.Chain.STS.Rule.Chain
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 
 import Test.Cardano.Chain.Config (readMainetCfg)
+import qualified Test.Cardano.Chain.Block.Elaboration as E
 
 tests :: IO Bool
 tests = checkParallel $$discover
@@ -49,22 +53,15 @@ prop_generatedChainsAreValidated = property $ do
     passConcreteValidation config tr = do
       initSt <- evalEither $ Concrete.initialChainValidationState config
       let
-        res = foldM elaborateAndUpdate initSt $ traceSignals OldestFirst tr
+        res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
       void $ evalEither res
       where
-
         elaborateAndUpdate
           :: Concrete.ChainValidationState
-          -> Abstract.Block
+          -> (Transition.State CHAIN, Abstract.Block)
           -> Either Concrete.ChainValidationError Concrete.ChainValidationState
-        elaborateAndUpdate cst ast =
-          Concrete.updateChain config cst (elaborate cst ast)
-
-    -- TODO: this will be replaced with the actual elaborate function.
-    -- TODO: the elaborate function might need some other parameters, like the
-    -- previous block.
-    elaborate
-      :: Concrete.ChainValidationState
-      -> Abstract.Block
-      -> Concrete.ABlock ByteString
-    elaborate = undefined
+        elaborateAndUpdate cst (ast, ab) =
+          Concrete.updateChain config cst (E.elaborateBS gh aenv ast cst ab)
+          where
+            gh = Genesis.configGenesisHash config
+            aenv = tr ^. traceEnv
