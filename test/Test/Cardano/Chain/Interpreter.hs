@@ -3,6 +3,9 @@
 module Test.Cardano.Chain.Interpreter
   ( interpretDCert
   , tests
+  -- * TODO: these should go into different modules.
+  , interpretKeyPair
+  , vKeyPair
   )
 where
 

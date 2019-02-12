@@ -37,10 +37,15 @@ tests = checkParallel $$discover
 -- after being elaborated must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
-  config <- readMainetCfg
+  config <- readMainetCfg -- TODO: you might want to generate this genesis
+                          -- config from the intial abstract environment (which
+                          -- will be contained in the trace)
   forAll trace >>= passConcreteValidation config
   where
-    passConcreteValidation :: MonadTest m => Genesis.Config -> Trace CHAIN -> m ()
+    passConcreteValidation
+      :: MonadTest m
+      => Genesis.Config
+      -> Trace CHAIN -> m ()
     passConcreteValidation config tr = do
       initSt <- evalEither $ Concrete.initialChainValidationState config
       let

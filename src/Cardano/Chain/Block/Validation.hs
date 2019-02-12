@@ -9,6 +9,7 @@ module Cardano.Chain.Block.Validation
   ( updateChain
   , updateChainBoundary
   , ChainValidationState
+  , cvsPreviousHash
   , initialChainValidationState
   , ChainValidationError
 
