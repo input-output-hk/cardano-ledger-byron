@@ -1,6 +1,7 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Cardano.Spec.Chain.STS.Block where
 
@@ -17,18 +18,39 @@ import Ledger.Core
 import Ledger.Delegation
 import Ledger.Signatures
 
-data BlockHeader
-  = BlockHeader
-  { _prevHHash :: !Hash
-    -- ^ Hash of the previous block header, or 'genesisHash' in case of the
-    -- first block in a chain.
-  , _bSlot :: !Slot
-    -- ^ Absolute slot for which the block was generated.
-  , _bIssuer :: !VKey
-    -- ^ Block issuer.
-  , _bSig :: !(Sig VKey)
-    -- ^ Signature of the block by its issuer.
+-- TODO(md): Define this type by seeing what is needed here in the
+-- blockchain LaTeX document
+data BHToSign deriving (Eq, Show, Generic)
 
+data BlockProtocolHeader
+  = MkBlockProtocolHeader
+  {
+    -- | Hash of the previous block header, or 'genesisHash' in case of
+    -- the first block in a chain.
+    _bhPrevHash :: Hash
+    -- | Hash of the block.
+  , _bhHash     :: Hash
+    -- | Block issuer.
+  , _bhIssuer   :: VKey
+    -- | Part of the block header which must be signed.
+  , _bhToSign   :: BHToSign
+    -- | Signature of the block by its issuer.
+  , _bhSig      :: !(Sig VKey)
+  } deriving (Eq, Show, Generic)
+
+makeLenses ''BlockProtocolHeader
+
+
+-- Actually, there's nothing that is exclusive to the payload part of
+-- the header so no need for this data structure
+data BlockPayloadHeader
+
+data BlockHeader
+  = MkBlockHeader
+  { -- | Absolute slot for which the block was generated.
+    _bhSlot :: !Slot
+    -- | Part of the header specific to the Permissive BFT protocol.
+  , _bhPBFT :: !BlockProtocolHeader
     -- TODO: BlockVersion – the protocol (block) version that created the block
 
     -- TODO: SoftwareVersion – the software version that created the block
@@ -40,9 +62,9 @@ makeLenses ''BlockHeader
 instance HasTypeReps BlockHeader where
   typeReps x = typeOf x
                <| typeOf (undefined :: Hash)
-               <| typeReps (x ^. bSlot :: Slot)
-               <> typeReps (x ^. bIssuer :: VKey)
-               <> typeReps (x ^. bSig :: Sig VKey)
+               <| typeReps (x ^. bhSlot :: Slot)
+               <> typeReps (x ^. bhPBFT ^. bhIssuer :: VKey)
+               <> typeReps (x ^. bhPBFT ^. bhSig :: Sig VKey)
 
 data BlockBody
   = BlockBody

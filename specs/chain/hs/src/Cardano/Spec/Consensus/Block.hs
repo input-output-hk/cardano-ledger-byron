@@ -47,13 +47,11 @@ instance BlockBody CBM.BlockBody where
   bbCerts (CBM.BlockBody bDCerts) = bDCerts
 
 instance BlockHeader CBM.BlockHeader where
-  bhPrevHash h = h ^. CBM.prevHHash
-   -- TODO: a corresponding field as of Feb 11, 2019 does not exist in
-   -- the CBM.BlockHeader type
-  bhHash       = undefined
-  bhSig      h = h ^. CBM.bSig
-  bhIssuer   h = h ^. CBM.bIssuer
-  bhSlot     h = h ^. CBM.bSlot
+  bhPrevHash h = h ^. CBM.bhPBFT ^. CBM.bhPrevHash
+  bhHash     h = h ^. CBM.bhPBFT ^. CBM.bhHash
+  bhSig      h = h ^. CBM.bhPBFT ^. CBM.bhSig
+  bhIssuer   h = h ^. CBM.bhPBFT ^. CBM.bhIssuer
+  bhSlot     h = h ^. CBM.bhSlot
 
 instance Block CBM.Block where
   type FamBlockHeader CBM.Block = CBM.BlockHeader
