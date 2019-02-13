@@ -138,9 +138,10 @@ annotateBlock
   :: Concrete.Block
   -> Concrete.ABlock ByteString
 annotateBlock block =
-  case Binary.decodeFullDecoder "Block" Concrete.decodeABlock bytes of
-    Left _ -> panic "This function should be able to decode the block it encoded."
-    Right res ->
+  case Binary.decodeFullDecoder "Block" Concrete.decodeABlockOrBoundary bytes of
+    Left err ->
+      panic $ "This function should be able to decode the block it encoded. Instead I got: " <> show err
+    Right (Concrete.ABOBBlock res) ->
       map (LBS.toStrict . Binary.slice bytes) res
   where
     bytes = Binary.serializeEncoding (Concrete.encodeBlock block)
@@ -213,9 +214,10 @@ rcDCert vk ast
   = mkDCert vkg sigVkg vk (ast ^. epoch)
   where
     dm = ast ^. dis . delegationMap
+
     vkg = case M.keys $ M.filter (== vk) dm of
-            [res] -> res
-            _ -> panic $ "No delegator found for key " <> show vk
+            res:_ -> res
+            []    -> panic $ "No delegator found for key " <> show vk
 
     vkp = vKeyPair $ coerce vkg
 

@@ -6,6 +6,7 @@
 -- specification.
 module Test.Cardano.Chain.Block.Validation.Spec
   ( tests
+  , passConcreteValidation
   )
 where
 
@@ -45,23 +46,23 @@ prop_generatedChainsAreValidated = property $ do
                           -- config from the intial abstract environment (which
                           -- will be contained in the trace)
   forAll trace >>= passConcreteValidation config
+
+passConcreteValidation
+  :: MonadTest m
+  => Genesis.Config
+  -> Trace CHAIN -> m ()
+passConcreteValidation config tr = do
+  initSt <- evalEither $ Concrete.initialChainValidationState config
+  let
+    res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
+  void $ evalEither res
   where
-    passConcreteValidation
-      :: MonadTest m
-      => Genesis.Config
-      -> Trace CHAIN -> m ()
-    passConcreteValidation config tr = do
-      initSt <- evalEither $ Concrete.initialChainValidationState config
-      let
-        res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
-      void $ evalEither res
+    elaborateAndUpdate
+      :: Concrete.ChainValidationState
+      -> (Transition.State CHAIN, Abstract.Block)
+      -> Either Concrete.ChainValidationError Concrete.ChainValidationState
+    elaborateAndUpdate cst (ast, ab) =
+      Concrete.updateChain config cst (E.elaborateBS gh aenv ast cst ab)
       where
-        elaborateAndUpdate
-          :: Concrete.ChainValidationState
-          -> (Transition.State CHAIN, Abstract.Block)
-          -> Either Concrete.ChainValidationError Concrete.ChainValidationState
-        elaborateAndUpdate cst (ast, ab) =
-          Concrete.updateChain config cst (E.elaborateBS gh aenv ast cst ab)
-          where
-            gh = Genesis.configGenesisHash config
-            aenv = tr ^. traceEnv
+        gh = Genesis.configGenesisHash config
+        aenv = tr ^. traceEnv
