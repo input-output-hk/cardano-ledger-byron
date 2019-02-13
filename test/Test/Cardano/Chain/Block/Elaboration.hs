@@ -53,7 +53,7 @@ import Test.Cardano.Chain.Interpreter
  -- 'ChainValidationState'.
 
 elaborate
-  :: Genesis.GenesisHash -- TODO: Do we want this to coincide with the hash of
+  :: Genesis.Config -- TODO: Do we want this to coincide with the hash of
                          -- the abstract environment? (and in such case we
                          -- wouldn't need this parameter)
   -> Transition.Environment CHAIN
@@ -61,7 +61,7 @@ elaborate
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ()
-elaborate genesisHash (_, _, pps) ast st ab
+elaborate config (_, _, pps) ast st ab
   = Concrete.ABlock
   { Concrete.blockHeader = bh0
   , Concrete.blockBody = bb0
@@ -70,7 +70,7 @@ elaborate genesisHash (_, _, pps) ast st ab
   where
     bh0
       = Concrete.mkHeaderExplicit
-        Crypto.dummyProtocolMagicId
+        (Genesis.configProtocolMagicId config)
         prevHash
         0 -- Chain difficulty.
         -- TODO: we might want to generate the chain difficulty
@@ -90,13 +90,13 @@ elaborate genesisHash (_, _, pps) ast st ab
       = Concrete.ExtraHeaderData
       { Concrete.ehdProtocolVersion = Update.ProtocolVersion 0 0 0
       , Concrete.ehdSoftwareVersion =
-        Update.SoftwareVersion (Update.ApplicationName "baz") 0
+          Update.SoftwareVersion (Update.ApplicationName "baz") 0
       , Concrete.ehdAttributes = emptyAttrs
       , Concrete.ehdEBDataProof = H.hash extraBodyData
       }
 
     prevHash
-      = fromMaybe (Genesis.getGenesisHash genesisHash) $ Concrete.cvsPreviousHash st
+      = fromMaybe (Genesis.getGenesisHash $ Genesis.configGenesisHash config) $ Concrete.cvsPreviousHash st
 
     sid = Slotting.unflattenSlotId
       (coerce (pps ^. bkSlotsPerEpoch))
@@ -110,7 +110,7 @@ elaborate genesisHash (_, _, pps) ast st ab
     (_, ssk) = interpretKeyPair $ vKeyPair $ issuer
 
     cDCert :: Maybe Delegation.Certificate
-    cDCert = Just $ interpretDCert $ rcDCert issuer ast
+    cDCert = Just $ interpretDCert config $ rcDCert issuer ast
 
     bb0
       = Concrete.ABody
@@ -120,88 +120,94 @@ elaborate genesisHash (_, _, pps) ast st ab
       , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
       }
 
-    dcerts = ab ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to interpretDCert)
+    dcerts = ab ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to (interpretDCert config))
 
 elaborateBS
-  :: Genesis.GenesisHash -- TODO: Do we want this to coincide with the hash of
-                         -- the abstract environment? (and in such case we
-                         -- wouldn't need this parameter)
+  :: Genesis.Config -- TODO: Do we want this to come from the abstract
+                    -- environment? (in such case we wouldn't need this
+                    -- parameter)
   -> Transition.Environment CHAIN
   -> Transition.State CHAIN
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ByteString
-elaborateBS genesisHash aenv ast st ab
-  = annotateBlock $ elaborate genesisHash aenv ast st ab
+elaborateBS config aenv ast st ab
+  = annotateBlock $ elaborate config aenv ast st ab
 
 annotateBlock
   :: Concrete.Block
   -> Concrete.ABlock ByteString
 annotateBlock block =
-  case Binary.decodeFullDecoder "Block" Concrete.decodeABlockOrBoundary bytes of
-    Left err ->
-      panic $ "This function should be able to decode the block it encoded. Instead I got: " <> show err
-    Right (Concrete.ABOBBlock res) ->
-      map (LBS.toStrict . Binary.slice bytes) res
+  -- TODO: use 'encode' from 'Bi'
+  let res =
+        case Binary.decodeFullDecoder "Block" Concrete.decodeABlockOrBoundary bytes of
+          Left err ->
+            panic $ "This function should be able to decode the block it encoded. Instead I got: " <> show err
+          Right abobb ->
+            map (LBS.toStrict . Binary.slice bytes) abobb
+  in
+  case res of
+    Concrete.ABOBBlock bk -> bk
+
   where
     bytes = Binary.serializeEncoding (Concrete.encodeBlock block)
 
 -- TODO: Make a block that will be accepted by 'updateChain'
 
--- | Some random block that could be the first block in the chain.
-block0
-  :: Genesis.GenesisHash
-  -> Concrete.Block
--- TODO: the initial state of the concrete validator will have 'Nothing' as
--- previous hash, and in this case, it will look the for the genesisHash in the
--- config. So we need to make sure that this genesis hash is the same as the
--- config.
+-- -- | Some random block that could be the first block in the chain.
+-- block0
+--   :: Genesis.GenesisHash
+--   -> Concrete.Block
+-- -- TODO: the initial state of the concrete validator will have 'Nothing' as
+-- -- previous hash, and in this case, it will look the for the genesisHash in the
+-- -- config. So we need to make sure that this genesis hash is the same as the
+-- -- config.
 
--- TODO: We might want to use the concrete generators in the 'elaborate' function.
---
+-- -- TODO: We might want to use the concrete generators in the 'elaborate' function.
+-- --
 
-block0 genesisHash
-  = Concrete.ABlock
-  { Concrete.blockHeader = bh0
-  , Concrete.blockBody = bb0
-  , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
-  }
-  where
-    bh0
-      = Concrete.mkHeader
-        Crypto.dummyProtocolMagicId
-        (Left genesisHash) -- Either GenesisHash Header
-        (SlotId 0 0) -- SlotId
-        (Signing.SecretKey ssk) -- SecretKey
-        Nothing   -- Maybe Delegation.Certificate
-        bb0
-        extraHeaderData -- TODO: ExtraHeaderData  This is IMPORTANT!
+-- block0 genesisHash
+--   = Concrete.ABlock
+--   { Concrete.blockHeader = bh0
+--   , Concrete.blockBody = bb0
+--   , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
+--   }
+--   where
+--     bh0
+--       = Concrete.mkHeader
+--         Crypto.dummyProtocolMagicId
+--         (Left genesisHash) -- Either GenesisHash Header
+--         (SlotId 0 0) -- SlotId
+--         (Signing.SecretKey ssk) -- SecretKey
+--         Nothing   -- Maybe Delegation.Certificate
+--         bb0
+--         extraHeaderData -- TODO: ExtraHeaderData  This is IMPORTANT!
 
-    -- Signer secret key
-    -- TODO: it seems we will have to have access to the secret keys of all the
-    -- keys in the abstract environment.
-    ssk = CC.generate ("foo" :: ByteString) ("bar" :: ByteString)
+--     -- Signer secret key
+--     -- TODO: it seems we will have to have access to the secret keys of all the
+--     -- keys in the abstract environment.
+--     ssk = CC.generate ("foo" :: ByteString) ("bar" :: ByteString)
 
-    emptyAttrs = Common.Attributes () (Common.UnparsedFields [])
+--     emptyAttrs = Common.Attributes () (Common.UnparsedFields [])
 
-    extraHeaderData
-      = Concrete.ExtraHeaderData
-      { Concrete.ehdProtocolVersion = Update.ProtocolVersion 0 0 0
-      , Concrete.ehdSoftwareVersion =
-        Update.SoftwareVersion (Update.ApplicationName "baz") 0
-      , Concrete.ehdAttributes = emptyAttrs
-      , Concrete.ehdEBDataProof = H.hash extraBodyData
-      }
+--     extraHeaderData
+--       = Concrete.ExtraHeaderData
+--       { Concrete.ehdProtocolVersion = Update.ProtocolVersion 0 0 0
+--       , Concrete.ehdSoftwareVersion =
+--         Update.SoftwareVersion (Update.ApplicationName "baz") 0
+--       , Concrete.ehdAttributes = emptyAttrs
+--       , Concrete.ehdEBDataProof = H.hash extraBodyData
+--       }
 
-    extraBodyData = Concrete.ExtraBodyData emptyAttrs
+--     extraBodyData = Concrete.ExtraBodyData emptyAttrs
 
-    bb0
-      = Concrete.ABody
-      { Concrete.bodyTxPayload = Txp.ATxPayload []
-      , Concrete.bodySscPayload = Ssc.SscPayload
-      , Concrete.bodyDlgPayload = Delegation.UnsafeAPayload [] ()
-      , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
-      }
+--     bb0
+--       = Concrete.ABody
+--       { Concrete.bodyTxPayload = Txp.ATxPayload []
+--       , Concrete.bodySscPayload = Ssc.SscPayload
+--       , Concrete.bodyDlgPayload = Delegation.UnsafeAPayload [] ()
+--       , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
+--       }
 
 
 -- | Re-construct an abstract delegation certificate from the abstract state.

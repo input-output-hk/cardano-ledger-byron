@@ -15,6 +15,15 @@ import Data.ByteString.Builder (integerDec, toLazyByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Set as Set
+import Hedgehog
+  ( Property
+  , checkSequential
+  , discover
+  , evalEither
+  , forAll
+  , property
+  , withTests
+  )
 
 import Cardano.Binary.Class (Annotated(..), serialize')
 import Cardano.Chain.Delegation as Delegation (Certificate)
@@ -42,11 +51,9 @@ import Ledger.Core
   )
 import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 
-import Hedgehog
-  (Property, checkSequential, discover, evalEither, forAll, property, withTests)
+import qualified Cardano.Chain.Genesis as Genesis
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
-
+import Test.Cardano.Chain.Config (readMainetCfg)
 
 tests :: IO Bool
 tests = checkSequential $$discover
@@ -56,18 +63,22 @@ prop_interpretedCertsValid =
   withTests 50
     . property
     $ do
+        config <- readMainetCfg
 
         -- Generate and interpret a certificate
-        cert <- forAll $ interpretDCert <$> dcertGen env
+        cert <- forAll $ interpretDCert config <$> dcertGen env
 
         -- Annotate the omega value for signature checking
         let
           omega = pskOmega cert
+
           annotatedCert =
             cert { aPskOmega = Annotated omega (serialize' omega) }
 
+          pm = Genesis.configProtocolMagicId config
+
         -- Validate the certificate
-        evalEither $ validateProxySecretKey dummyProtocolMagicId annotatedCert
+        evalEither $ validateProxySecretKey pm annotatedCert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -78,9 +89,13 @@ prop_interpretedCertsValid =
     , _dSEnvLiveness = SlotCount 20
     }
 
-interpretDCert :: DCert -> Delegation.Certificate
-interpretDCert cert = createPsk
-  dummyProtocolMagicId
+
+interpretDCert
+  :: Genesis.Config
+  -> DCert
+  -> Delegation.Certificate
+interpretDCert config cert = createPsk
+  (Genesis.configProtocolMagicId config)
   (noPassSafeSigner delegatorSK)
   delegatePK
   epochIndex

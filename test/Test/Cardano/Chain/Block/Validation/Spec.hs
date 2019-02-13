@@ -8,6 +8,8 @@
 module Test.Cardano.Chain.Block.Validation.Spec
   ( tests
   , passConcreteValidation
+  , passConcreteValidationIO
+  , randomTrace
   )
 where
 
@@ -25,6 +27,7 @@ import Hedgehog
   , property
   , failure
   )
+import qualified Hedgehog.Gen as Gen
 
 import qualified Cardano.Chain.Genesis as Genesis
 import Control.State.Transition.Generator
@@ -44,8 +47,8 @@ tests = checkParallel $$discover
 
 -- | Every abstract chain that was generated according to the inference rules,
 -- after being elaborated must be validated by the concrete block validator.
-xprop_generatedChainsAreValidated :: Property
-xprop_generatedChainsAreValidated = property $ do
+prop_generatedChainsAreValidated :: Property
+prop_generatedChainsAreValidated = property $ do
   config <- readMainetCfg -- TODO: you might want to generate this genesis
                           -- config from the intial abstract environment (which
                           -- will be contained in the trace)
@@ -66,10 +69,35 @@ passConcreteValidation config tr = do
       -> (Transition.State CHAIN, Abstract.Block)
       -> Either Concrete.ChainValidationError Concrete.ChainValidationState
     elaborateAndUpdate cst (ast, ab) =
-      Concrete.updateChain config cst (E.elaborateBS gh aenv ast cst ab)
+      Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
       where
-        gh = Genesis.configGenesisHash config
         aenv = tr ^. traceEnv
+
+-- TODO: remove this function if not needed or remove duplication
+passConcreteValidationIO
+  :: MonadIO m
+  => Trace CHAIN -> m ()
+passConcreteValidationIO  tr = do
+  config <- readMainetCfg
+  let initSt =
+        either (panic . show) identity $ Concrete.initialChainValidationState config
+  let res =
+        foldM (elaborateAndUpdate config) initSt $
+        Trace.preStatesAndSignals OldestFirst tr
+  either (panic . show) (const $ return ()) res
+  where
+    elaborateAndUpdate
+      :: Genesis.Config
+      -> Concrete.ChainValidationState
+      -> (Transition.State CHAIN, Abstract.Block)
+      -> Either Concrete.ChainValidationError Concrete.ChainValidationState
+    elaborateAndUpdate config cst (ast, ab) =
+      Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
+      where
+        aenv = tr ^. traceEnv
+
+randomTrace :: IO (Trace CHAIN)
+randomTrace = Gen.sample trace
 
 -- TODO: put this in the STS tests.
 prop_blockIssuersAreDelegates :: Property
