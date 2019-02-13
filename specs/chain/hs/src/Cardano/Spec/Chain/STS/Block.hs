@@ -35,7 +35,7 @@ data BlockProtocolHeader
     -- | Part of the block header which must be signed.
   , _bhToSign   :: BHToSign
     -- | Signature of the block by its issuer.
-  , _bhSig      :: !(Sig VKey)
+  , _bhSig      :: (Sig VKey)
   } deriving (Eq, Show, Generic)
 
 makeLenses ''BlockProtocolHeader
@@ -48,9 +48,9 @@ data BlockPayloadHeader
 data BlockHeader
   = MkBlockHeader
   { -- | Absolute slot for which the block was generated.
-    _bhSlot :: !Slot
+    _bhSlot :: Slot
     -- | Part of the header specific to the Permissive BFT protocol.
-  , _bhPBFT :: !BlockProtocolHeader
+  , _bhPBFT :: BlockProtocolHeader
     -- TODO: BlockVersion – the protocol (block) version that created the block
 
     -- TODO: SoftwareVersion – the software version that created the block
