@@ -49,17 +49,21 @@ tests = checkParallel $$discover
 -- after being elaborated must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
-  config <- readMainetCfg -- TODO: you might want to generate this genesis
-                          -- config from the intial abstract environment (which
-                          -- will be contained in the trace)
+
+  todo "TODO: this is wrong ! We need to generate the config from the abstract environment!"
+  -- Furthemore, we might want to weaken the preconditions of the Block and
+  -- Delegation validation functions so that they only take the parts of the config they need.
+
+  -- WRONG! config <- readMainetCfg
   forAll trace >>= passConcreteValidation config
 
 passConcreteValidation
   :: MonadTest m
-  => Genesis.Config
-  -> Trace CHAIN -> m ()
-passConcreteValidation config tr = do
-  initSt <- evalEither $ Concrete.initialChainValidationState config
+  => Trace CHAIN -> m ()
+passConcreteValidation tr = do
+  config <- todo "Make a config from the initial environment of the trace"
+  initSt <- evalEither $ todo "we have to make an chain initial states ourselves, since initialChainValidationState makes a delegation transition"
+    -- WRONG! Concrete.initialChainValidationState config
   let
     res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
   void $ evalEither res
