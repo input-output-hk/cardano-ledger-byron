@@ -157,7 +157,7 @@ data ChainValidationError
   = ChainValidationBoundaryTooLarge
   -- ^ The size of an epoch boundary block exceeds the limit
 
-  | ChainValidationInvalidDelegation PublicKey PublicKey
+  | ChainValidationInvalidDelegation PublicKey PublicKey ChainValidationState
   -- ^ The delegation used in the signature is not valid according to the ledger
 
   | ChainValidationInvalidHash HeaderHash HeaderHash
@@ -260,7 +260,7 @@ updateChain config cvs b = do
 
   -- Check that the delegation is valid according to the ledger
   delegates (cvsDelegationState cvs) delegator signer
-    `orThrowError` ChainValidationInvalidDelegation delegator signer
+    `orThrowError` ChainValidationInvalidDelegation delegator signer cvs
 
   let signingHistory = cvsSigningHistory cvs
 

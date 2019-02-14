@@ -8,8 +8,8 @@
 module Test.Cardano.Chain.Block.Validation.Spec
   ( tests
   , passConcreteValidation
-  , passConcreteValidationIO
-  , randomTrace
+  -- , passConcreteValidationIO
+  -- , randomTrace
   )
 where
 
@@ -50,24 +50,28 @@ tests = checkParallel $$discover
 prop_generatedChainsAreValidated :: Property
 prop_generatedChainsAreValidated = property $ do
 
-  todo "TODO: this is wrong ! We need to generate the config from the abstract environment!"
+--  todo "TODO: this is wrong ! We need to generate the config from the abstract environment!"
   -- Furthemore, we might want to weaken the preconditions of the Block and
   -- Delegation validation functions so that they only take the parts of the config they need.
 
   -- WRONG! config <- readMainetCfg
-  forAll trace >>= passConcreteValidation config
+  forAll trace >>= passConcreteValidation
 
 passConcreteValidation
   :: MonadTest m
   => Trace CHAIN -> m ()
 passConcreteValidation tr = do
-  config <- todo "Make a config from the initial environment of the trace"
-  initSt <- evalEither $ todo "we have to make an chain initial states ourselves, since initialChainValidationState makes a delegation transition"
+
+
+    -- "we have to make an chain initial states ourselves, since initialChainValidationState makes a delegation transition"
     -- WRONG! Concrete.initialChainValidationState config
   let
+    initSt = abStToInitSt (tr ^. traceInitState)
     res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
   void $ evalEither res
   where
+    config = abEnvToCfg (tr ^. traceEnv)
+
     elaborateAndUpdate
       :: Concrete.ChainValidationState
       -> (Transition.State CHAIN, Abstract.Block)
@@ -78,30 +82,30 @@ passConcreteValidation tr = do
         aenv = tr ^. traceEnv
 
 -- TODO: remove this function if not needed or remove duplication
-passConcreteValidationIO
-  :: MonadIO m
-  => Trace CHAIN -> m ()
-passConcreteValidationIO  tr = do
-  config <- readMainetCfg
-  let initSt =
-        either (panic . show) identity $ Concrete.initialChainValidationState config
-  let res =
-        foldM (elaborateAndUpdate config) initSt $
-        Trace.preStatesAndSignals OldestFirst tr
-  either (panic . show) (const $ return ()) res
-  where
-    elaborateAndUpdate
-      :: Genesis.Config
-      -> Concrete.ChainValidationState
-      -> (Transition.State CHAIN, Abstract.Block)
-      -> Either Concrete.ChainValidationError Concrete.ChainValidationState
-    elaborateAndUpdate config cst (ast, ab) =
-      Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
-      where
-        aenv = tr ^. traceEnv
+-- passConcreteValidationIO
+--   :: MonadIO m
+--   => Trace CHAIN -> m ()
+-- passConcreteValidationIO  tr = do
+--   config <- readMainetCfg
+--   let initSt =
+--         either (panic . show) identity $ Concrete.initialChainValidationState config
+--   let res =
+--         foldM (elaborateAndUpdate config) initSt $
+--         Trace.preStatesAndSignals OldestFirst tr
+--   either (panic . show) (const $ return ()) res
+--   where
+--     elaborateAndUpdate
+--       :: Genesis.Config
+--       -> Concrete.ChainValidationState
+--       -> (Transition.State CHAIN, Abstract.Block)
+--       -> Either Concrete.ChainValidationError Concrete.ChainValidationState
+--     elaborateAndUpdate config cst (ast, ab) =
+--       Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
+--       where
+--         aenv = tr ^. traceEnv
 
-randomTrace :: IO (Trace CHAIN)
-randomTrace = Gen.sample trace
+-- randomTrace :: IO (Trace CHAIN)
+-- randomTrace = Gen.sample trace
 
 -- TODO: put this in the STS tests.
 prop_blockIssuersAreDelegates :: Property
@@ -120,3 +124,17 @@ prop_blockIssuersAreDelegates =
            where
              issuer = bk ^. Abstract.bHeader . Abstract.bIssuer
              dm = st ^. dis . Deleg.delegationMap
+
+--  | Make a config from the initial environment of the trace.
+abEnvToCfg
+  :: Transition.Environment CHAIN
+  -> Genesis.Config
+abEnvToCfg = undefined
+
+-- | Make a concrete chain validation state from an abstract state.
+--
+-- TODO: a better name for this might be @abStToSt@ or @abStToCSt@
+abStToInitSt
+  :: Transition.State CHAIN
+  -> Concrete.ChainValidationState
+abStToInitSt = undefined
