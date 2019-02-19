@@ -24,7 +24,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/fm-ledger-rules
-    commit: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+    commit: f1af40416f6c262426e6617ec12bba5442315938
     subdirs:
       - specs/semantics/hs
       - specs/ledger/hs

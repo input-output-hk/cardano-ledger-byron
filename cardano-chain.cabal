@@ -170,7 +170,6 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Common.Lovelace
-                       Test.Cardano.Chain.Common.Utils
                        Test.Cardano.Chain.Config
 
                        Test.Cardano.Chain.Delegation.Bi
