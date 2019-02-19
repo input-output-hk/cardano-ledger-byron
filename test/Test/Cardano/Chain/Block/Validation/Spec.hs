@@ -123,7 +123,7 @@ prop_blockIssuersAreDelegates =
              [] -> failure
            where
              issuer = bk ^. Abstract.bHeader . Abstract.bIssuer
-             dm = st ^. dis . Deleg.delegationMap
+             dm = st ^. disL . Deleg.delegationMap
 
 --  | Make a config from the initial environment of the trace.
 abEnvToCfg

@@ -38,7 +38,7 @@ import qualified Cardano.Chain.Txp as Txp
 import qualified Cardano.Chain.Update as Update
 
 import qualified Control.State.Transition as Transition
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, dis, epoch, pps)
+import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL, epochL, ppsL)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation (DCert, mkDCert, delegationMap)
@@ -103,7 +103,7 @@ elaborate config (_, _, pps) ast st ab
       -- TODO: I don't like this inconsistency between qualifying and not, but
       -- some qualifying some identifiers can get too awkward. And using this
       -- with lenses gets even worse.
-      (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.getValue)
+      (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
 
     issuer = ab ^. Abstract.bHeader . Abstract.bIssuer
 
@@ -217,9 +217,10 @@ rcDCert
   -> Transition.State CHAIN
   -> DCert
 rcDCert vk ast
-  = mkDCert vkg sigVkg vk (ast ^. epoch)
+  = mkDCert vkg sigVkg vk (ast ^. epochL)
   where
-    dm = ast ^. dis . delegationMap
+    dm :: Map Abstract.VKeyGenesis Abstract.VKey
+    dm = ast ^. disL . delegationMap
 
     vkg = case M.keys $ M.filter (== vk) dm of
             res:_ -> res
