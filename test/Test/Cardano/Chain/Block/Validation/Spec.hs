@@ -43,7 +43,7 @@ import Cardano.Chain.Block as Concrete
 import Cardano.Spec.Chain.STS.Rule.Chain
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Delegation as Deleg
-import Ledger.Update (maxBkSz, maxHdrSz)
+import Ledger.Update (maxBkSz, maxHdrSz, bkSgnCntW)
 
 import Test.Cardano.Chain.Interpreter (elaborateVKeyGenesis)
 import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
@@ -160,7 +160,10 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       , Genesis.gdK =
         -- TODO: for now this is a constant. It will come from the environment
         -- once we add the update mechanism (which requires the K parameter).
-          BlockCount 10 -- This is configSlotSecurityParam config
+          BlockCount  (fromIntegral $ pps ^. bkSgnCntW)-- This is configSlotSecurityParam config
+          -- TODO: this should be a different protocol parameter once we have
+          -- an abstract protocol parameter for k. Then we need to solve the
+          -- problem that in the concrete implementation k and w are the same.
       , Genesis.gdProtocolMagic =
           dummyProtocolMagic
       , Genesis.gdAvvmDistr =

@@ -82,7 +82,7 @@ data SigningHistory = SigningHistory
 
 checkDelegator :: BlockCount -> PublicKey -> SigningHistory -> Bool
 checkDelegator byzantineNodes s sh =
-  delegatorSlots % 1 < shK sh % byzantineNodes
+  delegatorSlots % 1 <= shK sh % byzantineNodes
  where
   delegatorSlots =
     fromMaybe 0 $ M.lookup (mkStakeholderId s) (shStakeholderCounts sh)

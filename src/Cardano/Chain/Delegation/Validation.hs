@@ -47,6 +47,8 @@ import Cardano.Chain.Genesis as Genesis
   , configEpochSlots
   , configHeavyDelegation
   , configProtocolMagicId
+  , GenesisData
+  , configGenesisData
   )
 import Cardano.Chain.Slotting
   ( EpochIndex
@@ -89,7 +91,7 @@ data SchedulingError
   | SchedulingNonGenesisDelegator StakeholderId
   -- ^ This delegator is not one of the allowed genesis keys
 
-  | SchedulingPastEpoch EpochIndex EpochIndex
+  | SchedulingPastEpoch EpochIndex EpochIndex GenesisData FlatSlotId
   -- ^ This delegation is for a past epoch
 
   deriving (Eq, Show)
@@ -114,7 +116,7 @@ scheduleCertificate config slot d ss cert = do
 
   -- Check that the delegation epoch is greater than or equal to the current one
   (epoch <= delegationEpoch)
-    `orThrowError` SchedulingPastEpoch epoch delegationEpoch
+    `orThrowError` SchedulingPastEpoch epoch delegationEpoch (configGenesisData config) slot
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
   ((delegationEpoch, delegator) `Set.notMember` ssKeyEpochDelegations ss)
