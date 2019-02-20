@@ -43,10 +43,16 @@ import Cardano.Chain.Block as Concrete
 import Cardano.Spec.Chain.STS.Rule.Chain
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Delegation as Deleg
+import Ledger.Update (maxBkSz, maxHdrSz)
 
 import Test.Cardano.Chain.Interpreter (elaborateVKeyGenesis)
 import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
-import Cardano.Chain.Common (BlockCount(BlockCount), mkStakeholderId)
+import Cardano.Chain.Common
+  ( BlockCount(BlockCount)
+  , LovelacePortion(LovelacePortion)
+  , TxFeePolicy(TxFeePolicyUnknown)
+  , mkStakeholderId
+  )
 import qualified Cardano.Chain.Update as Update
 import Test.Cardano.Chain.Config (readMainetCfg)
 import qualified Test.Cardano.Chain.Block.Elaboration as E
@@ -72,8 +78,9 @@ passConcreteValidation
 passConcreteValidation tr = do
     -- We have to make an chain initial states ourselves, since
     -- initialChainValidationState makes a delegation transition
+
   let
-    initSt = abStToInitSt (tr ^. traceInitState)
+    initSt = either (panic . show) identity $ initialChainValidationState config
     res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
   void $ evalEither res
   where
@@ -153,31 +160,36 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       , Genesis.gdK =
         -- TODO: for now this is a constant. It will come from the environment
         -- once we add the update mechanism (which requires the K parameter).
-          BlockCount 10
+          BlockCount 10 -- This is configSlotSecurityParam config
       , Genesis.gdProtocolMagic =
           dummyProtocolMagic
       , Genesis.gdAvvmDistr =
           Genesis.GenesisAvvmBalances []
       }
 
+    -- We shouldn't need to use 'coerce' after
+    -- https://github.com/input-output-hk/cardano-chain/issues/332 gets
+    -- implemented.
     genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
 
     gPps
       = Update.ProtocolParameters
-      { Update.ppScriptVersion = undefined
-      , Update.ppSlotDuration = undefined
-      , Update.ppMaxBlockSize = undefined
-      , Update.ppMaxHeaderSize = undefined
-      , Update.ppMaxTxSize = undefined
-      , Update.ppMaxProposalSize = undefined
-      , Update.ppMpcThd = undefined
-      , Update.ppHeavyDelThd = undefined
-      , Update.ppUpdateVoteThd = undefined
-      , Update.ppUpdateProposalThd = undefined
-      , Update.ppUpdateImplicit = undefined
-      , Update.ppSoftforkRule = undefined
-      , Update.ppTxFeePolicy = undefined
-      , Update.ppUnlockStakeEpoch = undefined
+      { Update.ppScriptVersion = 0
+      , Update.ppSlotDuration = 0
+      , Update.ppMaxBlockSize = pps ^. maxBkSz
+      , Update.ppMaxHeaderSize = pps ^. maxHdrSz
+      , Update.ppMaxTxSize = 0
+      , Update.ppMaxProposalSize = 0
+      , Update.ppMpcThd = LovelacePortion 0
+      , Update.ppHeavyDelThd = LovelacePortion 0
+      , Update.ppUpdateVoteThd = LovelacePortion 0
+      , Update.ppUpdateProposalThd = LovelacePortion 0
+      , Update.ppUpdateImplicit = 0
+      , Update.ppSoftforkRule =
+          Update.SoftforkRule (LovelacePortion 0) (LovelacePortion 0) (LovelacePortion 0)
+      , Update.ppTxFeePolicy =
+          TxFeePolicyUnknown 0 "Fee policy unspecified at \"Test.Cardano.Chain.Block.Validation.Spec\""
+      , Update.ppUnlockStakeEpoch = 0
       }
 
     genesisStakeHolders
