@@ -107,7 +107,7 @@ elaborate config (_, _, pps) ast st ab
 
     issuer = ab ^. Abstract.bHeader . Abstract.bIssuer
 
-    (_, ssk) = interpretKeyPair $ vKeyPair $ issuer
+    (_, ssk) = interpretKeyPair $ vKeyPair issuer
 
     cDCert :: Maybe Delegation.Certificate
     cDCert = Just $ interpretDCert config $ rcDCert issuer ast

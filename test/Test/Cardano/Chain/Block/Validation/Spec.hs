@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,9 +15,12 @@ module Test.Cardano.Chain.Block.Validation.Spec
 where
 
 import Cardano.Prelude hiding (trace)
+import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
 import Control.Lens ((^.))
-import qualified Data.Map.Strict as M
+import Data.Coerce (coerce)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Hedgehog
   ( MonadTest
   , Property
@@ -29,6 +33,7 @@ import Hedgehog
   )
 import qualified Hedgehog.Gen as Gen
 
+import qualified Cardano.Crypto.Hashing as H
 import qualified Cardano.Chain.Genesis as Genesis
 import Control.State.Transition.Generator
 import qualified Control.State.Transition as Transition
@@ -39,6 +44,10 @@ import Cardano.Spec.Chain.STS.Rule.Chain
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Delegation as Deleg
 
+import Test.Cardano.Chain.Interpreter (elaborateVKeyGenesis)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Cardano.Chain.Common (BlockCount(BlockCount), mkStakeholderId)
+import qualified Cardano.Chain.Update as Update
 import Test.Cardano.Chain.Config (readMainetCfg)
 import qualified Test.Cardano.Chain.Block.Elaboration as E
 
@@ -61,10 +70,8 @@ passConcreteValidation
   :: MonadTest m
   => Trace CHAIN -> m ()
 passConcreteValidation tr = do
-
-
-    -- "we have to make an chain initial states ourselves, since initialChainValidationState makes a delegation transition"
-    -- WRONG! Concrete.initialChainValidationState config
+    -- We have to make an chain initial states ourselves, since
+    -- initialChainValidationState makes a delegation transition
   let
     initSt = abStToInitSt (tr ^. traceInitState)
     res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
@@ -118,7 +125,7 @@ prop_blockIssuersAreDelegates =
        where
          checkIssuer :: MonadTest m => (Transition.State CHAIN, Transition.Signal CHAIN) -> m ()
          checkIssuer (st, bk) =
-           case M.keys $ M.filter (== issuer) dm of -- TODO: factor out this repetition
+           case Map.keys $ Map.filter (== issuer) dm of -- TODO: factor out this repetition
              _:_ -> pure $! ()
              [] -> failure
            where
@@ -129,11 +136,59 @@ prop_blockIssuersAreDelegates =
 abEnvToCfg
   :: Transition.Environment CHAIN
   -> Genesis.Config
-abEnvToCfg = undefined
+abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
+  where
+    genesisData
+      = Genesis.GenesisData
+      { Genesis.gdBootStakeholders =
+          Genesis.GenesisWStakeholders genesisStakeHolders
+      , Genesis.gdHeavyDelegation =
+          Genesis.UnsafeGenesisDelegation [] -- We don't need initial heavyweight delegation.
+      , Genesis.gdStartTime =
+          UTCTime (ModifiedJulianDay 0) 0
+      , Genesis.gdNonAvvmBalances =
+          Genesis.GenesisNonAvvmBalances []
+      , Genesis.gdProtocolParameters =
+          gPps
+      , Genesis.gdK =
+        -- TODO: for now this is a constant. It will come from the environment
+        -- once we add the update mechanism (which requires the K parameter).
+          BlockCount 10
+      , Genesis.gdProtocolMagic =
+          dummyProtocolMagic
+      , Genesis.gdAvvmDistr =
+          Genesis.GenesisAvvmBalances []
+      }
+
+    genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
+
+    gPps
+      = Update.ProtocolParameters
+      { Update.ppScriptVersion = undefined
+      , Update.ppSlotDuration = undefined
+      , Update.ppMaxBlockSize = undefined
+      , Update.ppMaxHeaderSize = undefined
+      , Update.ppMaxTxSize = undefined
+      , Update.ppMaxProposalSize = undefined
+      , Update.ppMpcThd = undefined
+      , Update.ppHeavyDelThd = undefined
+      , Update.ppUpdateVoteThd = undefined
+      , Update.ppUpdateProposalThd = undefined
+      , Update.ppUpdateImplicit = undefined
+      , Update.ppSoftforkRule = undefined
+      , Update.ppTxFeePolicy = undefined
+      , Update.ppUnlockStakeEpoch = undefined
+      }
+
+    genesisStakeHolders
+      = Map.fromList
+      $ zip (mkStakeholderId . elaborateVKeyGenesis <$> vkgs') [1..]
+
+    vkgs' = Set.toList vkgs
 
 -- | Make a concrete chain validation state from an abstract state.
 --
--- TODO: a better name for this might be @abStToSt@ or @abStToCSt@
+-- TODO: we might not need this if we make a configuration from the genesis environment.
 abStToInitSt
   :: Transition.State CHAIN
   -> Concrete.ChainValidationState

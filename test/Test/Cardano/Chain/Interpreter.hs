@@ -6,6 +6,8 @@ module Test.Cardano.Chain.Interpreter
   -- * TODO: these should go into different modules.
   , interpretKeyPair
   , vKeyPair
+  , elaborateVKey
+  , elaborateVKeyGenesis
   )
 where
 
@@ -14,6 +16,7 @@ import Cardano.Prelude
 import Data.ByteString.Builder (integerDec, toLazyByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
 import qualified Data.Set as Set
 import Hedgehog
   ( Property
@@ -119,3 +122,9 @@ interpretKeyPair kp = deterministicKeyGen $ padSeed seed
 
 vKeyPair :: VKey -> KeyPair
 vKeyPair (VKey o) = keyPair o
+
+elaborateVKey :: VKey -> PublicKey
+elaborateVKey = fst . interpretKeyPair . vKeyPair
+
+elaborateVKeyGenesis :: VKeyGenesis -> PublicKey
+elaborateVKeyGenesis = elaborateVKey . coerce
