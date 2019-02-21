@@ -1,5 +1,3 @@
-
-
 module Test.Cardano.Core.Elaboration
   ( elaborateKeyPair
   , vKeyPair
@@ -8,8 +6,22 @@ module Test.Cardano.Core.Elaboration
   )
 where
 
-import Cardano.Crypto.Signing (PublicKey, SecretKey)
-import Ledger.Core (KeyPair, Owner(Owner), VKey, VKeyGenesis)
+import Cardano.Prelude
+
+import qualified Data.ByteString as BS
+import Data.ByteString.Builder (integerDec, toLazyByteString)
+import qualified Data.ByteString.Lazy as BSL
+
+import Cardano.Crypto.Signing (PublicKey, SecretKey, deterministicKeyGen)
+import Ledger.Core
+  ( KeyPair
+  , Owner(Owner)
+  , VKey(VKey)
+  , VKeyGenesis(VKeyGenesis)
+  , keyPair
+  , owner
+  , sKey
+  )
 
 elaborateKeyPair :: KeyPair -> (PublicKey, SecretKey)
 elaborateKeyPair kp = deterministicKeyGen $ padSeed seed
@@ -26,4 +38,4 @@ elaborateVKey :: VKey -> PublicKey
 elaborateVKey = fst . elaborateKeyPair . vKeyPair
 
 elaborateVKeyGenesis :: VKeyGenesis -> PublicKey
-elaborateVKeyGenesis = elaborateVKey . coerce
+elaborateVKeyGenesis (VKeyGenesis vk) = elaborateVKey vk

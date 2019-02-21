@@ -160,6 +160,8 @@ test-suite cardano-chain-test
   type:                exitcode-stdio-1.0
 
   other-modules:
+                       Test.Cardano.Core.Elaboration
+
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Validation

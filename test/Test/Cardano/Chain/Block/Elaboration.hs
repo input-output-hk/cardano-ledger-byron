@@ -47,12 +47,13 @@ import Cardano.Chain.Common
   , mkStakeholderId
   )
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
-import Test.Cardano.Ledger.Delegation.Elaboration
-  ( elaborateDCert, elaborateVKeyGenesis
-  , elaborateKeyPair
+import Test.Cardano.Core.Elaboration
+  ( elaborateKeyPair
+  , elaborateVKeyGenesis
   , vKeyPair
   )
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Ledger.Delegation.Elaboration (elaborateDCert)
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate
@@ -105,10 +106,10 @@ elaborate config (_, _, pps) ast st ab
 
     issuer = ab ^. Abstract.bHeader . Abstract.bIssuer
 
-    (_, ssk) = interpretKeyPair $ vKeyPair issuer
+    (_, ssk) = elaborateKeyPair $ vKeyPair issuer
 
     cDCert :: Maybe Delegation.Certificate
-    cDCert = Just $ interpretDCert config $ rcDCert issuer ast
+    cDCert = Just $ elaborateDCert config $ rcDCert issuer ast
 
     bb0
       = Concrete.ABody
@@ -118,7 +119,7 @@ elaborate config (_, _, pps) ast st ab
       , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
       }
 
-    dcerts = ab ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to (interpretDCert config))
+    dcerts = ab ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to (elaborateDCert config))
 
 elaborateBS
   :: Genesis.Config -- TODO: Do we want this to come from the abstract

@@ -8,10 +8,6 @@ where
 
 import Cardano.Prelude
 
-import Data.ByteString.Builder (integerDec, toLazyByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import qualified Data.Set as Set
 import Hedgehog
   ( Property
@@ -31,7 +27,6 @@ import Cardano.Crypto.Signing
   , PublicKey
   , SecretKey
   , createPsk
-  , deterministicKeyGen
   , noPassSafeSigner
   , pskOmega
   , validateProxySecretKey

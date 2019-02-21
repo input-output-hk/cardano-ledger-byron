@@ -17,13 +17,13 @@ import qualified Test.Cardano.Chain.Block.Validation.Spec
 import qualified Test.Cardano.Chain.Delegation.Bi
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
-import qualified Test.Cardano.Chain.Interpreter
 import qualified Test.Cardano.Chain.Ssc.Bi
 import qualified Test.Cardano.Chain.Txp.Bi
 import qualified Test.Cardano.Chain.Txp.Json
 import qualified Test.Cardano.Chain.Txp.Validation
 import qualified Test.Cardano.Chain.Update.Bi
 import qualified Test.Cardano.Chain.Update.Json
+import qualified Test.Cardano.Ledger.Delegation.Elaboration
 
 main :: IO ()
 main = do
