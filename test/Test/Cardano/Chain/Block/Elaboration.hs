@@ -48,9 +48,9 @@ import Cardano.Chain.Common
   )
 
 import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
-import Test.Cardano.Chain.Interpreter
-  ( interpretDCert, elaborateVKeyGenesis
-  , interpretKeyPair
+import Test.Cardano.Ledger.Delegation.Elaboration
+  ( elaborateDCert, elaborateVKeyGenesis
+  , elaborateKeyPair
   , vKeyPair
   )
 

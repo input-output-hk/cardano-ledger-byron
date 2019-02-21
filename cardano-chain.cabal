@@ -182,8 +182,6 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
 
-                       Test.Cardano.Chain.Interpreter
-
                        Test.Cardano.Chain.Ssc.Bi
 
                        Test.Cardano.Chain.Slotting.Example
@@ -199,6 +197,8 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Json
+
+                       Test.Cardano.Ledger.Delegation.Elaboration
 
                        Test.Options
 

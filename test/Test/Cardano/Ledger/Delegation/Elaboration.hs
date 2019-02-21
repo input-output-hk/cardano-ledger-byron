@@ -1,13 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Interpreter
-  ( interpretDCert
+module Test.Cardano.Ledger.Delegation.Elaboration
+  ( elaborateDCert
   , tests
-  -- * TODO: these should go into different modules.
-  , interpretKeyPair
-  , vKeyPair
-  , elaborateVKey
-  , elaborateVKeyGenesis
   )
 where
 
@@ -57,19 +52,25 @@ import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 import qualified Cardano.Chain.Genesis as Genesis
 
 import Test.Cardano.Chain.Config (readMainetCfg)
+import Test.Cardano.Core.Elaboration
+  ( elaborateKeyPair
+  , elaborateVKey
+  , elaborateVKeyGenesis
+  , vKeyPair
+  )
 
 tests :: IO Bool
 tests = checkSequential $$discover
 
-prop_interpretedCertsValid :: Property
-prop_interpretedCertsValid =
+prop_elaboratedCertsValid :: Property
+prop_elaboratedCertsValid =
   withTests 50
     . property
     $ do
         config <- readMainetCfg
 
-        -- Generate and interpret a certificate
-        cert <- forAll $ interpretDCert config <$> dcertGen env
+        -- Generate and elaborate a certificate
+        cert <- forAll $ elaborateDCert config <$> dcertGen env
 
         -- Annotate the omega value for signature checking
         let
@@ -92,39 +93,21 @@ prop_interpretedCertsValid =
     , _dSEnvLiveness = SlotCount 20
     }
 
-
-interpretDCert
+elaborateDCert
   :: Genesis.Config
   -> DCert
   -> Delegation.Certificate
-interpretDCert config cert = createPsk
+elaborateDCert config cert = createPsk
   (Genesis.configProtocolMagicId config)
   (noPassSafeSigner delegatorSK)
   delegatePK
   epochIndex
  where
   VKeyGenesis delegatorVKey = delegator cert
-  (_         , delegatorSK) = interpretKeyPair $ vKeyPair delegatorVKey
-  (delegatePK, _          ) = interpretKeyPair . vKeyPair $ delegate cert
+  (_         , delegatorSK) = elaborateKeyPair $ vKeyPair delegatorVKey
+  (delegatePK, _          ) = elaborateKeyPair . vKeyPair $ delegate cert
 
   Epoch e = _depoch cert
 
   epochIndex :: EpochIndex
   epochIndex = fromIntegral e
-
-interpretKeyPair :: KeyPair -> (PublicKey, SecretKey)
-interpretKeyPair kp = deterministicKeyGen $ padSeed seed
- where
-  Owner o = owner $ sKey kp
-  padSeed s =
-    let padLength = max 0 (32 - BS.length s) in BS.replicate padLength 0 <> s
-  seed = BSL.toStrict . toLazyByteString . integerDec $ fromIntegral o
-
-vKeyPair :: VKey -> KeyPair
-vKeyPair (VKey o) = keyPair o
-
-elaborateVKey :: VKey -> PublicKey
-elaborateVKey = fst . interpretKeyPair . vKeyPair
-
-elaborateVKeyGenesis :: VKeyGenesis -> PublicKey
-elaborateVKeyGenesis = elaborateVKey . coerce

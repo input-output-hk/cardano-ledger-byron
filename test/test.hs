@@ -29,19 +29,19 @@ main :: IO ()
 main = do
   opts <- execParser optsParser
   let scenario = optsTestScenario opts
-  runTests $ []
-    -- [ Test.Cardano.Chain.Block.Bi.tests
-    -- , Test.Cardano.Chain.Block.Validation.tests scenario
-    -- , Test.Cardano.Chain.Common.Lovelace.tests
-    -- , Test.Cardano.Chain.Delegation.Bi.tests
-    -- , Test.Cardano.Chain.Epoch.File.tests
-    -- , Test.Cardano.Chain.Genesis.Json.tests
-    -- , Test.Cardano.Chain.Interpreter.tests
-    -- , Test.Cardano.Chain.Ssc.Bi.tests
-    -- , Test.Cardano.Chain.Txp.Bi.tests
-    -- , Test.Cardano.Chain.Txp.Json.tests
-    -- , Test.Cardano.Chain.Txp.Validation.tests scenario
-    -- , Test.Cardano.Chain.Update.Bi.tests
-    -- , Test.Cardano.Chain.Update.Json.tests
-    -- ]
-    ++ [Test.Cardano.Chain.Block.Validation.Spec.tests]
+  runTests
+    [ Test.Cardano.Chain.Block.Bi.tests
+    , Test.Cardano.Chain.Block.Validation.tests scenario
+    , Test.Cardano.Chain.Common.Lovelace.tests
+    , Test.Cardano.Chain.Delegation.Bi.tests
+    , Test.Cardano.Chain.Epoch.File.tests
+    , Test.Cardano.Chain.Genesis.Json.tests
+    , Test.Cardano.Ledger.Delegation.Elaboration.tests
+    , Test.Cardano.Chain.Ssc.Bi.tests
+    , Test.Cardano.Chain.Txp.Bi.tests
+    , Test.Cardano.Chain.Txp.Json.tests
+    , Test.Cardano.Chain.Txp.Validation.tests scenario
+    , Test.Cardano.Chain.Update.Bi.tests
+    , Test.Cardano.Chain.Update.Json.tests
+    , Test.Cardano.Chain.Block.Validation.Spec.tests
+    ]
