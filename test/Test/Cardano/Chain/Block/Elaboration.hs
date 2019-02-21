@@ -41,7 +41,7 @@ import qualified Control.State.Transition as Transition
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL, epochL, ppsL)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Core as Abstract
-import Ledger.Delegation (DCert, mkDCert, delegationMap)
+import Ledger.Delegation (DCert, delegationMap, delegatorOf, mkDCert)
 import Ledger.Update (bkSlotsPerEpoch, PParams)
 
 import Test.Cardano.Chain.Interpreter
@@ -49,13 +49,13 @@ import Test.Cardano.Chain.Interpreter
   , interpretKeyPair
   , vKeyPair
   )
- -- TODO: discuss with Ru whether the genesis hash can be in the
- -- 'ChainValidationState'.
 
+-- TODO: discuss with Ru whether the genesis hash can be in the
+-- 'ChainValidationState'.
 elaborate
-  :: Genesis.Config -- TODO: Do we want this to coincide with the hash of
-                         -- the abstract environment? (and in such case we
-                         -- wouldn't need this parameter)
+  :: Genesis.Config -- TODO: Do we want this to coincide with the hash of the
+                    -- abstract environment? (and in such case we wouldn't need
+                    -- this parameter)
   -> Transition.Environment CHAIN
   -> Transition.State CHAIN
   -> Concrete.ChainValidationState
@@ -152,65 +152,10 @@ annotateBlock block =
   where
     bytes = Binary.serializeEncoding (Concrete.encodeBlock block)
 
--- TODO: Make a block that will be accepted by 'updateChain'
-
--- -- | Some random block that could be the first block in the chain.
--- block0
---   :: Genesis.GenesisHash
---   -> Concrete.Block
--- -- TODO: the initial state of the concrete validator will have 'Nothing' as
--- -- previous hash, and in this case, it will look the for the genesisHash in the
--- -- config. So we need to make sure that this genesis hash is the same as the
--- -- config.
-
--- -- TODO: We might want to use the concrete generators in the 'elaborate' function.
--- --
-
--- block0 genesisHash
---   = Concrete.ABlock
---   { Concrete.blockHeader = bh0
---   , Concrete.blockBody = bb0
---   , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
---   }
---   where
---     bh0
---       = Concrete.mkHeader
---         Crypto.dummyProtocolMagicId
---         (Left genesisHash) -- Either GenesisHash Header
---         (SlotId 0 0) -- SlotId
---         (Signing.SecretKey ssk) -- SecretKey
---         Nothing   -- Maybe Delegation.Certificate
---         bb0
---         extraHeaderData -- TODO: ExtraHeaderData  This is IMPORTANT!
-
---     -- Signer secret key
---     -- TODO: it seems we will have to have access to the secret keys of all the
---     -- keys in the abstract environment.
---     ssk = CC.generate ("foo" :: ByteString) ("bar" :: ByteString)
-
---     emptyAttrs = Common.Attributes () (Common.UnparsedFields [])
-
---     extraHeaderData
---       = Concrete.ExtraHeaderData
---       { Concrete.ehdProtocolVersion = Update.ProtocolVersion 0 0 0
---       , Concrete.ehdSoftwareVersion =
---         Update.SoftwareVersion (Update.ApplicationName "baz") 0
---       , Concrete.ehdAttributes = emptyAttrs
---       , Concrete.ehdEBDataProof = H.hash extraBodyData
---       }
-
---     extraBodyData = Concrete.ExtraBodyData emptyAttrs
-
---     bb0
---       = Concrete.ABody
---       { Concrete.bodyTxPayload = Txp.ATxPayload []
---       , Concrete.bodySscPayload = Ssc.SscPayload
---       , Concrete.bodyDlgPayload = Delegation.UnsafeAPayload [] ()
---       , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
---       }
-
-
 -- | Re-construct an abstract delegation certificate from the abstract state.
+--
+-- We need to do this because the delegation certificate is included in the
+-- block.
 rcDCert
   :: Abstract.VKey
   -- ^ Key for which the delegation certificate is being constructed.
@@ -222,9 +167,9 @@ rcDCert vk ast
     dm :: Map Abstract.VKeyGenesis Abstract.VKey
     dm = ast ^. disL . delegationMap
 
-    vkg = case M.keys $ M.filter (== vk) dm of
-            res:_ -> res
-            []    -> panic $ "No delegator found for key " <> show vk
+    vkg = fromMaybe err $ delegatorOf dm vk
+
+    err = panic $ "No delegator found for key " <> show vk
 
     vkp = vKeyPair $ coerce vkg
 

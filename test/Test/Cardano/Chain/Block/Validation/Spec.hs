@@ -88,24 +88,6 @@ passConcreteValidation tr = do
       where
         aenv = tr ^. traceEnv
 
--- TODO: put this in the STS tests.
-prop_blockIssuersAreDelegates :: Property
-prop_blockIssuersAreDelegates =
-  property $ forAll trace >>= blockIssuersAreDelegates
-  where
-    blockIssuersAreDelegates :: MonadTest m => Trace CHAIN -> m ()
-    blockIssuersAreDelegates tr =
-       traverse_ checkIssuer $ Trace.preStatesAndSignals OldestFirst tr
-       where
-         checkIssuer :: MonadTest m => (Transition.State CHAIN, Transition.Signal CHAIN) -> m ()
-         checkIssuer (st, bk) =
-           case Map.keys $ Map.filter (== issuer) dm of -- TODO: factor out this repetition
-             _:_ -> pure $! ()
-             [] -> failure
-           where
-             issuer = bk ^. Abstract.bHeader . Abstract.bIssuer
-             dm = st ^. disL . Deleg.delegationMap
-
 --  | Make a genesis configuration from an initial abstract environment of the
 --  | trace.
 abEnvToCfg
