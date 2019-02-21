@@ -29,7 +29,7 @@ main :: IO ()
 main = do
   opts <- execParser optsParser
   let scenario = optsTestScenario opts
-  runTests
+  runTests $ []
     -- [ Test.Cardano.Chain.Block.Bi.tests
     -- , Test.Cardano.Chain.Block.Validation.tests scenario
     -- , Test.Cardano.Chain.Common.Lovelace.tests
@@ -44,5 +44,4 @@ main = do
     -- , Test.Cardano.Chain.Update.Bi.tests
     -- , Test.Cardano.Chain.Update.Json.tests
     -- ]
-    -- ++
-    [Test.Cardano.Chain.Block.Validation.Spec.tests]
+    ++ [Test.Cardano.Chain.Block.Validation.Spec.tests]
