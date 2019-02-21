@@ -9,8 +9,6 @@
 module Test.Cardano.Chain.Block.Validation.Spec
   ( tests
   , passConcreteValidation
-  -- , passConcreteValidationIO
-  -- , randomTrace
   )
 where
 
@@ -30,6 +28,7 @@ import Hedgehog
   , forAll
   , property
   , failure
+  , withTests
   )
 import qualified Hedgehog.Gen as Gen
 
@@ -63,22 +62,16 @@ tests = checkParallel $$discover
 -- | Every abstract chain that was generated according to the inference rules,
 -- after being elaborated must be validated by the concrete block validator.
 prop_generatedChainsAreValidated :: Property
-prop_generatedChainsAreValidated = property $ do
-
---  todo "TODO: this is wrong ! We need to generate the config from the abstract environment!"
-  -- Furthemore, we might want to weaken the preconditions of the Block and
-  -- Delegation validation functions so that they only take the parts of the config they need.
-
-  -- WRONG! config <- readMainetCfg
-  forAll trace >>= passConcreteValidation
+prop_generatedChainsAreValidated =
+  -- TODO: we might want to make this configurable, so that we run a smaller
+  -- number of tests when developing, and use a higher number when on CI (or in
+  -- nightly builds?).
+  withTests 500 $ property $ forAll trace >>= passConcreteValidation
 
 passConcreteValidation
   :: MonadTest m
   => Trace CHAIN -> m ()
 passConcreteValidation tr = do
-    -- We have to make an chain initial states ourselves, since
-    -- initialChainValidationState makes a delegation transition
-
   let
     initSt = either (panic . show) identity $ initialChainValidationState config
     res = foldM elaborateAndUpdate initSt $ Trace.preStatesAndSignals OldestFirst tr
@@ -94,32 +87,6 @@ passConcreteValidation tr = do
       Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
       where
         aenv = tr ^. traceEnv
-
--- TODO: remove this function if not needed or remove duplication
--- passConcreteValidationIO
---   :: MonadIO m
---   => Trace CHAIN -> m ()
--- passConcreteValidationIO  tr = do
---   config <- readMainetCfg
---   let initSt =
---         either (panic . show) identity $ Concrete.initialChainValidationState config
---   let res =
---         foldM (elaborateAndUpdate config) initSt $
---         Trace.preStatesAndSignals OldestFirst tr
---   either (panic . show) (const $ return ()) res
---   where
---     elaborateAndUpdate
---       :: Genesis.Config
---       -> Concrete.ChainValidationState
---       -> (Transition.State CHAIN, Abstract.Block)
---       -> Either Concrete.ChainValidationError Concrete.ChainValidationState
---     elaborateAndUpdate config cst (ast, ab) =
---       Concrete.updateChain config cst (E.elaborateBS config aenv ast cst ab)
---       where
---         aenv = tr ^. traceEnv
-
--- randomTrace :: IO (Trace CHAIN)
--- randomTrace = Gen.sample trace
 
 -- TODO: put this in the STS tests.
 prop_blockIssuersAreDelegates :: Property
@@ -139,7 +106,8 @@ prop_blockIssuersAreDelegates =
              issuer = bk ^. Abstract.bHeader . Abstract.bIssuer
              dm = st ^. disL . Deleg.delegationMap
 
---  | Make a config from the initial environment of the trace.
+--  | Make a genesis configuration from an initial abstract environment of the
+--  | trace.
 abEnvToCfg
   :: Transition.Environment CHAIN
   -> Genesis.Config
@@ -158,12 +126,10 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       , Genesis.gdProtocolParameters =
           gPps
       , Genesis.gdK =
-        -- TODO: for now this is a constant. It will come from the environment
-        -- once we add the update mechanism (which requires the K parameter).
-          BlockCount  (fromIntegral $ pps ^. bkSgnCntW)-- This is configSlotSecurityParam config
           -- TODO: this should be a different protocol parameter once we have
           -- an abstract protocol parameter for k. Then we need to solve the
           -- problem that in the concrete implementation k and w are the same.
+          BlockCount  (fromIntegral $ pps ^. bkSgnCntW)
       , Genesis.gdProtocolMagic =
           dummyProtocolMagic
       , Genesis.gdAvvmDistr =
@@ -200,11 +166,3 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       $ zip (mkStakeholderId . elaborateVKeyGenesis <$> vkgs') [1..]
 
     vkgs' = Set.toList vkgs
-
--- | Make a concrete chain validation state from an abstract state.
---
--- TODO: we might not need this if we make a configuration from the genesis environment.
-abStToInitSt
-  :: Transition.State CHAIN
-  -> Concrete.ChainValidationState
-abStToInitSt = undefined
