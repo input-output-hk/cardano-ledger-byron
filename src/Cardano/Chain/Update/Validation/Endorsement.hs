@@ -2,7 +2,12 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
-  ( registerEndorsement
+  ( Environment (..)
+  , State (..)
+  , Endorsement
+  , CandidateProtocolVersion
+  , register
+  , Error
   )
 where
 
@@ -31,8 +36,8 @@ data Environment = Environment
   , numGenesisKeys            :: !Word8
   -- ^ Number of genesis keys. This is used in combination with the
   -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
-  -- genesis keys that need to endorse a new protocol version for it to be considered for
-  -- adoption.
+  -- genesis keys that need to endorse a new protocol version for it to be
+  -- considered for adoption.
   }
 
 data State = State
@@ -66,9 +71,9 @@ data Error
 -- | Register an endorsement.
 --
 -- This corresponds to the @UPEND@ rule.
-registerEndorsement
+register
   :: MonadError Error m => Environment -> State -> Endorsement -> m State
-registerEndorsement env st endorsement =
+register env st endorsement =
   case M.toList (M.filter ((== pv) . fst) registeredUpdateProposals) of
     -- We ignore endorsement of proposals that aren't registered
     [] -> pure st
