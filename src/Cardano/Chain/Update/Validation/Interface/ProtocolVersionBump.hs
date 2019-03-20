@@ -35,6 +35,8 @@ data State = State
 -- | Change the protocol version when an epoch change is detected, and there is
 -- a candidate protocol update that was confirmed at least @2 * k@ slots ago,
 -- where @k@ is the chain security parameter.
+--
+-- This corresponds to the @PVBUMP@ rules in the Byron ledger specification.
 tryBumpVersion
   :: Environment
   -> State
