@@ -20,6 +20,7 @@ import Cardano.Chain.Common
 import Cardano.Chain.Delegation.Validation
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolParameters
+import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import Cardano.Chain.Update.ProtocolVersion
 import Cardano.Chain.Update.SoftforkRule
 import Cardano.Chain.Update.Vote
@@ -55,7 +56,7 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
     -- later than 2k slots before the end of an epoch can be adopted in
     -- following epochs.
   , cpvProtocolVersion    :: ProtocolVersion
-  , cpvProtocolParameters :: ProtocolParameters
+  , cpvProtocolParameters :: ProtocolParameterUpdate
   }
 
 data Endorsement = Endorsement

@@ -9,6 +9,7 @@ module Cardano.Chain.Update.ProtocolParameterUpdate
   ( ProtocolParameterUpdate(..)
   , isEmpty
   , apply
+  , empty
   )
 where
 

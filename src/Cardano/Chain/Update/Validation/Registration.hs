@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Validation rules for registering updates
 --
@@ -21,6 +22,12 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ApplicationName
 import Cardano.Chain.Update.ProtocolParameters
+import Cardano.Chain.Update.ProtocolParameterUpdate
+  ( ProtocolParameterUpdate
+  , ppuMaxBlockSize
+  , ppuMaxTxSize
+  , ppuScriptVersion
+  )
 import qualified Cardano.Chain.Update.ProtocolParameterUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion
 import Cardano.Chain.Update.SoftwareVersion
@@ -35,7 +42,7 @@ data State = State
   , rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
   }
 
-type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameters)
+type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameterUpdate)
 type SoftwareUpdateProposals = Map UpId SoftwareVersion
 
 type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, FlatSlotId)
@@ -159,17 +166,18 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
   pvCanFollow newPV adoptedPV
     `orThrowError` RegistrationInvalidProtocolVersion newPV
 
-  canUpdate adoptedPP newPP proposal
+  canUpdate adoptedPP ppu proposal
 
-  pure $ M.insert (recoverUpId proposal) (newPV, newPP) registeredPUPs
+  pure $ M.insert (recoverUpId proposal) (newPV, ppu) registeredPUPs
  where
   body  = proposalBody proposal
   newPV = pbProtocolVersion body
   ppu   = pbProtocolParameterUpdate body
-  newPP = PPU.apply ppu adoptedPP
-
 
 -- | Check that the new 'ProtocolVersion' is a valid next version
+--
+-- FIXME: this predicate should be checked at the moment of adoption, since the
+-- current parameters might have changed.
 pvCanFollow :: ProtocolVersion -> ProtocolVersion -> Bool
 pvCanFollow newPV adoptedPV = adoptedPV < newPV && isNextVersion
  where
@@ -184,46 +192,69 @@ pvCanFollow newPV adoptedPV = adoptedPV < newPV && isNextVersion
 -- | Check that the new 'ProtocolParameters' represent a valid update
 --
 --   This is where we enforce constraints on how the 'ProtocolParameters' change
+--
+-- FIXME: this predicate should be checked at the moment of adoption, since the
+-- current parameters might have changed.
 canUpdate
   :: MonadError Error m
   => ProtocolParameters
-  -> ProtocolParameters
+  -> ProtocolParameterUpdate
   -> AProposal ByteString
   -> m ()
-canUpdate adoptedPP newPP proposal = do
+canUpdate adoptedPP upp proposal = do
 
   -- Check that the proposal size is less than the maximum
   (proposalSize <= maxProposalSize) `orThrowError` RegistrationProposalTooLarge
     (TooLarge maxProposalSize proposalSize)
 
   -- Check that the new maximum block size is no more than twice the current one
-  (newMaxBlockSize <= 2 * adoptedMaxBlockSize)
+  (newMaxBlockSize ?<= 2 * adoptedMaxBlockSize)
     `orThrowError` RegistrationMaxBlockSizeTooLarge
-                    (TooLarge adoptedMaxBlockSize newMaxBlockSize)
+                    (TooLarge adoptedMaxBlockSize (value newMaxBlockSize))
 
   -- Check that the new max transaction size is less than the new max block size
-  (newMaxTxSize <= newMaxBlockSize) `orThrowError` RegistrationMaxTxSizeTooLarge
-    (TooLarge newMaxBlockSize newMaxTxSize)
+  (newMaxTxSize ?<=?  newMaxBlockSize) `orThrowError` RegistrationMaxTxSizeTooLarge
+    (TooLarge (value newMaxBlockSize) (value newMaxTxSize))
 
   -- Check that the new script version is either the same or incremented
-  (0 <= scriptVersionDiff && scriptVersionDiff <= 1)
+  (0 <=? scriptVersionDiff && scriptVersionDiff ?<= 1)
     `orThrowError` RegistrationInvalidScriptVersion
                     adoptedScriptVersion
-                    newScriptVersion
+                    (value newScriptVersion)
  where
   proposalSize :: Natural
   proposalSize         = fromIntegral . BS.length $ proposalAnnotation proposal
   maxProposalSize      = ppMaxProposalSize adoptedPP
 
   adoptedMaxBlockSize  = ppMaxBlockSize adoptedPP
-  newMaxBlockSize      = ppMaxBlockSize newPP
+  newMaxBlockSize      = ppuMaxBlockSize upp
 
-  newMaxTxSize         = ppMaxTxSize newPP
+  newMaxTxSize         = ppuMaxTxSize upp
 
   adoptedScriptVersion = ppScriptVersion adoptedPP
-  newScriptVersion     = ppScriptVersion newPP
-  scriptVersionDiff    = newScriptVersion - adoptedScriptVersion
+  newScriptVersion     = ppuScriptVersion upp
+  scriptVersionDiff    = (\x -> x - adoptedScriptVersion) <$> newScriptVersion
 
+  value (Just x) = x
+  value Nothing =
+    panic $  "Unexpected 'Nothing' value."
+          <> " If a condition '?<=' or '<=?' failed it means "
+          <> "there was a value which made the comparison evaluate to 'False'."
+
+(?<=) :: Ord a => Maybe a -> a -> Bool
+x ?<= y = fromMaybe True $ (<= y) <$> x
+
+infixl 4 ?<=
+
+(<=?) :: Ord a => a -> Maybe a -> Bool
+x <=? y = fromMaybe True $ (x <=) <$> y
+
+infixl 4 <=?
+
+(?<=?) :: Ord a => Maybe a -> Maybe a -> Bool
+x ?<=? y = fromMaybe True $ (<=) <$> x <*> y
+
+infixl 4 ?<=?
 
 -- | Check that a new 'SoftwareVersion' is valid
 --

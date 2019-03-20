@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
-  ()
+  ( Environment (..)
+  , State (..)
+  , tryBumpVersion
+  )
 where
 
 import Cardano.Prelude hiding (State)
@@ -12,6 +15,7 @@ import Data.Maybe (fromJust)
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId, twice)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
+import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
   ( CandidateProtocolUpdate(CandidateProtocolUpdate)
@@ -27,8 +31,8 @@ data Environment = Environment
 
 data State = State
   { currentEpoch              :: !EpochIndex
-  , adoptedProtocolVersion    :: !ProtocolVersion
-  , adoptedProtocolParameters :: !ProtocolParameters
+  , nextProtocolVersion       :: !ProtocolVersion
+  , nextProtocolParameters    :: !ProtocolParameterUpdate
   , candidateProtocolVersions :: ![CandidateProtocolUpdate]
   }
 
@@ -53,8 +57,8 @@ tryBumpVersion env st lastSeenEpoch =
                     <> "since this was checked in this if branch"
     in
       st { currentEpoch = lastSeenEpoch
-         , adoptedProtocolVersion = cpvProtocolVersion
-         , adoptedProtocolParameters = cpvProtocolParameters
+         , nextProtocolVersion = cpvProtocolVersion
+         , nextProtocolParameters = cpvProtocolParameters
          , candidateProtocolVersions =
              filter ((currentSlot - twice k <) . cpvSlot) candidateProtocolVersions
          }
@@ -65,8 +69,6 @@ tryBumpVersion env st lastSeenEpoch =
 
     State
       { currentEpoch
-      , adoptedProtocolVersion
-      , adoptedProtocolParameters
       , candidateProtocolVersions } = st
 
     stableCandidates =

@@ -28,6 +28,8 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
+import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
+import qualified Cardano.Chain.Update.ProtocolParameterUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   ( NumSoftwareVersion
@@ -41,6 +43,8 @@ import Cardano.Chain.Update.Validation.Endorsement
   , endorsementProtocolVersion
   )
 import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
+import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump (tryBumpVersion)
+import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
 import Cardano.Chain.Update.Vote (UpId, AProposal, recoverUpId, AVote)
@@ -68,7 +72,7 @@ data State = State
     -- ^ Candidate protocol versions
   , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
     -- ^ Current application versions (by application name)
-  , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameters))
+  , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameterUpdate))
     -- ^ Registered protocol update proposals
   , registeredSoftwareUpdateProposals :: !(Map UpId SoftwareVersion)
     -- ^ Registered software update proposals
@@ -285,4 +289,60 @@ registerEpoch
   -> EpochIndex
   -- ^ Epoch seen on the block.
   -> m State
-registerEpoch = undefined
+registerEpoch env st lastSeenEpoch = do
+  let PVBump.State e' pv' pps' fads' = tryBumpVersion subEnv subSt lastSeenEpoch
+      -- Keep only those update proposals that have a version lower than the
+      -- candidate to be adopted.
+      --
+      -- TODO: this could be optimized for the case in which there is no change
+      -- in protocol version
+      pidsKeep =
+        S.fromList [ pid
+                   | (pid, (pvi, _)) <- M.toList registeredProtocolUpdateProposals
+                   , pv' < pvi
+                   ]
+  pure $!
+    st { currentEpoch = e'
+       , adoptedProtocolVersion = pv'
+       , adoptedProtocolParameters = undefined -- TODO: we need to define a
+                                               -- different structure for the
+                                               -- proposed changes in the
+                                               -- protocol parameters.   newPP = PPU.apply ppu adoptedPP
+       , registeredProtocolUpdateProposals =
+           M.restrictKeys registeredProtocolUpdateProposals pidsKeep
+       , confirmedProposals =
+           M.restrictKeys confirmedProposals pidsKeep
+       , proposalVotes =
+           M.restrictKeys proposalVotes pidsKeep
+       , registeredEndorsements =
+           S.filter ((pv' <) . endorsementProtocolVersion) registeredEndorsements
+       , proposalRegistrationSlot =
+           M.restrictKeys proposalRegistrationSlot pidsKeep
+       }
+
+  where
+    subEnv = PVBump.Environment k currentSlot
+
+    subSt =
+      PVBump.State
+        currentEpoch
+        adoptedProtocolVersion
+        PPU.empty -- FIXME: the PVBUMP rule doesn't use this parameter, so we should update the spec accordingly.
+        candidateProtocolVersions
+
+    Environment
+      { k
+      , currentSlot
+      } = env
+
+    State
+      { currentEpoch
+      , adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , candidateProtocolVersions
+      , registeredProtocolUpdateProposals
+      , confirmedProposals
+      , proposalVotes
+      , registeredEndorsements
+      , proposalRegistrationSlot
+      } = st
