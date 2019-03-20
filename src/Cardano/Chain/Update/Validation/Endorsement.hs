@@ -4,8 +4,8 @@
 module Cardano.Chain.Update.Validation.Endorsement
   ( Environment (..)
   , State (..)
-  , Endorsement
-  , CandidateProtocolVersion
+  , Endorsement (..)
+  , CandidateProtocolUpdate (..)
   , register
   , Error
   )
@@ -25,6 +25,7 @@ import Cardano.Chain.Update.SoftforkRule
 import Cardano.Chain.Update.Vote
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 
+
 data Environment = Environment
   { k                         :: !BlockCount
   -- ^ Chain stability parameter.
@@ -41,12 +42,11 @@ data Environment = Environment
   }
 
 data State = State
-  { candidateProtocolVersions :: [CandidateProtocolVersion]
+  { candidateProtocolVersions :: [CandidateProtocolUpdate]
   , registeredEndorsements :: Set Endorsement
   }
 
-
-data CandidateProtocolVersion = CandidateProtocolVersion
+data CandidateProtocolUpdate = CandidateProtocolUpdate
   { cpvSlot               :: FlatSlotId
     -- ^ Slot at which this protocol version and parameters gathered enough
     -- endorsements and became a candidate. This is used to check which
@@ -81,25 +81,25 @@ register env st endorsement =
     -- Try to register the endorsement and check if we can adopt the proposal
     [(upId, (_, pps'))] -> if isConfirmedAndStable upId
       then if canAdopt numGenesisKeys pps registeredEndorsements' pv
--- Register the endorsement and adopt the proposal in the next epoch
+        -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
-            cpv = CandidateProtocolVersion
+            cpv = CandidateProtocolUpdate
               { cpvSlot = currentSlot
               , cpvProtocolVersion = pv
               , cpvProtocolParameters = pps'
               }
             cpvs' =
-              updateCandidateProtocolVersions candidateProtocolVersions cpv
+              updateCandidateProtocolUpdates candidateProtocolVersions cpv
           pure $ State
             { candidateProtocolVersions = cpvs'
             , registeredEndorsements    = registeredEndorsements'
             }
 
--- Just register the endorsement if we cannot adopt
+        -- Just register the endorsement if we cannot adopt
         else pure $ st { registeredEndorsements = registeredEndorsements' }
 
--- Ignore the endorsement if the registration isn't stable
+      -- Ignore the endorsement if the registration isn't stable
       else pure st
 
     -- Throw an error if there are multiple proposals for this protocol version
@@ -110,9 +110,9 @@ register env st endorsement =
 
   isConfirmedAndStable upId = upId `M.member` scps
    where
-      -- Stable and confirmed proposals.
+    -- Stable and confirmed proposals.
     scps     = M.filter (stableAt <=) confirmedProposals
-    stableAt = currentSlot - FlatSlotId (2 * getBlockCount k)
+    stableAt = currentSlot - twice k
 
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
@@ -158,17 +158,17 @@ canAdopt ngk pps endorsements protocolVersion =
     ((== protocolVersion) . endorsementProtocolVersion)
     endorsements
 
--- | Add a newly endorsed protocol version to the 'CandidateProtocolVersion's
+-- | Add a newly endorsed protocol version to the 'CandidateProtocolUpdate's
 --
 --   We only add it to the list if the 'ProtocolVersion' is strictly greater
---   than all other `CandidateProtocolVersion`s
+--   than all other `CandidateProtocolUpdate`s
 --
 -- This corresponds to the @FADS@ rule.
-updateCandidateProtocolVersions
-  :: [CandidateProtocolVersion]
-  -> CandidateProtocolVersion
-  -> [CandidateProtocolVersion]
-updateCandidateProtocolVersions [] cpv = [cpv]
-updateCandidateProtocolVersions cpvs@(cpv : _) cpv'
+updateCandidateProtocolUpdates
+  :: [CandidateProtocolUpdate]
+  -> CandidateProtocolUpdate
+  -> [CandidateProtocolUpdate]
+updateCandidateProtocolUpdates [] cpv = [cpv]
+updateCandidateProtocolUpdates cpvs@(cpv : _) cpv'
   | cpvProtocolVersion cpv < cpvProtocolVersion cpv' = cpv' : cpvs
   | otherwise = cpvs

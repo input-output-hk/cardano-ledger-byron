@@ -35,16 +35,20 @@ import Cardano.Chain.Update.SoftwareVersion
   , svAppName
   , svNumber
   )
-import Cardano.Chain.Update.Validation.Endorsement (Endorsement, CandidateProtocolVersion)
+import Cardano.Chain.Update.Validation.Endorsement
+  ( CandidateProtocolUpdate
+  , Endorsement
+  , endorsementProtocolVersion
+  )
 import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
 import Cardano.Chain.Update.Vote (UpId, AProposal, recoverUpId, AVote)
 import Cardano.Crypto (ProtocolMagicId)
 
+
 data Environment = Environment
   { protocolMagic :: ProtocolMagicId
-  , currentEpoch  :: !EpochIndex
   , currentSlot   :: !FlatSlotId
   , delegationMap :: !(Map StakeholderId StakeholderId)
   , k             :: !BlockCount
@@ -55,13 +59,13 @@ data Environment = Environment
 
 -- | Update interface state.
 data State = State
-  { prevEpoch                         :: !EpochIndex
-    -- ^ Previously seen epoch
+  { currentEpoch                      :: !EpochIndex
+    -- ^ Current epoch
   , adoptedProtocolVersion            :: !ProtocolVersion
   , adoptedProtocolParameters         :: !ProtocolParameters
     -- ^ Adopted protocol parameters
-  , candidateProtocolVersions         :: ![CandidateProtocolVersion]
-    -- ^ Future protocol version adoptions
+  , candidateProtocolVersions         :: ![CandidateProtocolUpdate]
+    -- ^ Candidate protocol versions
   , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
     -- ^ Current application versions (by application name)
   , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameters))
@@ -86,7 +90,7 @@ data Error
 
 -- | Register an update proposal.
 --
--- This corresponds to the @UPIREG@ rules in the spec.
+-- This corresponds to the @UPIREG@ rule in the Byron ledger specification.
 registerProposal
   :: MonadError Error m
   => Environment
@@ -102,6 +106,7 @@ registerProposal env st proposal = do
        , registeredSoftwareUpdateProposals = raus'
        , proposalRegistrationSlot = M.insert (recoverUpId proposal) currentSlot pws
        }
+
   where
     Environment
       { protocolMagic = pm
@@ -124,7 +129,9 @@ registerProposal env st proposal = do
 --
 -- If the proposal gets enough confirmations after adding the given vote, then
 -- it will get added to the set of confirmed proposals.
--- This corresponds to the @UPIVOTE@ rules in the spec.
+--
+-- This corresponds to the @UPIVOTE@ rule in the Byron ledger
+-- specification.
 --
 registerVote
   :: MonadError Error m
@@ -151,7 +158,6 @@ registerVote env st vote = do
        -- TODO: consider using the `Relation` instances from `fm-ledger-rules` (see `Ledger.Core`)
 
   where
-
     Environment
       { protocolMagic = pm
       , currentSlot = sn
@@ -178,6 +184,9 @@ registerVote env st vote = do
 -- An endorsement represents the fact that a genesis stakeholder is ready to
 -- start using the protocol version being endorsed. In the decentralized era
 -- only genesis key holders can endorse protocol versions.
+--
+-- This corresponds to the @UPIEND@ rule in the Byron ledger
+-- specification.
 registerEndorsement
   :: MonadError Error m
   => Environment
@@ -191,7 +200,7 @@ registerEndorsement env st endorsement = do
   ngk <- if M.size delegationMap <= fromIntegral (maxBound :: Word8)
          then pure $! fromIntegral (M.size delegationMap)
          else throwError $ NumberOfGenesisKeysTooLarge (M.size delegationMap)
-  Endorsement.State fads bvs <-
+  Endorsement.State fads' bvs' <-
     Endorsement.register (subEnv ngk) subSt endorsement
       `wrapError` Endorsement
   let
@@ -200,18 +209,26 @@ registerEndorsement env st endorsement = do
     sn = currentSlot
 
     nonExpiredPids =
-      M.keysSet $ M.filter (<= currentSlot - u) proposalRegistrationSlot
+      M.keysSet $ M.filter (currentSlot - u <=) proposalRegistrationSlot
 
     confirmedPids = M.keysSet confirmedProposals
 
     registeredProtocolUpdateProposals' =
       M.restrictKeys registeredUpdateProposals pidsKeep
 
-    vsKeep = S.fromList $ snd <$> M.elems registeredProtocolUpdateProposals'
+    vsKeep = S.fromList $ fst <$> M.elems registeredProtocolUpdateProposals'
 
   pure $!
-    st { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
-       , proposalRegistrationSlot = M.restrictKeys proposalRegistrationSlot pidsKeep
+    st { candidateProtocolVersions = fads'
+       , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+       , registeredSoftwareUpdateProposals =
+           M.restrictKeys registeredSoftwareUpdateProposals pidsKeep
+       , proposalVotes =
+           M.restrictKeys proposalVotes pidsKeep
+       , registeredEndorsements =
+           S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements
+       , proposalRegistrationSlot =
+           M.restrictKeys proposalRegistrationSlot pidsKeep
        }
 
   where
@@ -235,7 +252,9 @@ registerEndorsement env st endorsement = do
       { adoptedProtocolParameters
       , confirmedProposals
       , registeredProtocolUpdateProposals = registeredUpdateProposals
+      , registeredSoftwareUpdateProposals
       , candidateProtocolVersions
+      , proposalVotes
       , registeredEndorsements
       , proposalRegistrationSlot
       } = st
@@ -252,3 +271,18 @@ registerEndorsement env st endorsement = do
     -- https://github.com/input-output-hk/cardano-sl/search?q=updateImplicit&unscoped_q=updateImplicit
     --
     -- For a proposal time-to-live we might want a substantially lower value.
+
+-- | Register an epoch. Whenever an epoch number is seen on a block this epoch
+-- number should be passed to this function so that on epoch change the
+-- protocol parameters can be updated, provided that there is an update
+-- candidate that was accepted and endorsed by a majority of the genesis keys.
+--
+-- This corresponds to the @UPIEC@ rule in the Byron ledger specification.
+registerEpoch
+  :: MonadError Error m
+  => Environment
+  -> State
+  -> EpochIndex
+  -- ^ Epoch seen on the block.
+  -> m State
+registerEpoch = undefined
