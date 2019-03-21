@@ -34,7 +34,7 @@ data Environment = Environment
   , delegationMap             :: !(Map StakeholderId StakeholderId)
   , adoptedProtocolParameters :: !ProtocolParameters
   , confirmedProposals        :: !(Map UpId FlatSlotId)
-  , registeredUpdateProposals :: !Registration.ProtocolUpdateProposals
+  , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
   , numGenesisKeys            :: !Word8
   -- ^ Number of genesis keys. This is used in combination with the
   -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
@@ -75,7 +75,7 @@ data Error
 register
   :: MonadError Error m => Environment -> State -> Endorsement -> m State
 register env st endorsement =
-  case M.toList (M.filter ((== pv) . fst) registeredUpdateProposals) of
+  case M.toList (M.filter ((== pv) . fst) registeredProtocolUpdateProposals) of
     -- We ignore endorsement of proposals that aren't registered
     [] -> pure st
 
@@ -106,7 +106,7 @@ register env st endorsement =
     -- Throw an error if there are multiple proposals for this protocol version
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
  where
-  Environment { k, currentSlot, delegationMap, confirmedProposals, registeredUpdateProposals, numGenesisKeys }
+  Environment { k, currentSlot, delegationMap, confirmedProposals, registeredProtocolUpdateProposals, numGenesisKeys }
     = env
 
   isConfirmedAndStable upId = upId `M.member` scps

@@ -85,7 +85,7 @@ data State = State
     -- ^ Update proposals votes
   , registeredEndorsements            :: !(Set Endorsement)
     -- ^ Update proposals endorsements
-  , proposalRegistrationSlot          :: Map UpId FlatSlotId
+  , proposalRegistrationSlot          :: !(Map UpId FlatSlotId)
     -- ^ Slot at which an update proposal was registered
   }
 
@@ -105,32 +105,43 @@ registerProposal
   -> AProposal ByteString
   -> m State
 registerProposal env st proposal = do
-  Registration.State rpus' raus' <-
-    Registration.registerProposal pm pv pps avs dms regSubSt proposal
-      `wrapError` Registration
+  Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals'
+    <- Registration.registerProposal
+         protocolMagic
+         adoptedProtocolVersion
+         adoptedProtocolParameters
+         appVersions
+         delegationMap
+         regSubSt
+         proposal
+       `wrapError` Registration
   pure $!
-    st { registeredProtocolUpdateProposals = rpus'
-       , registeredSoftwareUpdateProposals = raus'
-       , proposalRegistrationSlot = M.insert (recoverUpId proposal) currentSlot pws
+    st { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+       , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals'
+       , proposalRegistrationSlot =
+           M.insert (recoverUpId proposal) currentSlot proposalRegistrationSlot
        }
 
   where
     Environment
-      { protocolMagic = pm
+      { protocolMagic
       , currentSlot
-      , delegationMap = dms
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolVersion = pv
-      , adoptedProtocolParameters = pps
-      , appVersions = avs
-      , registeredProtocolUpdateProposals = rpus
-      , registeredSoftwareUpdateProposals = raus
-      , proposalRegistrationSlot = pws
+      { adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , appVersions
+      , registeredProtocolUpdateProposals
+      , registeredSoftwareUpdateProposals
+      , proposalRegistrationSlot
       } = st
 
-    regSubSt = Registration.State rpus raus
+    regSubSt =
+      Registration.State
+        registeredProtocolUpdateProposals
+        registeredSoftwareUpdateProposals
 
 -- | Register a vote for the given proposal.
 --
@@ -147,44 +158,54 @@ registerVote
   -> AVote ByteString
   -> m State
 registerVote env st vote = do
-  Voting.State vts' cps' <-
-    Voting.registerVoteWithConfirmation pm subEnv subSt vote
+  Voting.State proposalVotes' confirmedProposals'
+    <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting
   let
-    avsNew =
-      M.fromList $! [ (svAppName sv, (svNumber sv, sn))
-                    | (pid, sv) <- M.toList raus
-                    , pid `elem` M.keys cps'
+    appVersions' =
+      M.fromList $! [ (svAppName sv, (svNumber sv, currentSlot))
+                    | (pid, sv) <- M.toList registeredSoftwareUpdateProposals
+                    , pid `elem` M.keys confirmedProposals'
                     ]
   pure $!
-    st { confirmedProposals = cps'
-       , proposalVotes = vts'
-       , appVersions = M.union avsNew avs
-       , registeredSoftwareUpdateProposals = M.withoutKeys raus (M.keysSet cps)
+    st { confirmedProposals = confirmedProposals'
+       , proposalVotes = proposalVotes'
+       -- Note that is important that the new application versions are passed
+       -- as the first argument of @M.union@, since the values in this first
+       -- argument overwrite the values in the second.
+       , appVersions = M.union appVersions' appVersions
+       , registeredSoftwareUpdateProposals =
+           M.withoutKeys
+             registeredSoftwareUpdateProposals
+             (M.keysSet confirmedProposals)
        }
        -- TODO: consider using the `Relation` instances from `fm-ledger-rules` (see `Ledger.Core`)
 
   where
     Environment
-      { protocolMagic = pm
-      , currentSlot = sn
-      , delegationMap = dms
+      { protocolMagic
+      , currentSlot
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolParameters = pps
+      { adoptedProtocolParameters
       , proposalRegistrationSlot
-      , proposalVotes = vts
-      , confirmedProposals = cps
-      , appVersions =  avs
-      , registeredSoftwareUpdateProposals = raus
+      , proposalVotes
+      , confirmedProposals
+      , appVersions
+      , registeredSoftwareUpdateProposals
       } = st
 
     rups = M.keysSet proposalRegistrationSlot
 
-    subEnv = Voting.Environment sn pps (Voting.RegistrationEnvironment rups dms)
+    subEnv =
+      Voting.Environment
+        currentSlot
+        adoptedProtocolParameters
+        (Voting.RegistrationEnvironment rups delegationMap)
 
-    subSt = Voting.State vts cps
+    subSt = Voting.State proposalVotes confirmedProposals
 
 -- | Register an endorsement.
 --
@@ -207,9 +228,9 @@ registerEndorsement env st endorsement = do
   ngk <- if M.size delegationMap <= fromIntegral (maxBound :: Word8)
          then pure $! fromIntegral (M.size delegationMap)
          else throwError $ NumberOfGenesisKeysTooLarge (M.size delegationMap)
-  Endorsement.State fads' bvs' <-
-    Endorsement.register (subEnv ngk) subSt endorsement
-      `wrapError` Endorsement
+  Endorsement.State candidateProtocolVersions' registeredEndorsements'
+    <- Endorsement.register (subEnv ngk) subSt endorsement
+       `wrapError` Endorsement
   let
     pidsKeep = nonExpiredPids `union` confirmedPids
 
@@ -221,19 +242,19 @@ registerEndorsement env st endorsement = do
     confirmedPids = M.keysSet confirmedProposals
 
     registeredProtocolUpdateProposals' =
-      M.restrictKeys registeredUpdateProposals pidsKeep
+      M.restrictKeys registeredProtocolUpdateProposals pidsKeep
 
     vsKeep = S.fromList $ fst <$> M.elems registeredProtocolUpdateProposals'
 
   pure $!
-    st { candidateProtocolVersions = fads'
+    st { candidateProtocolVersions = candidateProtocolVersions'
        , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
        , registeredSoftwareUpdateProposals =
            M.restrictKeys registeredSoftwareUpdateProposals pidsKeep
        , proposalVotes =
            M.restrictKeys proposalVotes pidsKeep
        , registeredEndorsements =
-           S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements
+           S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements'
        , proposalRegistrationSlot =
            M.restrictKeys proposalRegistrationSlot pidsKeep
        }
@@ -246,7 +267,7 @@ registerEndorsement env st endorsement = do
         delegationMap
         adoptedProtocolParameters
         confirmedProposals
-        registeredUpdateProposals
+        registeredProtocolUpdateProposals
         n -- Number of genesis keys
 
     Environment
@@ -258,7 +279,7 @@ registerEndorsement env st endorsement = do
     State
       { adoptedProtocolParameters
       , confirmedProposals
-      , registeredProtocolUpdateProposals = registeredUpdateProposals
+      , registeredProtocolUpdateProposals
       , registeredSoftwareUpdateProposals
       , candidateProtocolVersions
       , proposalVotes
@@ -287,24 +308,27 @@ registerEpoch
   -- ^ Epoch seen on the block.
   -> m State
 registerEpoch env st lastSeenEpoch = do
-  let PVBump.State e' pv' pps' fads' = tryBumpVersion subEnv subSt lastSeenEpoch
+  let PVBump.State
+        currentEpoch'
+        adoptedProtocolVersion'
+        nextProtocolParameters'
+        candidateProtocolVersions'
+        = tryBumpVersion subEnv subSt lastSeenEpoch
       -- Keep only those update proposals that have a version lower than the
       -- candidate to be adopted.
       --
-      -- TODO: this could be optimized for the case in which there is no change
+      -- NOTE: this could be optimized for the case in which there is no change
       -- in protocol version
       pidsKeep =
         S.fromList [ pid
                    | (pid, (pvi, _)) <- M.toList registeredProtocolUpdateProposals
-                   , pv' < pvi
+                   , adoptedProtocolVersion' < pvi
                    ]
   pure $!
-    st { currentEpoch = e'
-       , adoptedProtocolVersion = pv'
-       , adoptedProtocolParameters = undefined -- TODO: we need to define a
-                                               -- different structure for the
-                                               -- proposed changes in the
-                                               -- protocol parameters.   newPP = PPU.apply ppu adoptedPP
+    st { currentEpoch = currentEpoch'
+       , adoptedProtocolVersion = adoptedProtocolVersion'
+       , adoptedProtocolParameters =
+           PPU.apply nextProtocolParameters' adoptedProtocolParameters
        , registeredProtocolUpdateProposals =
            M.restrictKeys registeredProtocolUpdateProposals pidsKeep
        , confirmedProposals =
@@ -312,7 +336,8 @@ registerEpoch env st lastSeenEpoch = do
        , proposalVotes =
            M.restrictKeys proposalVotes pidsKeep
        , registeredEndorsements =
-           S.filter ((pv' <) . endorsementProtocolVersion) registeredEndorsements
+           S.filter ((adoptedProtocolVersion' <) . endorsementProtocolVersion)
+                    registeredEndorsements
        , proposalRegistrationSlot =
            M.restrictKeys proposalRegistrationSlot pidsKeep
        }
