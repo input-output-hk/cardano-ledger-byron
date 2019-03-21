@@ -27,7 +27,10 @@ import Cardano.Chain.Common.StakeholderId (StakeholderId)
 import Cardano.Chain.Common.BlockCount (BlockCount)
 
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
-import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
+import Cardano.Chain.Update.ProtocolParameters
+  ( ProtocolParameters
+  , ppUpdateImplicit
+  )
 import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import qualified Cardano.Chain.Update.ProtocolParameterUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -268,13 +271,7 @@ registerEndorsement env st endorsement = do
         candidateProtocolVersions
         registeredEndorsements
 
-    u = undefined
-    -- TODO: what should our proposal time-to-live be?
-    --
-    -- We only have this, but it concerns the threshold for implicit adoption.
-    -- https://github.com/input-output-hk/cardano-sl/search?q=updateImplicit&unscoped_q=updateImplicit
-    --
-    -- For a proposal time-to-live we might want a substantially lower value.
+    u = ppUpdateImplicit adoptedProtocolParameters
 
 -- | Register an epoch. Whenever an epoch number is seen on a block this epoch
 -- number should be passed to this function so that on epoch change the
