@@ -10,11 +10,8 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import Data.Maybe (fromJust)
-
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId, twice)
-import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -53,6 +50,7 @@ tryBumpVersion env st lastSeenEpoch =
           { cpvProtocolVersion
           , cpvProtocolParameters
           } = fromMaybe err $ head stableCandidates
+        err :: CandidateProtocolUpdate
         err = panic $  "The list of stable candidates shouldn't be empty,"
                     <> "since this was checked in this if branch"
     in

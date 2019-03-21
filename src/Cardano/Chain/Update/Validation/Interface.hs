@@ -13,6 +13,8 @@ module Cardano.Chain.Update.Validation.Interface
     -- * Interface functions
   , registerProposal
   , registerVote
+  , registerEndorsement
+  , registerEpoch
   )
 where
 
@@ -237,8 +239,6 @@ registerEndorsement env st endorsement = do
   let
     pidsKeep = nonExpiredPids `union` confirmedPids
 
-    sn = currentSlot
-
     nonExpiredPids =
       M.keysSet $ M.filter (currentSlot - u <=) proposalRegistrationSlot
 
@@ -332,6 +332,7 @@ registerEpoch env st lastSeenEpoch = do
        , adoptedProtocolVersion = adoptedProtocolVersion'
        , adoptedProtocolParameters =
            PPU.apply nextProtocolParameters' adoptedProtocolParameters
+       , candidateProtocolVersions = candidateProtocolVersions'
        , registeredProtocolUpdateProposals =
            M.restrictKeys registeredProtocolUpdateProposals pidsKeep
        , confirmedProposals =

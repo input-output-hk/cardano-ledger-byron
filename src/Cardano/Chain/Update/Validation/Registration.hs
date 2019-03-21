@@ -275,6 +275,7 @@ canUpdate adoptedPP upp proposal = do
   newScriptVersion     = ppuScriptVersion upp
   scriptVersionDiff    = (\x -> x - adoptedScriptVersion) <$> newScriptVersion
 
+  value :: Maybe a -> a
   value (Just x) = x
   value Nothing =
     panic $  "Unexpected 'Nothing' value."
@@ -282,12 +283,12 @@ canUpdate adoptedPP upp proposal = do
           <> "there was a value which made the comparison evaluate to 'False'."
 
 (?<=) :: Ord a => Maybe a -> a -> Bool
-x ?<= y = fromMaybe True $ (<= y) <$> x
+x ?<= y = maybe True (<= y) x
 
 infixl 4 ?<=
 
 (<=?) :: Ord a => a -> Maybe a -> Bool
-x <=? y = fromMaybe True $ (x <=) <$> y
+x <=? y = maybe True (x <=) y
 
 infixl 4 <=?
 
