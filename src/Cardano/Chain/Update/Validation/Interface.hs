@@ -55,7 +55,7 @@ import Cardano.Crypto (ProtocolMagicId)
 
 
 data Environment = Environment
-  { protocolMagic :: ProtocolMagicId
+  { protocolMagic :: !ProtocolMagicId
   , currentSlot   :: !FlatSlotId
   , delegationMap :: !(Map StakeholderId StakeholderId)
   , k             :: !BlockCount
@@ -106,14 +106,7 @@ registerProposal
   -> m State
 registerProposal env st proposal = do
   Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals'
-    <- Registration.registerProposal
-         protocolMagic
-         adoptedProtocolVersion
-         adoptedProtocolParameters
-         appVersions
-         delegationMap
-         regSubSt
-         proposal
+    <- Registration.registerProposal subEnv subSt proposal
        `wrapError` Registration
   pure $!
     st { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
@@ -138,7 +131,15 @@ registerProposal env st proposal = do
       , proposalRegistrationSlot
       } = st
 
-    regSubSt =
+    subEnv =
+      Registration.Environment
+        protocolMagic
+        adoptedProtocolVersion
+        adoptedProtocolParameters
+        appVersions
+        delegationMap
+
+    subSt =
       Registration.State
         registeredProtocolUpdateProposals
         registeredSoftwareUpdateProposals

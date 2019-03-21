@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Validation rules for registering updates
@@ -7,7 +8,8 @@
 --   specification
 module Cardano.Chain.Update.Validation.Registration
   ( Error
-  , State(..)
+  , Environment (..)
+  , State (..)
   , ProtocolUpdateProposals
   , registerProposal
   )
@@ -34,6 +36,14 @@ import Cardano.Chain.Update.SoftwareVersion
 import Cardano.Chain.Update.Vote
 import Cardano.Crypto
 
+
+data Environment = Environment
+  { protocolMagic             :: ProtocolMagicId
+  , adoptedProtocolVersion    :: !ProtocolVersion
+  , adoptedProtocolParameters :: !ProtocolParameters
+  , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
+  , delegationMap             :: !(Map StakeholderId StakeholderId)
+  }
 
 -- | State keeps track of registered protocol and software update
 --   proposals
@@ -72,29 +82,36 @@ data TooLarge n = TooLarge
 --   its contents. This corresponds to the @UPREG@ rules in the spec.
 registerProposal
   :: MonadError Error m
-  => ProtocolMagicId
-  -> ProtocolVersion
-  -> ProtocolParameters
-  -> ApplicationVersions
-  -> Map StakeholderId StakeholderId
+  => Environment
   -> State
   -> AProposal ByteString
   -> m State
-registerProposal pm adoptedPV adoptedPP appVersions delegation rs proposal = do
+registerProposal env rs proposal = do
 
   -- Check that the proposer is delegated to by a genesis key
-  not (null $ M.filter (== proposer) delegation)
+  not (null $ M.filter (== proposer) delegationMap)
     `orThrowError` RegistrationInvalidProposer proposer
 
   -- Verify the proposal signature
-  verifySignatureDecoded pm SignUSProposal proposerPK body signature
+  verifySignatureDecoded protocolMagic SignUSProposal proposerPK body sig
     `orThrowError` RegistrationInvalidSignature
 
   -- Check that the proposal is valid
-  registerProposalComponents adoptedPV adoptedPP appVersions rs proposal
+  registerProposalComponents
+    adoptedProtocolVersion adoptedProtocolParameters appVersions rs proposal
+
  where
-  AProposal body proposerPK signature _ = proposal
+  AProposal body proposerPK sig _ = proposal
+
   proposer = mkStakeholderId proposerPK
+
+  Environment
+    { protocolMagic
+    , adoptedProtocolVersion
+    , adoptedProtocolParameters
+    , appVersions
+    , delegationMap
+    } = env
 
 
 -- | Register the individual components of an update proposal
