@@ -46,11 +46,13 @@ import Cardano.Chain.Update.Validation.Endorsement
   , endorsementProtocolVersion
   )
 import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
-import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump (tryBumpVersion)
+import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
+  ( tryBumpVersion
+  )
 import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
-import Cardano.Chain.Update.Vote (UpId, AProposal, recoverUpId, AVote)
+import Cardano.Chain.Update.Vote (AProposal, AVote, UpId, recoverUpId)
 import Cardano.Crypto (ProtocolMagicId)
 
 

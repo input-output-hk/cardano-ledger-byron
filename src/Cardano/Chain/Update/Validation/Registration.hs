@@ -20,10 +20,15 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common
-import Cardano.Chain.Slotting
-import Cardano.Chain.Update.ApplicationName
+import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolParameters
+  ( ProtocolParameters
+  , ppMaxBlockSize
+  , ppMaxProposalSize
+  , ppScriptVersion
+  )
 import Cardano.Chain.Update.ProtocolParameterUpdate
   ( ProtocolParameterUpdate
   , ppuMaxBlockSize
@@ -31,10 +36,28 @@ import Cardano.Chain.Update.ProtocolParameterUpdate
   , ppuScriptVersion
   )
 import qualified Cardano.Chain.Update.ProtocolParameterUpdate as PPU
-import Cardano.Chain.Update.ProtocolVersion
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(ProtocolVersion))
 import Cardano.Chain.Update.SoftwareVersion
+  ( NumSoftwareVersion
+  , SoftwareVersion(SoftwareVersion)
+  )
 import Cardano.Chain.Update.Vote
+  ( AProposal(AProposal)
+  , ProposalBody(ProposalBody)
+  , UpId
+  , pbProtocolParameterUpdate
+  , pbSoftwareVersion
+  , proposalAnnotation
+  , proposalAnnotation
+  , proposalBody
+  , recoverUpId
+  , pbProtocolVersion
+  )
 import Cardano.Crypto
+  ( ProtocolMagicId
+  , SignTag(SignUSProposal)
+  , verifySignatureDecoded
+  )
 
 
 data Environment = Environment
