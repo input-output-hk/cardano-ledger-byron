@@ -9,6 +9,7 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Signing (SignTag(..), sign, toPublic, verifySignature)
 
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -35,8 +36,8 @@ prop_sign = property $ do
   a        <- forAll genData
 
   assert
-    $ verifySignature Dummy.protocolMagicId SignForTestingOnly pk a
-    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifySignature toCBOR Dummy.dummyProtocolMagicId SignForTestingOnly pk a
+    $ sign dummyProtocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when the wrong 'PublicKey' is used
 prop_signDifferentKey :: Property
@@ -47,8 +48,8 @@ prop_signDifferentKey = property $ do
 
   assert
     . not
-    $ verifySignature Dummy.protocolMagicId SignForTestingOnly pk a
-    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifySignature toCBOR Dummy.dummyProtocolMagicId SignForTestingOnly pk a
+    $ sign dummyProtocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when then wrong signature data is used
 prop_signDifferentData :: Property
@@ -59,8 +60,8 @@ prop_signDifferentData = property $ do
 
   assert
     . not
-    $ verifySignature Dummy.protocolMagicId SignForTestingOnly pk b
-    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifySignature toCBOR Dummy.dummyProtocolMagicId SignForTestingOnly pk b
+    $ sign dummyProtocolMagicId SignForTestingOnly sk a
 
 genData :: Gen [Int32]
 genData = Gen.list (Range.constant 0 50) (Gen.int32 Range.constantBounded)
