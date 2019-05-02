@@ -49,6 +49,7 @@ module Cardano.Chain.Block.Header
   , BlockSignature(..)
   , ToSign(..)
   , ConsensusData
+  , AConsensusData(..)
   , consensusData
 
   -- * 'ConsensusData' encoding and decoding
