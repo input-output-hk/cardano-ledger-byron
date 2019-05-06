@@ -24,6 +24,7 @@ module Cardano.Chain.Block.Header
   -- * Accessors
   , headerSlot
   , headerLeaderKey
+  , headerHashAnnotated
   , headerIssuer
   , headerLength
   , headerDifficulty
@@ -116,6 +117,7 @@ import Cardano.Crypto
   , PublicKey
   , SecretKey
   , SignTag(..)
+  , hashDecoded
   , hashHexF
   , proxySign
   , pskIssuerPk
@@ -331,6 +333,9 @@ headerToSign epochSlots h = ToSign
   (unflattenSlotId epochSlots $ headerSlot h)
   (headerDifficulty h)
   (headerExtraData h)
+
+headerHashAnnotated :: AHeader ByteString -> HeaderHash
+headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 
 headerLength :: AHeader ByteString -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation

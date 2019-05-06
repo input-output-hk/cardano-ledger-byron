@@ -19,6 +19,9 @@ module Cardano.Chain.Block.Validation
   , BodyState(..)
   , BodyEnvironment(..)
   , ChainValidationState(..)
+  , cvsLastSlot
+  , cvsPreviousHash
+  , HeaderState(..)
   , initialChainValidationState
   , ChainValidationError
   , HeaderEnvironment(..)
@@ -55,7 +58,6 @@ import Cardano.Chain.Block.Block
   , blockAttributes
   , blockAProtocolMagicId
   , blockDlgPayload
-  , blockHashAnnotated
   , blockHeader
   , blockIssuer
   , blockLength
@@ -70,6 +72,7 @@ import Cardano.Chain.Block.Header
   ( AHeader
   , BlockSignature(..)
   , HeaderHash
+  , headerHashAnnotated
   , headerAttributes
   , headerLength
   , headerSlot
@@ -163,16 +166,26 @@ updateSigningHistory pk sh
 -- ChainValidationState
 --------------------------------------------------------------------------------
 
+data HeaderState = HeaderState
+  { hsLastSlot :: !FlatSlotId
+  , hsSigningHistory :: !SigningHistory
+  , hsPreviousHash :: !(Either GenesisHash HeaderHash)
+  , hsUPIState :: !UPI.State
+  } deriving (Eq, Show, Generic, NFData)
+
 data ChainValidationState = ChainValidationState
-  { cvsLastSlot        :: !FlatSlotId
-  , cvsSigningHistory  :: !SigningHistory
-  , cvsPreviousHash    :: !(Either GenesisHash HeaderHash)
+  { cvsHeaderState     :: !HeaderState
   -- ^ GenesisHash for the previous hash of the zeroth boundary block and
   --   HeaderHash for all others.
   , cvsUtxo            :: !UTxO
-  , cvsUpdateState     :: !UPI.State
   , cvsDelegationState :: !DI.State
   } deriving (Eq, Show, Generic, NFData)
+
+cvsLastSlot :: ChainValidationState -> FlatSlotId
+cvsLastSlot = hsLastSlot . cvsHeaderState
+
+cvsPreviousHash :: ChainValidationState -> Either GenesisHash HeaderHash
+cvsPreviousHash = hsPreviousHash . cvsHeaderState
 
 -- | Create the state needed to validate the zeroth epoch of the chain. The
 --   zeroth epoch starts with a boundary block where the previous hash is the
@@ -184,19 +197,21 @@ initialChainValidationState
 initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
-    { cvsLastSlot       = 0
-    , cvsSigningHistory = SigningHistory
-      { shK = configK config
-      , shStakeholderCounts = M.fromList
-        . map (, BlockCount 0)
-        . M.keys
-        . unGenesisWStakeholders
-        $ configBootStakeholders config
-      , shSigningQueue = Empty
+    { cvsHeaderState = HeaderState {
+        hsLastSlot       = 0
+      , hsSigningHistory = SigningHistory
+        { shK = configK config
+        , shStakeholderCounts = M.fromList
+          . map (, BlockCount 0)
+          . M.keys
+          . unGenesisWStakeholders
+          $ configBootStakeholders config
+        , shSigningQueue = Empty
+        }
+      , hsPreviousHash   = Left $ configGenesisHash config
+      , hsUPIState = UPI.initialState config
       }
-    , cvsPreviousHash   = Left $ configGenesisHash config
     , cvsUtxo           = genesisUtxo config
-    , cvsUpdateState    = UPI.initialState config
     , cvsDelegationState = delegationState
     }
  where
@@ -314,7 +329,7 @@ updateChainBoundary
   -> BoundaryValidationData ByteString
   -> m ChainValidationState
 updateChainBoundary cvs bvd = do
-  case (cvsPreviousHash cvs, boundaryPrevHash bvd) of
+  case (hsPreviousHash . cvsHeaderState $ cvs, boundaryPrevHash bvd) of
     (Left expected, Left actual) ->
         (expected == actual)
           `orThrowError` ChainValidationGenesisHashMismatch expected actual
@@ -333,13 +348,15 @@ updateChainBoundary cvs bvd = do
 
   -- Update the previous hash
   pure $ cvs
-    { cvsPreviousHash =
-      Right
-      . coerce
-      . hashRaw
-      . BSL.fromStrict
-      . wrapBoundaryBytes
-      $ boundaryHeaderBytes bvd
+    { cvsHeaderState = (cvsHeaderState cvs) 
+      { hsPreviousHash =
+        Right
+        . coerce
+        . hashRaw
+        . BSL.fromStrict
+        . wrapBoundaryBytes
+        $ boundaryHeaderBytes bvd
+      }
     }
 
 
@@ -470,9 +487,9 @@ data HeaderEnvironment = HeaderEnvironment
 updateHeader
   :: MonadError ChainValidationError m
   => HeaderEnvironment
-  -> UPI.State
+  -> HeaderState
   -> AHeader ByteString
-  -> m UPI.State
+  -> m HeaderState
 updateHeader env st h = do
   -- Validate the header size
   headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
@@ -481,9 +498,15 @@ updateHeader env st h = do
   length attributes == 0 `orThrowError` ChainValidationHeaderAttributesTooLarge
 
   -- Perform epoch transition
-  epochTransition epochEnv st (headerSlot h)
+  us <- epochTransition epochEnv (hsUPIState st) (headerSlot h)
+
+  pure $ st
+    { hsLastSlot = headerSlot h
+    , hsPreviousHash = Right $ headerHashAnnotated h
+    , hsUPIState = us
+    }
  where
-  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
+  maxHeaderSize = Update.ppMaxHeaderSize . UPI.adoptedProtocolParameters $ hsUPIState st
 
   UnparsedFields attributes = attrRemain $ headerAttributes h
 
@@ -562,7 +585,7 @@ updateBlock config cvs b = do
                     (configProtocolMagicId config)
 
   -- Update the header
-  updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
+  headerState' <- updateHeader headerEnv (cvsHeaderState cvs) (blockHeader b)
 
   let
     bodyEnv = BodyEnvironment
@@ -571,23 +594,21 @@ updateBlock config cvs b = do
         (configReqNetMagic config)
       , k          = configK config
       , numGenKeys
-      , protocolParameters = UPI.adoptedProtocolParameters updateState'
+      , protocolParameters = UPI.adoptedProtocolParameters $ hsUPIState headerState'
       , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
       }
 
     bs = BodyState
       { utxo        = cvsUtxo cvs
-      , updateState = updateState'
+      , updateState = hsUPIState headerState'
       , delegationState = cvsDelegationState cvs
       }
 
   BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
 
   pure $ cvs
-    { cvsLastSlot     = blockSlot b
-    , cvsPreviousHash = Right $ blockHashAnnotated b
+    { cvsHeaderState = headerState' { hsUPIState = updateState }
     , cvsUtxo         = utxo
-    , cvsUpdateState  = updateState
     , cvsDelegationState = delegationState
     }
  where

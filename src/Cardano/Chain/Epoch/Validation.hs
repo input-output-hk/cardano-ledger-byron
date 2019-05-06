@@ -29,6 +29,7 @@ import Cardano.Chain.Block
   , UTxOSize
   , blockSlot
   , calcUTxOSize
+  , cvsLastSlot
   , updateChainBlockOrBoundary
   )
 import Cardano.Chain.Epoch.File
