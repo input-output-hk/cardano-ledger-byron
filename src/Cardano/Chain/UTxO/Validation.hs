@@ -79,7 +79,7 @@ data TxValidationError
 --   3. Output balance + fee = input balance
 --
 --   These are the conditions of the UTxO inference rule in the spec. We
---   actually assume 3 by calculating the fee as output balance - input balance.
+--   actually assume 3 by calculating the fee as input balance - output balance.
 validateTx
   :: MonadError TxValidationError m
   => Environment
