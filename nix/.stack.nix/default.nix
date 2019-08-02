@@ -29,7 +29,6 @@
         cs-blockchain = ./cs-blockchain.nix;
         cardano-shell = ./cardano-shell.nix;
         contra-tracer = ./contra-tracer.nix;
-        iohk-monitoring = ./iohk-monitoring.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         cardano-crypto = ./cardano-crypto.nix;
         };
