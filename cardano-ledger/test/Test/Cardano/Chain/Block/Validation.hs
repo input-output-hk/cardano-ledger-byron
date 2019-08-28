@@ -36,7 +36,7 @@ import qualified Hedgehog.Range as Range
 import System.Environment (lookupEnv)
 
 import Cardano.Chain.Block
-  ( ABlockOrBoundary(..)
+  ( BlockOrBoundary(..)
   , BlockValidationMode (BlockValidation)
   , ChainValidationError
   , ChainValidationState(..)
@@ -120,7 +120,7 @@ foldChainValidationState
   :: ShouldAssertNF
   -> Genesis.Config
   -> ChainValidationState
-  -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+  -> Stream (Of BlockOrBoundary) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO ChainValidationState
 foldChainValidationState shouldAssertNF config cvs blocks =
   S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
@@ -128,13 +128,13 @@ foldChainValidationState shouldAssertNF config cvs blocks =
   validate
     :: MonadIO m
     => ChainValidationState
-    -> ABlockOrBoundary ByteString
+    -> BlockOrBoundary
     -> ExceptT Error m ChainValidationState
   validate c b =
     withExceptT (ErrorChainValidationError (blockOrBoundarySlot b))
       . (`runReaderT` fromBlockValidationMode BlockValidation)
       $ case b of
-          ABOBBoundary bvd -> do
+          BOBBoundary bvd -> do
             case shouldAssertNF of
               AssertNF -> do
                 isNF <- liftIO $ isNormalForm $! c
@@ -146,12 +146,12 @@ foldChainValidationState shouldAssertNF config cvs blocks =
                   )
               NoAssertNF -> pure ()
             updateChainBoundary c bvd
-          ABOBBlock block -> updateBlock config c block
+          BOBBlock block -> updateBlock config c block
 
-  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotNumber
+  blockOrBoundarySlot :: BlockOrBoundary -> Maybe SlotNumber
   blockOrBoundarySlot = \case
-    ABOBBoundary _     -> Nothing
-    ABOBBlock    block -> Just $ blockSlot block
+    BOBBoundary _     -> Nothing
+    BOBBlock    block -> Just $ blockSlot block
 
 
 --------------------------------------------------------------------------------
