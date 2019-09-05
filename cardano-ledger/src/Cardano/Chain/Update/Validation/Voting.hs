@@ -28,7 +28,7 @@ import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.Vote
-  ( AVote(..)
+  ( Vote(..)
   , recoverSignedBytes
   , proposalId
   )
@@ -77,7 +77,7 @@ registerVoteWithConfirmation
   => Annotated ProtocolMagicId ByteString
   -> Environment
   -> State
-  -> AVote ByteString
+  -> Vote
   -> m State
 registerVoteWithConfirmation pm votingEnv vs vote = do
 
@@ -122,7 +122,7 @@ registerVote
   => Annotated ProtocolMagicId ByteString
   -> RegistrationEnvironment
   -> RegisteredVotes
-  -> AVote ByteString
+  -> Vote
   -> m RegisteredVotes
 registerVote pm vre votes vote = do
   -- Check that the proposal being voted on is registered

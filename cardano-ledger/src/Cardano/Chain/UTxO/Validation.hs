@@ -30,6 +30,7 @@ import Cardano.Binary
   , Decoder
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , decodeListLen
   , decodeWord8
@@ -54,9 +55,9 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.UTxO.Tx (Tx(..), TxIn, TxOut(..))
 import Cardano.Chain.UTxO.Compact (CompactTxOut(..), toCompactTxIn)
-import Cardano.Chain.UTxO.TxAux (ATxAux, aTaTx, taWitness)
+import Cardano.Chain.UTxO.TxAux (TxAux(..))
 import Cardano.Chain.UTxO.TxWitness
-  (TxInWitness(..), TxSigData(..), recoverSigData)
+  (TxInWitness(..), TxSigData(..), TxWitness(..), recoverSigData)
 import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
@@ -136,7 +137,7 @@ instance FromCBOR TxValidationError where
     tag <- decodeWord8
     case tag of
       0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
-      1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
+      1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> runReaderT fromCBORAnnotated' mempty <*> fromCBOR <*> fromCBOR
       2 -> checkSize 2 >> TxValidationInvalidWitness <$> fromCBOR
       3 -> checkSize 2 >> TxValidationMissingInput <$> fromCBOR
       4 -> checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
@@ -157,9 +158,9 @@ validateTx
   :: MonadError TxValidationError m
   => Environment
   -> UTxO
-  -> Annotated Tx ByteString
+  -> Tx
   -> m ()
-validateTx env utxo (Annotated tx txBytes) = do
+validateTx env utxo tx = do
 
   -- Check that the size of the transaction is less than the maximum
   txSize <= maxTxSize
@@ -202,7 +203,7 @@ validateTx env utxo (Annotated tx txBytes) = do
   feePolicy = ppTxFeePolicy protocolParameters
 
   txSize :: Natural
-  txSize = fromIntegral $ BS.length txBytes
+  txSize = fromIntegral $ BS.length (txSerialized tx)
 
   inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
@@ -305,10 +306,10 @@ updateUTxOTx
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> Annotated Tx ByteString
+  -> Tx
   -> m UTxO
-updateUTxOTx env utxo aTx@(Annotated tx _) = do
-  unlessNoTxValidation (validateTx env utxo aTx)
+updateUTxOTx env utxo tx = do
+  unlessNoTxValidation (validateTx env utxo tx)
     `wrapErrorWithValidationMode` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
@@ -320,7 +321,7 @@ updateUTxOTxWitness
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> ATxAux ByteString
+  -> TxAux
   -> m UTxO
 updateUTxOTxWitness env utxo ta = do
   whenTxValidation $ do
@@ -332,18 +333,17 @@ updateUTxOTxWitness env utxo ta = do
     -- Validate witnesses and their signing addresses
     mapM_
         (uncurry $ validateWitness pmi sigData)
-        (zip addresses (V.toList witness))
+        (zip addresses (V.toList $ txInWitnesses witness))
       `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxOTx env utxo aTx
+  updateUTxOTx env utxo tx
  where
   Environment { protocolMagic } = env
   pmi = getAProtocolMagicId protocolMagic
 
-  aTx@(Annotated tx _) = aTaTx ta
-  witness = taWitness ta
-  sigData = recoverSigData aTx
+  TxAux { taTx = tx, taWitness = witness} = ta
+  sigData = recoverSigData tx
 
 
 -- | Update UTxO with a list of transactions
@@ -351,6 +351,6 @@ updateUTxO
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> [ATxAux ByteString]
+  -> [TxAux]
   -> m UTxO
 updateUTxO env as = foldM (updateUTxOTxWitness env) as

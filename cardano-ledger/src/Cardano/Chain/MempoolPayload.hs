@@ -13,14 +13,14 @@ import Cardano.Prelude
 import Cardano.Binary
   ( DecoderError(..)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , decodeListLen
   , decodeWord8
   , encodeListLen
-  , matchSize
+  , enforceSize
   )
 import qualified Cardano.Chain.Delegation.Payload as Delegation
-import Cardano.Chain.UTxO.TxPayload (ATxPayload)
+import Cardano.Chain.UTxO.TxPayload (TxPayload)
 import qualified Cardano.Chain.Update.Payload as Update
 
 -- | A payload which can be submitted into or between mempools via the
@@ -30,7 +30,7 @@ type MempoolPayload = AMempoolPayload ()
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
 data AMempoolPayload a
-  = MempoolTxPayload !(ATxPayload a)
+  = MempoolTxPayload !TxPayload
   -- ^ A transaction payload.
   | MempoolDlgPayload !(Delegation.APayload a)
   -- ^ A delegation payload.
@@ -46,12 +46,11 @@ instance ToCBOR MempoolPayload where
   toCBOR (MempoolUpdatePayload up) =
     encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR up
 
-instance FromCBOR MempoolPayload where
-  fromCBOR = do
-    len <- decodeListLen
-    matchSize "MempoolPayload" 2 len
-    decodeWord8 >>= \case
-      0   -> MempoolTxPayload <$> fromCBOR
-      1   -> MempoolDlgPayload <$> fromCBOR
-      2   -> MempoolUpdatePayload <$> fromCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
+instance FromCBORAnnotated MempoolPayload where
+  fromCBORAnnotated' = do
+    lift $ enforceSize "MempoolPayload" 2
+    lift decodeWord8 >>= \case
+      0   -> MempoolTxPayload <$> fromCBORAnnotated'
+      1   -> MempoolDlgPayload <$> lift fromCBOR
+      2   -> MempoolUpdatePayload <$> lift fromCBOR
+      tag -> lift . cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

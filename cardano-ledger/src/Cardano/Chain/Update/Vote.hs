@@ -1,10 +1,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
@@ -12,8 +10,7 @@
 module Cardano.Chain.Update.Vote
   (
   -- * Vote
-    AVote(..)
-  , Vote
+    Vote(..)
 
   -- * Vote Constructors
   , mkVote
@@ -39,12 +36,13 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( Annotated(..)
-  , ByteSpan
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , fromCBORAnnotated
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , serialize'
   )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
@@ -67,19 +65,17 @@ import Cardano.Crypto
 -- Vote
 --------------------------------------------------------------------------------
 
-type Vote = AVote ()
-
 -- | Vote for update proposal
 --
 --   Invariant: The signature is valid.
-data AVote a = UnsafeVote
+data Vote = UnsafeVote
   { voterVK     :: !VerificationKey
   -- ^ Verification key casting the vote
-  , aProposalId :: !(Annotated UpId a)
+  , aProposalId :: !(Annotated UpId ByteString)
   -- ^ Proposal to which this vote applies
   , signature   :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit)
-  } deriving (Eq, Show, Generic, Functor)
+  } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
 
@@ -99,7 +95,7 @@ mkVote
   -> Vote
 mkVote pm sk upId decision = UnsafeVote
   (toVerification sk)
-  (Annotated upId ())
+  (Annotated upId (serialize' upId))
   (sign pm SignUSVote sk (upId, decision))
 
 -- | Same as 'mkVote', but uses 'SafeSigner'
@@ -114,7 +110,7 @@ mkVoteSafe
   -> Vote
 mkVoteSafe pm sk upId decision = UnsafeVote
   (safeToVerification sk)
-  (Annotated upId ())
+  (Annotated upId (serialize' upId))
   (safeSign pm SignUSVote sk (upId, decision))
 
 
@@ -122,7 +118,7 @@ mkVoteSafe pm sk upId decision = UnsafeVote
 -- Vote Accessors
 --------------------------------------------------------------------------------
 
-proposalId :: AVote a -> UpId
+proposalId :: Vote -> UpId
 proposalId = unAnnotated . aProposalId
 
 
@@ -134,7 +130,7 @@ instance ToCBOR Vote where
   toCBOR uv =
     encodeListLen 4
       <> toCBOR (voterVK uv)
-      <> toCBOR (proposalId uv)
+      <> encodePreEncoded (annotation $ aProposalId uv)
       -- We encode @True@ here because we removed the decision bit. This is safe
       -- because we know that all @Vote@s on mainnet use this encoding and any
       -- changes to the encoding in our implementation will be picked up by
@@ -142,20 +138,16 @@ instance ToCBOR Vote where
       <> toCBOR True
       <> toCBOR (signature uv)
 
-instance FromCBOR Vote where
-  fromCBOR = void <$> fromCBOR @(AVote ByteSpan)
+instance FromCBORAnnotated Vote where
+  fromCBORAnnotated' =
+    UnsafeVote <$ lift (enforceSize "Vote" 4)
+      <*> lift fromCBOR
+      <*> fromCBORAnnotated'
+      -- Drop the decision bit that previously allowed negative voting
+      <*  lift (fromCBOR @Bool)
+      <*> lift fromCBOR
 
-instance FromCBOR (AVote ByteSpan) where
-  fromCBOR = do
-    enforceSize "Vote" 4
-    voterVK     <- fromCBOR
-    aProposalId <- fromCBORAnnotated
-    -- Drop the decision bit that previously allowed negative voting
-    void $ fromCBOR @Bool
-    signature <- fromCBOR
-    pure $ UnsafeVote { voterVK, aProposalId, signature }
-
-recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
+recoverSignedBytes :: Vote -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
   let
     bytes = mconcat
@@ -174,7 +166,7 @@ recoverSignedBytes v =
 -- Vote Formatting
 --------------------------------------------------------------------------------
 
-instance B.Buildable (AVote a) where
+instance B.Buildable Vote where
   build uv = bprint
     ( "Update Vote { voter: "
     . build
