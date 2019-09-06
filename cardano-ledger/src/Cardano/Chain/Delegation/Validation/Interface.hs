@@ -33,7 +33,7 @@ import Cardano.Binary
   )
 import Cardano.Chain.Common (BlockCount(..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
+import Cardano.Chain.Delegation.Certificate (Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
@@ -109,15 +109,7 @@ initialState env genesisDelegation = updateDelegation env' is certificates
       }
     }
 
-  certificates =
-    fmap annotateCertificate . M.elems $ unGenesisDelegation genesisDelegation
-
-  annotateCertificate :: Certificate -> ACertificate ByteString
-  annotateCertificate c = c
-    { Delegation.aEpoch = Annotated
-      (Delegation.epoch c)
-      (serialize' $ Delegation.epoch c)
-    }
+  certificates = M.elems $ unGenesisDelegation genesisDelegation
 
 
 -- | Check whether a delegation is valid in the 'State'

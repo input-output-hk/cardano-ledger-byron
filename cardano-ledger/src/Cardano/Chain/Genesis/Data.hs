@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE PatternSynonyms  #-}
 
 module Cardano.Chain.Genesis.Data
   ( GenesisData(..)
@@ -43,7 +44,8 @@ import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto
-  ( ProtocolMagicId(..)
+  ( ProtocolMagicId (..)
+  , pattern ProtocolMagicId
   , hashRaw
   )
 

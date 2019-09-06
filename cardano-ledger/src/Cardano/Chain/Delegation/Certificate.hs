@@ -9,14 +9,14 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Chain.Delegation.Certificate
   (
   -- * Certificate
-    Certificate
-  , ACertificate(..)
+    Certificate(..)
 
   -- * Certificate Constructors
   , signCertificate
@@ -44,10 +44,14 @@ import Cardano.Binary
   , ByteSpan
   , FromCBOR(..)
   , ToCBOR(..)
-  , fromCBORAnnotated
+  , FromCBORAnnotated (..)
   , encodeListLen
   , enforceSize
   , serialize'
+  , withSlice
+  , encodePreEncoded
+  , serializeEncoding'
+  , withSlice'
   )
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto
@@ -66,16 +70,14 @@ import Cardano.Crypto
 -- Certificate
 --------------------------------------------------------------------------------
 
-type Certificate = ACertificate ()
-
 -- | Delegation certificate allowing the @delegateVK@ to sign blocks on behalf
 --   of @issuerVK@
 --
 --   Each delegator can publish at most one 'Certificate' per 'EpochNumber', and
 --   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
-data ACertificate a = UnsafeACertificate
-  { aEpoch     :: Annotated EpochNumber a
+data Certificate = UnsafeCertificate
+  { aEpoch     :: Annotated EpochNumber ByteString
   -- ^ The epoch from which the delegation is valid
   , issuerVK   :: VerificationKey
   -- ^ The issuer of the certificate, who delegates their right to sign blocks
@@ -83,9 +85,9 @@ data ACertificate a = UnsafeACertificate
   -- ^ The delegate, who gains the right to sign blocks
   , signature  :: Signature EpochNumber
   -- ^ The signature that proves the certificate was issued by @issuerVK@
-  } deriving (Eq, Ord, Show, Generic, Functor)
+  , serialize  :: ByteString
+  } deriving (Eq, Ord, Show, Generic)
     deriving anyclass NFData
-
 
 --------------------------------------------------------------------------------
 -- Certificate Constructors
@@ -99,13 +101,10 @@ signCertificate
   -> SafeSigner
   -> Certificate
 signCertificate protocolMagicId delegateVK epochNumber safeSigner =
-  UnsafeACertificate
-  { aEpoch     = Annotated epochNumber ()
-  , issuerVK   = safeToVerification safeSigner
-  , delegateVK = delegateVK
-  , signature  = coerce sig
-  }
- where
+  unsafeCertificate epochNumber issuerVK delegateVK signature
+  where
+  issuerVK   = safeToVerification safeSigner
+  signature  = coerce sig
   sig = safeSign protocolMagicId SignCertificate safeSigner
     $ mconcat [ "00"
               , CC.unXPub (unVerificationKey delegateVK)
@@ -115,19 +114,27 @@ signCertificate protocolMagicId delegateVK epochNumber safeSigner =
 unsafeCertificate
   :: EpochNumber
   -> VerificationKey
-  -- ^ The issuer of the certificate. See 'UnsafeACertificate'.
+  -- ^ The issuer of the certificate. See 'UnsafeCertificate'.
   -> VerificationKey
-  -- ^ The delegate of the certificate. See 'UnsafeACertificate'.
+  -- ^ The delegate of the certificate. See 'UnsafeCertificate'.
   -> Signature EpochNumber
   -> Certificate
-unsafeCertificate e = UnsafeACertificate (Annotated e ())
+unsafeCertificate epochNumber issuerVK delegateVK signature =
+  let serialize =  serializeEncoding' $ encodeListLen 4
+        <> encodePreEncoded epochNumberBytes
+        <> toCBOR issuerVK
+        <> toCBOR delegateVK
+        <> toCBOR signature
+      epochNumberBytes = serialize' epochNumber
+      aEpoch = Annotated epochNumber epochNumberBytes
+  in UnsafeCertificate { aEpoch, issuerVK, delegateVK, signature, serialize }
 
 
 --------------------------------------------------------------------------------
 -- Certificate Accessor
 --------------------------------------------------------------------------------
 
-epoch :: ACertificate a -> EpochNumber
+epoch :: Certificate -> EpochNumber
 epoch = unAnnotated . aEpoch
 
 
@@ -138,9 +145,9 @@ epoch = unAnnotated . aEpoch
 -- | A 'Certificate' is valid if the 'Signature' is valid
 isValid
   :: Annotated ProtocolMagicId ByteString
-  -> ACertificate ByteString
+  -> Certificate
   -> Bool
-isValid pm UnsafeACertificate { aEpoch, issuerVK, delegateVK, signature } =
+isValid pm UnsafeCertificate { aEpoch, issuerVK, delegateVK, signature } =
   verifySignatureDecoded
     pm
     SignCertificate
@@ -164,25 +171,21 @@ instance ToCBOR Certificate where
       <> toCBOR (delegateVK cert)
       <> toCBOR (signature cert)
 
-instance FromCBOR Certificate where
-  fromCBOR = void <$> fromCBOR @(ACertificate ByteSpan)
-
-instance FromCBOR (ACertificate ByteSpan) where
-  fromCBOR = do
-    enforceSize "Delegation.Certificate" 4
-    UnsafeACertificate
-      <$> fromCBORAnnotated
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+instance FromCBORAnnotated Certificate where
+  fromCBORAnnotated' = withSlice' $
+    UnsafeCertificate <$ lift (enforceSize "Delegation.Certificate" 4)
+      <*> fromCBORAnnotated'
+      <*> lift fromCBOR
+      <*> lift fromCBOR
+      <*> lift fromCBOR
 
 
 --------------------------------------------------------------------------------
 -- Certificate Formatting
 --------------------------------------------------------------------------------
 
-instance B.Buildable (ACertificate a) where
-  build (UnsafeACertificate e iVK dVK _) = bprint
+instance B.Buildable Certificate where
+  build (UnsafeCertificate e iVK dVK _ _) = bprint
     ( "Delegation.Certificate { w = " . build
     . ", iVK = " . build
     . ", dVK = " . build

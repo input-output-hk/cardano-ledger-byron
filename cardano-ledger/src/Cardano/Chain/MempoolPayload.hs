@@ -32,7 +32,7 @@ type MempoolPayload = AMempoolPayload ()
 data AMempoolPayload a
   = MempoolTxPayload !TxPayload
   -- ^ A transaction payload.
-  | MempoolDlgPayload !(Delegation.APayload a)
+  | MempoolDlgPayload !Delegation.Payload
   -- ^ A delegation payload.
   | MempoolUpdatePayload !(Update.APayload a)
   -- ^ An update payload.
@@ -48,9 +48,10 @@ instance ToCBOR MempoolPayload where
 
 instance FromCBORAnnotated MempoolPayload where
   fromCBORAnnotated' = do
-    lift $ enforceSize "MempoolPayload" 2
+    len <- lift $ decodeListLen
+    lift $ matchSize "MempoolPayload" 2 len
     lift decodeWord8 >>= \case
       0   -> MempoolTxPayload <$> fromCBORAnnotated'
-      1   -> MempoolDlgPayload <$> lift fromCBOR
+      1   -> MempoolDlgPayload <$> fromCBORAnnotated'
       2   -> MempoolUpdatePayload <$> lift fromCBOR
-      tag -> lift . cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
+      tag -> lift $ cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

@@ -2,9 +2,11 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms   #-}
 
 module Cardano.Chain.Block.Proof
   ( Proof(..)
+  , pattern Proof
   , ProofValidationError (..)
   , mkProof
   , recoverProof
@@ -33,12 +35,27 @@ import Cardano.Crypto (Hash, hash, hashDecoded)
 
 
 -- | Proof of everything contained in the payload
-data Proof = Proof
-  { proofUTxO       :: !TxProof
-  , proofSsc        :: !SscProof
-  , proofDelegation :: !(Hash Delegation.Payload)
-  , proofUpdate     :: !Update.Proof
+data Proof = Proof'
+  { proofUTxO'       :: !TxProof
+  , proofSsc'        :: !SscProof
+  , proofDelegation' :: !(Hash Delegation.Payload)
+  , proofUpdate'     :: !Update.Proof
+  , proofSerialized  :: ByteString
   } deriving (Eq, Show, Generic, NFData)
+
+pattern Proof :: TxProof -> SscProof -> (Hash Delegation.Payload) -> Update.Proof -> Proof
+pattern Proof { proofUTxO, proofSsc, proofDelegation, proofUpdate } <-
+  Proof' proofUTxO proofSsc proofDelegation proofUpdate _
+  where
+  Proof utxo ssc delegation update =
+    let bytes = serializeEncoding' $ encodeListLen 4
+          <> toCBOR utxo
+          <> toCBOR ssc
+          <> toCBOR delegation
+          <> toCBOR update
+    in Proof' utxo ssc delegation update bytes
+
+
 
 instance B.Buildable Proof where
   build proof = bprint
@@ -49,26 +66,21 @@ instance B.Buildable Proof where
     (proofUpdate proof)
 
 instance ToCBOR Proof where
-  toCBOR bc =
-    encodeListLen 4
-      <> toCBOR (proofUTxO bc)
-      <> toCBOR (proofSsc bc)
-      <> toCBOR (proofDelegation bc)
-      <> toCBOR (proofUpdate bc)
+  toCBOR = encodePreEncoded . proofSerialized
 
 instance FromCBORAnnotated Proof where
-  fromCBORAnnotated' =
-    Proof <$ lift (enforceSize "Proof" 4)
-      <*> fromCBORAnnotated'
-      <*> lift fromCBOR
-      <*> lift fromCBOR
-      <*> lift fromCBOR
+  fromCBORAnnotated' = withSlice' $
+     Proof' <$ lift (enforceSize "Proof" 4)
+     <*> fromCBORAnnotated
+     <*> lift fromCBOR
+     <*> lift fromCBOR
+     <*> lift fromCBOR
 
 mkProof :: Body -> Proof
 mkProof body = Proof
   { proofUTxO        = mkTxProof $ bodyTxPayload body
   , proofSsc        = SscProof
-  , proofDelegation = hash $ void $ bodyDlgPayload body
+  , proofDelegation = hash $ bodyDlgPayload body
   , proofUpdate     = Update.mkProof $ void $ bodyUpdatePayload body
   }
 

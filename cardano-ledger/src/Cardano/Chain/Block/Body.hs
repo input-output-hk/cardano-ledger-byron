@@ -34,7 +34,7 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
   Body'
     bodyTxPayload
     bodySscPayload
-    (void -> bodyDlgPayload)
+    bodyDlgPayload
     (void -> bodyUpdatePayload)
     _
   where
@@ -50,7 +50,7 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
     -- FIXME: This constructs the members of members of the body with incorrect
     -- bytestring references. We'd need to make the same change we made to body
     -- all the way down to correct this problem.
-    in Body' tx ssc (dlgBytes <$ dlg) (updBytes <$ upd) bytes
+    in Body' tx ssc dlg (updBytes <$ upd) bytes
 
 -- | 'Body' consists of payloads of all block components
 data Body = Body'
@@ -58,7 +58,7 @@ data Body = Body'
   -- ^ UTxO payload
   , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
-  , bodyDlgPayload    :: !(Delegation.APayload ByteString)
+  , bodyDlgPayload    :: !Delegation.Payload
   -- ^ Heavyweight delegation payload (no-ttl certificates)
   , bodyUpdatePayload :: !(Update.APayload ByteString)
   -- ^ Additional update information for the update system
@@ -73,7 +73,7 @@ instance FromCBORAnnotated Body where
     Body' <$ lift (enforceSize "Body" 4)
       <*> fromCBORAnnotated'
       <*> lift fromCBOR
-      <*> liftByteSpanDecoder fromCBOR
+      <*> fromCBORAnnotated'
       <*> liftByteSpanDecoder fromCBOR
 
 bodyTxs :: Body -> [Tx]

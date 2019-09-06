@@ -102,8 +102,8 @@ import Cardano.Chain.Block.Body
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
 import Cardano.Chain.Block.Header
-  ( ABlockSignature
-  , AHeader(..)
+  ( BlockSignature
+  , Header(..)
   , ABoundaryHeader(..)
   , Header
   , HeaderHash
@@ -150,7 +150,7 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 --------------------------------------------------------------------------------
 
 data Block = Block
-  { blockHeader     :: AHeader ByteString
+  { blockHeader     :: Header
   , blockBody       :: Body
   , blockSerialized :: ByteString
   } deriving (Eq, Show, Generic, NFData)
@@ -248,7 +248,7 @@ blockDifficulty = headerDifficulty . blockHeader
 blockToSign :: EpochSlots -> Block -> ToSign
 blockToSign epochSlots = headerToSign epochSlots . blockHeader
 
-blockSignature :: Block -> ABlockSignature ByteString
+blockSignature :: Block -> BlockSignature
 blockSignature = headerSignature . blockHeader
 
 blockProtocolVersion :: Block -> ProtocolVersion
