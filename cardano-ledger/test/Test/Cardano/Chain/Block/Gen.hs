@@ -23,18 +23,19 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( ABlockSignature(..)
+  ( BlockSignature(..)
   , Block
-  , BlockSignature
   , Body
-  , ABoundaryBlock(..)
-  , ABoundaryBody(..)
-  , ABoundaryHeader(..)
-  , mkABoundaryHeader
+  , BoundaryBlock(..)
+  , pattern BoundaryBlock
+  , pattern BoundaryBody
+  , BoundaryHeader(..)
+  , mkBoundaryHeader
   , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
+  , pattern Proof
   , SigningHistory(..)
   , ToSign(..)
   , hashHeader
@@ -85,7 +86,7 @@ genBlockSignature pm epochSlots =
         signCertificate pm (toVerification delegateSK) epoch issuerSafeSigner
       issuerVK = safeToVerification issuerSafeSigner
       sig      = sign pm (SignBlock issuerVK) delegateSK toSign
-    in ABlockSignature cert sig
+    in BlockSignature cert sig
 
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
@@ -155,15 +156,12 @@ genSigningHistory =
 genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
-    <$> (mkAbstractHash <$> genHeader pm epochSlots)
+    <$> (hashHeader <$> genHeader pm epochSlots)
     <*> genProof pm
     <*> genEpochAndSlotCount epochSlots
     <*> genChainDifficulty
     <*> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
- where
-  mkAbstractHash :: Header -> HeaderHash
-  mkAbstractHash = hashHeader epochSlots
 
 genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
 genBlockWithEpochSlots pm = do
@@ -206,18 +204,16 @@ genBlock protocolMagicId epochSlots =
         )
         body
 
-genBoundaryBlock :: Gen (ABoundaryBlock ())
-genBoundaryBlock =
-  ABoundaryBlock
-    <$> pure 0
-    <*> genBoundaryHeader
-    <*> pure (ABoundaryBody ())
-    <*> pure ()
+genBoundaryBlock :: ProtocolMagicId -> Gen BoundaryBlock
+genBoundaryBlock pm =
+  BoundaryBlock
+    <$> genBoundaryHeader pm
+    <*> pure BoundaryBody
 
-genBoundaryHeader :: Gen (ABoundaryHeader ())
-genBoundaryHeader =
-  mkABoundaryHeader
-    <$> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
+genBoundaryHeader :: ProtocolMagicId -> Gen BoundaryHeader
+genBoundaryHeader pm =
+  mkBoundaryHeader
+    <$> pure pm
+    <*> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
     <*> (Gen.word64 (Range.constantFrom 10 0 1000))
     <*> genChainDifficulty
-    <*> pure ()

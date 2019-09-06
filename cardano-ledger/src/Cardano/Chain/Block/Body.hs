@@ -20,7 +20,7 @@ import Cardano.Prelude
 import Cardano.Binary
   (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize,
   FromCBORAnnotated(..), serializeEncoding', encodePreEncoded, serialize',
-  liftByteSpanDecoder, withSlice')
+  withSlice')
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.UTxO.Tx (Tx)
@@ -34,8 +34,8 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
   Body'
     bodyTxPayload
     bodySscPayload
-    (void -> bodyDlgPayload)
-    (void -> bodyUpdatePayload)
+    bodyDlgPayload
+    bodyUpdatePayload
     _
   where
   Body tx ssc dlg upd =
@@ -47,10 +47,7 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
         sscBytes = serialize' ssc
         dlgBytes = serialize' dlg
         updBytes = serialize' upd
-    -- FIXME: This constructs the members of members of the body with incorrect
-    -- bytestring references. We'd need to make the same change we made to body
-    -- all the way down to correct this problem.
-    in Body' tx ssc (dlgBytes <$ dlg) (updBytes <$ upd) bytes
+    in Body' tx ssc dlg upd bytes
 
 -- | 'Body' consists of payloads of all block components
 data Body = Body'
@@ -58,9 +55,9 @@ data Body = Body'
   -- ^ UTxO payload
   , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
-  , bodyDlgPayload    :: !(Delegation.APayload ByteString)
+  , bodyDlgPayload    :: !Delegation.Payload
   -- ^ Heavyweight delegation payload (no-ttl certificates)
-  , bodyUpdatePayload :: !(Update.APayload ByteString)
+  , bodyUpdatePayload :: !Update.Payload
   -- ^ Additional update information for the update system
   , bodySerialized    :: ByteString
   } deriving (Eq, Show, Generic, NFData)
@@ -73,8 +70,8 @@ instance FromCBORAnnotated Body where
     Body' <$ lift (enforceSize "Body" 4)
       <*> fromCBORAnnotated'
       <*> lift fromCBOR
-      <*> liftByteSpanDecoder fromCBOR
-      <*> liftByteSpanDecoder fromCBOR
+      <*> fromCBORAnnotated'
+      <*> fromCBORAnnotated'
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload
