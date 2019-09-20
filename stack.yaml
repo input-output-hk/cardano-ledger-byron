@@ -40,7 +40,7 @@ extra-deps:
   - gray-code-0.3.1
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e22be186e0b1018260ed7c5166871f82a869b94d
+    commit: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
     subdirs:
       - contra-tracer
 
