@@ -7,7 +7,9 @@ let
     (haskellPackages.callPackage ./stack-hpc-coveralls.nix {});
 
   buildTools =
-    [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls ];
+      [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls
+        gzip lz4 haskellPackages.weeder
+      ];
 
   libs = ps: with ps; [turtle safe transformers extra async];
 

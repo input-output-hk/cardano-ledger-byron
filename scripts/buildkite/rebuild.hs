@@ -53,10 +53,13 @@ import qualified Data.Text as T
 import qualified Filesystem.Path.CurrentOS as FP
 import qualified Turtle.Bytes as TB
 
+libraryName :: [Char]
 libraryName = "cardano-ledger"
 
+coverallsRepoTokenEnvVar :: Text
 coverallsRepoTokenEnvVar = "CARDANO_LEDGER_COVERALLS_REPO_TOKEN"
 
+extraShcArgs :: [Text]
 extraShcArgs = [ "--exclude-dirs"
                , "crypto/test"
                ]
