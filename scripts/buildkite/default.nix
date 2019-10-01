@@ -6,16 +6,20 @@ let
   stack-hpc-coveralls = pkgs.haskell.lib.dontCheck
     (haskellPackages.callPackage ./stack-hpc-coveralls.nix {});
 
-  stackRebuild = runCommand "stack-rebuild" {} ''
-    ${haskellPackages.ghcWithPackages (ps: [ps.turtle ps.safe ps.transformers])}/bin/ghc -o $out ${./rebuild.hs}
-  '';
-
   buildTools =
     [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls ];
 
+  libs = ps: with ps; [turtle safe transformers extra async];
+
+  ghc' = haskellPackages.ghcWithPackages libs;
+
+  stackRebuild = runCommand "stack-rebuild" {
+      buildInputs = [ ghc' makeWrapper ];
+  } ''
+    mkdir -p $out/bin
+    ghc -Wall -threaded -o $out/bin/rebuild ${./rebuild.hs}
+    wrapProgram $out/bin/rebuild --set PATH "${lib.makeBinPath buildTools}"
+  '';
+
 in
-  writeScript "stack-rebuild-wrapped" ''
-    #!${stdenv.shell}
-    export PATH=${lib.makeBinPath buildTools}
-    exec ${stackRebuild} "$@"
-  ''
+  stackRebuild

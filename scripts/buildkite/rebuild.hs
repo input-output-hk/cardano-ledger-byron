@@ -1,24 +1,91 @@
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import Control.Exception
-import Control.Monad.Trans.Maybe
+-- |
+-- Copyright: © 2018-2019 IOHK
+-- License: Apache-2.0
+--
+-- Script for building @cardano-ledger@ with Stack under Buildkite.
+--
+-- The caching mechanism was taken from @cardano-wallet@.
+--
+-- To work on this script under GHCi, with Haskell dependencies provided, run:
+--
+-- >
+--
+
+import Prelude hiding (FilePath)
+
+import Control.Exception ()
+import Control.Monad.Trans.Maybe ()
 import qualified Data.Text as T
-import Safe
-import System.Exit (exitWith)
+import qualified Filesystem.Path.CurrentOS as FP
+import Options.Applicative
+  ( (<**>)
+  , execParser
+  , fullDesc
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , option
+  , optional
+  , progDesc
+  , str
+  )
+import Safe ()
+import System.Exit (exitWith, ExitCode(ExitFailure, ExitSuccess))
 import Turtle
+  ( FilePath
+  , Text
+  , (%)
+  , d
+  , echo
+  , empty
+  , eprintf
+  , need
+  , printf
+  , proc
+  , s
+  , when
+  )
 
 
 -- | Run build and upload coverage information when successful
 main :: IO ()
 main = do
+  (Options { cacheDirectory }) <- parseOptions
+
   buildResult <- buildStep (Just ["--scenario=ContinuousIntegration"])
 
   when (buildResult == ExitSuccess) coverageUploadStep
 
   exitWith buildResult
 
+
+data Options = Options
+    { cacheDirectory :: Maybe FilePath
+    } deriving (Show)
+
+
+parseOptions :: IO Options
+parseOptions = execParser options
+  where
+    options = info (commandOptions <**> helper)
+                   (fullDesc <> progDesc "Build cardano-ledger with stack in Buildkite")
+      where
+        commandOptions
+          = fmap Options
+          $ optional
+          $ option
+              (FP.decodeString <$> str)
+              (  long "cache-dir"
+              <> metavar "DIR"
+              <> help "Location of project's cache"
+              )
 
 -- | Build and test all packages using stack
 buildStep :: Maybe [Text] -> IO ExitCode
