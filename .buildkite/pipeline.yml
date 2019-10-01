@@ -3,7 +3,7 @@ steps:
     env:
       STACK_ROOT: "/build/cardano-ledger.stack"
     command:
-      - "nix-build .buildkite/default.nix -o sr"
+      - "nix-build scripts/buildkite/default.nix -o sr"
       - "./sr/bin/rebuild --build-dir /build/cardano-ledger --cache-dir /build/cardano-ledger.cache"
     agents:
       system: x86_64-linux
