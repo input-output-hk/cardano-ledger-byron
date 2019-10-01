@@ -179,7 +179,7 @@ buildStep dryRun bk =
             --         ta (match serialTests ++ jobs 1) ++ jobs 1
             --     Parallel ->
             --         ta (skip serialTests)
-            , [ "--ta"], ["'--scenario=ContinuousIntegration'"]
+            , [ "--ta"], ["--scenario=ContinuousIntegration"]
             ]
 
     color arg = ["--color", arg]
