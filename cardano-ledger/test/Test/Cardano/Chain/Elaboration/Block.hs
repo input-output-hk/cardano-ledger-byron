@@ -132,9 +132,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   cDCert = elaborateDCert pm dCert
 
   bb0    = Concrete.Body
-             (UTxO.ATxPayload txPayload)
+             (UTxO.TxPayload txPayload)
              Ssc.SscPayload
-             (Delegation.UnsafeAPayload dcerts ())
+             (Delegation.unsafePayload dcerts)
              updatePayload
 
   dcerts =
@@ -143,19 +143,18 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
             (elaborateDCert pm)
           )
 
-  (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
+  (txPayload, txIdMap') = elaborateTxWitnesses
     txIdMap
     (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
-  updatePayload :: Update.APayload ()
+  updatePayload :: Update.Payload
   updatePayload =
-    Update.APayload
+    Update.Payload
       (fmap snd maybeProposals)
       (fmap (elaborateVote pm proposalsIdMap')
       $ Abstract._bUpdVotes
       $ Abstract._bBody abstractBlock
       )
-      () -- Update payload annotation
 
   maybeProposals :: Maybe (Abstract.Update.UProp, Update.Proposal)
   maybeProposals

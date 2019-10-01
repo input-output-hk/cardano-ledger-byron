@@ -126,7 +126,7 @@ updateDelegation
   :: MonadError Scheduling.Error m
   => Environment
   -> State
-  -> [ACertificate ByteString]
+  -> [Certificate]
   -> m State
 updateDelegation env is certificates = do
   -- Schedule new certificates

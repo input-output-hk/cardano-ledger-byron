@@ -23,9 +23,8 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( ABlockSignature(..)
+  ( BlockSignature(..)
   , Block
-  , BlockSignature
   , Body
   , ABoundaryBlock(..)
   , ABoundaryBody(..)
@@ -34,6 +33,7 @@ import Cardano.Chain.Block
   , Header
   , HeaderHash
   , Proof(..)
+  , pattern Proof
   , SigningHistory(..)
   , ToSign(..)
   , hashHeader
@@ -84,7 +84,7 @@ genBlockSignature pm epochSlots =
         signCertificate pm (toVerification delegateSK) epoch issuerSafeSigner
       issuerVK = safeToVerification issuerSafeSigner
       sig      = sign pm (SignBlock issuerVK) delegateSK toSign
-    in ABlockSignature cert sig
+    in BlockSignature cert sig
 
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
@@ -154,15 +154,12 @@ genSigningHistory =
 genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
-    <$> (mkAbstractHash <$> genHeader pm epochSlots)
+    <$> (hashHeader <$> genHeader pm epochSlots)
     <*> genProof pm
     <*> genEpochAndSlotCount epochSlots
     <*> genChainDifficulty
     <*> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
- where
-  mkAbstractHash :: Header -> HeaderHash
-  mkAbstractHash = hashHeader epochSlots
 
 genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
 genBlockWithEpochSlots pm = do

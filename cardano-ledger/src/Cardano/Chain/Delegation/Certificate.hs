@@ -41,14 +41,12 @@ import Text.JSON.Canonical
 
 import Cardano.Binary
   ( Annotated(..)
-  , ByteSpan
   , FromCBOR(..)
   , ToCBOR(..)
   , FromCBORAnnotated (..)
   , encodeListLen
   , enforceSize
   , serialize'
-  , withSlice
   , encodePreEncoded
   , serializeEncoding'
   , withSlice'
@@ -104,7 +102,7 @@ signCertificate protocolMagicId delegateVK epochNumber safeSigner =
   unsafeCertificate epochNumber issuerVK delegateVK signature
   where
   issuerVK   = safeToVerification safeSigner
-  signature  = coerce sig
+  signature  = coerce sig :: Signature EpochNumber
   sig = safeSign protocolMagicId SignCertificate safeSigner
     $ mconcat [ "00"
               , CC.unXPub (unVerificationKey delegateVK)

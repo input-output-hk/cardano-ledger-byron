@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -76,7 +77,7 @@ import Cardano.Chain.Block.Block
   , blockUpdatePayload
   )
 import Cardano.Chain.Block.Header
-  ( AHeader (..)
+  ( Header (..)
   , ABoundaryHeader (..)
   , BlockSignature
   , HeaderHash
@@ -107,7 +108,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
   (EpochNumber(..), SlotNumber(..), EpochAndSlotCount(..), slotNumberEpoch, fromSlotNumber)
-import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
+import Cardano.Chain.UTxO (TxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import Cardano.Chain.UTxO.UTxOConfiguration (UTxOConfiguration)
 import qualified Cardano.Chain.Update as Update
@@ -384,7 +385,7 @@ updateChainBoundary cvs bvd = do
 
 validateHeaderMatchesBody
   :: MonadError ProofValidationError m
-  => AHeader ByteString
+  => Header
   -> Body
   -> m ()
 validateHeaderMatchesBody hdr body = do
@@ -484,7 +485,7 @@ updateBody env bs b = do
 
   certificates  = Delegation.getPayload $ blockDlgPayload b
 
-  txs           = aUnTxPayload $ blockTxPayload b
+  txs           = unTxPayload $ blockTxPayload b
 
   delegationEnv = DI.Environment
     { DI.protocolMagic = getAProtocolMagicId protocolMagic
@@ -526,7 +527,7 @@ toNumGenKeys n
 headerIsValid
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => UPI.State
-  -> AHeader ByteString
+  -> Header
   -> m ()
 headerIsValid updateState h =
   -- Validate the header size
@@ -676,7 +677,7 @@ foldUTxOBlock env utxo block =
     (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
       block
     )
-  $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
+  $ UTxO.updateUTxO env utxo (unTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =

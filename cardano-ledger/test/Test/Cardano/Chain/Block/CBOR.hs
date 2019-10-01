@@ -27,9 +27,8 @@ import qualified Hedgehog as H
 
 import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder)
 import Cardano.Chain.Block
-  ( ABlockSignature(..)
+  ( BlockSignature(..)
   , Block
-  , BlockSignature
   , Body
   , ABoundaryBlock(boundaryBlockLength)
   , pattern Body
@@ -303,7 +302,7 @@ exampleHeader = mkHeaderExplicit
     (noPassSafeSigner issuerSk)
 
 exampleBlockSignature :: BlockSignature
-exampleBlockSignature = ABlockSignature cert sig
+exampleBlockSignature = BlockSignature cert sig
  where
   cert = Delegation.signCertificate
     pm

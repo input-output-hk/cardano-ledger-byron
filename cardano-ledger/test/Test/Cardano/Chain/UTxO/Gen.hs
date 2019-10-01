@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Test.Cardano.Chain.UTxO.Gen
   ( genCompactTxId
   , genCompactTxIn
@@ -40,23 +42,23 @@ import Cardano.Chain.UTxO
   ( CompactTxId
   , CompactTxIn
   , CompactTxOut
-  , Tx(..)
+  , Tx
+  , pattern Tx
   , TxAttributes
-  , TxAux
+  , TxAux(..)
   , TxId
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
-  , TxPayload
+  , TxPayload(..)
   , TxProof(..)
   , TxSig
   , TxSigData(..)
   , TxWitness
+  , pattern TxWitness
   , UTxOConfiguration(..)
   , UTxO
   , fromList
-  , mkTxAux
-  , mkTxPayload
   , mkUTxOConfiguration
   , toCompactTxId
   , toCompactTxIn
@@ -92,13 +94,13 @@ genRedeemWitness pm =
   RedeemWitness <$> genRedeemVerificationKey <*> genRedeemSignature pm genTxSigData
 
 genTx :: Gen Tx
-genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
+genTx = Tx <$> genTxInList <*> genTxOutList <*> genTxAttributes
 
 genTxAttributes :: Gen TxAttributes
 genTxAttributes = pure $ mkAttributes ()
 
 genTxAux :: ProtocolMagicId -> Gen TxAux
-genTxAux pm = mkTxAux <$> genTx <*> (genTxWitness pm)
+genTxAux pm = TxAux <$> genTx <*> (genTxWitness pm)
 
 genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash
@@ -128,7 +130,7 @@ genUTxOConfiguration =
     <$> Gen.list (Range.linear 0 50) genAddress
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
-genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
+genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagicId -> Gen TxProof
 genTxProof pm =
@@ -146,7 +148,7 @@ genTxInWitness pm = Gen.choice [genVKWitness pm, genRedeemWitness pm]
 
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
-  V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
+  TxWitness . V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
 
 genUTxO :: Gen UTxO
 genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut

@@ -33,7 +33,6 @@ module Cardano.Chain.Block.Header
   -- * Header Binary Serialization
   , toCBORHeader
   , toCBORHeaderToHash
-  , fromCBORAHeader
   , fromCBORHeader
   , fromCBORHeaderToHash
   , wrapHeaderBytes
@@ -52,7 +51,6 @@ module Cardano.Chain.Block.Header
   , HeaderHash
   , headerHashF
   , hashHeader
-  , headerHashAnnotated
   , genesisHeaderHash
 
   -- * BlockSignature
@@ -186,7 +184,7 @@ mkHeader pm prevHeader epochSlots = mkHeaderExplicit
   difficulty
   epochSlots
  where
-  prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
+  prevHash   = either genesisHeaderHash hashHeader prevHeader
   difficulty = either
     (const $ ChainDifficulty 0)
     (succ . headerDifficulty)
@@ -289,21 +287,14 @@ headerLength = fromIntegral . BS.length . headerAnnotation
 -- Header Binary Serialization
 --------------------------------------------------------------------------------
 
+instance ToCBOR Header where
+  toCBOR = encodePreEncoded . headerAnnotation
+
+
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
 toCBORHeader :: EpochSlots -> Header -> Encoding
-toCBORHeader es h =
-  encodeListLen 5
-    <> toCBOR (headerProtocolMagicId h)
-    <> toCBOR (headerPrevHash h)
-    <> toCBOR (headerProof h)
-    <> (  encodeListLen 4
-       <> toCBOR (fromSlotNumber es $ headerSlot h)
-       <> toCBOR (headerGenesisKey h)
-       <> toCBOR (headerDifficulty h)
-       <> toCBOR (headerSignature h)
-       )
-    <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
+toCBORHeader es h = toCBOR h
 
 toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
 toCBORBlockVersions pv sv =
@@ -325,7 +316,7 @@ fromCBORHeader epochSlots = withSlice' $ do
   slot <- fmap (first (toSlotNumber epochSlots)) fromCBORAnnotated'
   genesisKey <- lift fromCBOR
   difficulty <- fromCBORAnnotated'
-  sig <- lift fromCBOR
+  sig <- fromCBORAnnotated'
   ((protocolVersion, softwareVersion), extraBytes) <- withSlice' $
     (,) <$> lift fromCBORBlockVersions
   pure $ Header
@@ -396,9 +387,9 @@ instance Decoded Header where
 --   This encoding is only used when hashing the header for backwards
 --   compatibility, but should not be used when serializing a header within a
 --   block
-toCBORHeaderToHash :: EpochSlots -> Header -> Encoding
-toCBORHeaderToHash epochSlots h =
-  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBORHeader epochSlots h
+toCBORHeaderToHash :: Header -> Encoding
+toCBORHeaderToHash h =
+  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBOR h
 
 fromCBORHeaderToHash :: EpochSlots -> AnnotatedDecoder s (Maybe Header)
 fromCBORHeaderToHash epochSlots = do
@@ -440,7 +431,7 @@ renderHeader es header = bprint
   (headerSignature header)
  where
   headerHash :: HeaderHash
-  headerHash = hashHeader es header
+  headerHash = hashHeader header
 
 
 --------------------------------------------------------------------------------
@@ -472,11 +463,8 @@ wrapHeaderBytes = mappend "\130\SOH"
 --
 --   For backwards compatibility we have to take the hash of the header
 --   serialised with 'toCBORHeaderToHash'
-hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash es
-
-headerHashAnnotated :: Header -> HeaderHash
-headerHashAnnotated = hash . fmap wrapHeaderBytes
+hashHeader :: Header -> HeaderHash
+hashHeader = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash
 
 
 --------------------------------------------------------------------------------
@@ -648,8 +636,12 @@ instance ToCBOR ToSign where
       <> toCBOR (tsDifficulty ts)
       <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
 
-instance FromCBOR ToSign where
-  fromCBOR = do
-    enforceSize "ToSign" 5
-    fmap uncurry (ToSign <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR)
-      <*> fromCBORBlockVersions
+instance FromCBORAnnotated ToSign where
+  fromCBORAnnotated' = do
+    lift $ enforceSize "ToSign" 5
+    headerHash <- lift fromCBOR
+    bodyProof <- fromCBORAnnotated'
+    slotCount <- lift fromCBOR
+    difficulty <- lift fromCBOR
+    (protocolVersion, softwareVersion) <- lift fromCBORBlockVersions
+    pure $ ToSign headerHash bodyProof slotCount difficulty protocolVersion softwareVersion

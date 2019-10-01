@@ -14,8 +14,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation
-  ( ACertificate(delegateVK, issuerVK)
-  , Certificate
+  ( Certificate(delegateVK, issuerVK)
   , Payload
   , signCertificate
   , unsafePayload

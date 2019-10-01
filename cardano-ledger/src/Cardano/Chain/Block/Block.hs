@@ -110,10 +110,9 @@ import Cardano.Chain.Block.Header
   , ToSign
   , boundaryHeaderHashAnnotated
   , fromCBORABoundaryHeader
-  , fromCBORAHeader
+  , fromCBORHeader
   , hashHeader
   , headerDifficulty
-  , headerHashAnnotated
   , headerGenesisKey
   , headerIssuer
   , headerPrevHash
@@ -138,7 +137,7 @@ import Cardano.Chain.Slotting
   , WithEpochSlots(WithEpochSlots)
   )
 import Cardano.Chain.Ssc (SscPayload)
-import Cardano.Chain.UTxO.TxPayload (ATxPayload)
+import Cardano.Chain.UTxO.TxPayload (TxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
@@ -167,16 +166,11 @@ mkBlock
   -> Body
   -> Block
 mkBlock epochSlots header body =
-  -- FIXME: This constructs the members of members of the block with
-  -- incorrect bytestring references. We'd need to make the same change we
-  -- made to block all the way down to correct this problem.
-  let headerBytes = serializeEncoding' $ toCBORHeader epochSlots header
-      header' = headerBytes <$ header
-      bytes = serializeEncoding' $ encodeListLen 3
-              <> encodePreEncoded headerBytes
+  let bytes = serializeEncoding' $ encodeListLen 3
+              <> toCBOR header
               <> toCBOR body
               <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
-  in Block header' body bytes
+  in Block header body bytes
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
@@ -215,11 +209,11 @@ mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert bo
 -- Block Accessors
 --------------------------------------------------------------------------------
 
-blockHash :: EpochSlots -> Block -> HeaderHash
-blockHash epochSlots = hashHeader epochSlots . void . blockHeader
+blockHash :: Block -> HeaderHash
+blockHash = hashHeader . blockHeader
 
 blockHashAnnotated :: Block -> HeaderHash
-blockHashAnnotated = headerHashAnnotated . blockHeader
+blockHashAnnotated = hashHeader . blockHeader
 
 blockProtocolMagicId :: Block -> ProtocolMagicId
 blockProtocolMagicId = headerProtocolMagicId . blockHeader
@@ -257,16 +251,16 @@ blockProtocolVersion = headerProtocolVersion . blockHeader
 blockSoftwareVersion :: Block -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockTxPayload :: Block -> ATxPayload ByteString
+blockTxPayload :: Block -> TxPayload
 blockTxPayload = bodyTxPayload . blockBody
 
 blockSscPayload :: Block -> SscPayload
 blockSscPayload = bodySscPayload . blockBody
 
-blockUpdatePayload :: Block -> Update.APayload ByteString
+blockUpdatePayload :: Block -> Update.Payload
 blockUpdatePayload = bodyUpdatePayload . blockBody
 
-blockDlgPayload :: Block -> Delegation.APayload ByteString
+blockDlgPayload :: Block -> Delegation.Payload
 blockDlgPayload = bodyDlgPayload . blockBody
 
 blockLength :: Block -> Natural
@@ -283,7 +277,7 @@ instance ToCBOR Block where
 fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
 fromCBORBlock epochSlots = withSlice' $
   Block <$ lift (enforceSize "Block" 3)
-    <*> liftByteSpanDecoder (fromCBORAHeader epochSlots)
+    <*> fromCBORHeader epochSlots
     <*> fromCBORAnnotated'
     -- Drop the deprecated ExtraBodyData
     <* (lift $ enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
@@ -304,12 +298,12 @@ renderBlock es block =
     . "  " . shown . "\n"
     . "  update payload: " . build
     )
-    (WithEpochSlots es $ void $ blockHeader block)
+    (WithEpochSlots es $ blockHeader block)
     (length txs)
     txs
     (blockDlgPayload block)
     (blockSscPayload block)
-    (void $ blockUpdatePayload block)
+    (blockUpdatePayload block)
   where txs = bodyTxs $ blockBody block
 
 

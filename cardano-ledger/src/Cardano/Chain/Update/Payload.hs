@@ -20,13 +20,9 @@ import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
+  ( Decoded(..)
   , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeListLen
   , encodePreEncoded
   , enforceSize

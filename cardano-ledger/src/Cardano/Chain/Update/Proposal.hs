@@ -12,7 +12,7 @@ module Cardano.Chain.Update.Proposal
   (
   -- * Proposal
     Proposal(..)
-  , pattern Proposal
+  , pattern UnsafeProposal
   , UpId
 
   -- * Proposal Constructors
@@ -74,14 +74,14 @@ import Cardano.Crypto
 type UpId = Hash Proposal
 
 -- | Create an update 'Proposal' using the provided signature.
-pattern Proposal
+pattern UnsafeProposal
   :: ProposalBody
   -> VerificationKey
   -> Signature ProposalBody
   -> Proposal
-pattern Proposal body issuer signature <- Proposal' {body, issuer, signature}
+pattern UnsafeProposal body issuer signature <- Proposal' {body, issuer, signature}
   where
-    Proposal body issuer signature =
+    UnsafeProposal body issuer signature =
       let bytes = serializeEncoding' $
             encodeListLen 7
               <> toCBOR (protocolVersion body)
@@ -111,7 +111,7 @@ data Proposal = Proposal'
 -- | Create an update 'Proposal', signing it with the provided safe signer.
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
 signProposal protocolMagicId proposalBody safeSigner =
-  Proposal
+  UnsafeProposal
     proposalBody
     (safeToVerification safeSigner)
     (signatureForProposal protocolMagicId proposalBody safeSigner)

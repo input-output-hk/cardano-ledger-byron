@@ -20,7 +20,7 @@ import Data.Word (Word64)
 import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block
   ( Block (..)
-  , AHeader (..)
+  , Header (..)
   , BlockValidationMode (..)
   , Proof (..)
   , blockProof
@@ -213,21 +213,21 @@ createInitialDIState dState =
     , _dIStateKeyEpochDelegations = S.empty
     }
 
-modifyAHeader
-  :: (AHeader ByteString -> AHeader ByteString)
+modifyHeader
+  :: (Header ByteString -> Header)
   -> Block
   -> Block
-modifyAHeader ahModifier ab =
+modifyHeader ahModifier ab =
   ab { blockHeader = ahModifier (blockHeader ab) }
 
-modifyAProof
+modifyProof
   :: (Annotated Proof ByteString -> Annotated Proof ByteString)
   -> Block
   -> Block
-modifyAProof apModifier ab =
-  modifyAHeader ahModifier ab
+modifyProof apModifier ab =
+  modifyHeader ahModifier ab
  where
-  ahModifier :: AHeader ByteString -> AHeader ByteString
+  ahModifier :: Header -> Header
   ahModifier ah = ah { aHeaderProof = apModifier (aHeaderProof ah) }
 
 modifyDelegationProof
@@ -235,7 +235,7 @@ modifyDelegationProof
   -> Block
   -> Block
 modifyDelegationProof dpModifier ab =
-  modifyAProof apModifier ab
+  modifyProof apModifier ab
  where
   apModifier :: Annotated Proof ByteString -> Annotated Proof ByteString
   apModifier (Annotated p bs) = Annotated
@@ -247,7 +247,7 @@ modifyTxProof
   -> Block
   -> Block
 modifyTxProof tpModifier ab =
-  modifyAProof apModifier ab
+  modifyProof apModifier ab
  where
   apModifier :: Annotated Proof ByteString -> Annotated Proof ByteString
   apModifier (Annotated p bs) = Annotated
@@ -272,7 +272,7 @@ invalidateABlockProof ab =
       [ pure $ proofUpdate (blockProof ab)
       , feedPM Update.genProof
       ]
-    pure $ modifyAProof
+    pure $ modifyProof
       (\(Annotated p bs) -> Annotated
         (p
           { proofUTxO = txProof

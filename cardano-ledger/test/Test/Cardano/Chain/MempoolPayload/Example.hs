@@ -10,7 +10,7 @@ where
 import Cardano.Prelude
 
 import Cardano.Chain.Delegation as Delegation (unsafePayload)
-import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
+import Cardano.Chain.MempoolPayload (MempoolPayload (..), MempoolPayload)
 
 import Test.Cardano.Chain.Delegation.Example as Delegation
     (exampleCertificates)

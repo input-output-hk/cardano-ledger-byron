@@ -5,7 +5,7 @@ module Cardano.Chain.Update.Proof
   )
 where
 
-import Cardano.Chain.Update.Payload (APayload(..), Payload)
+import Cardano.Chain.Update.Payload (Payload(..))
 import Cardano.Crypto (Hash, hash, hashDecoded)
 import Cardano.Prelude
 
@@ -16,5 +16,5 @@ type Proof = Hash Payload
 mkProof :: Payload -> Proof
 mkProof = hash
 
-recoverProof :: APayload ByteString -> Proof
+recoverProof :: Payload -> Proof
 recoverProof = hashDecoded
