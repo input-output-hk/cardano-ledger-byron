@@ -3,13 +3,8 @@ steps:
     env:
       STACK_ROOT: "/build/cardano-ledger.stack"
     command:
-      # cache-s3 needs a build directory that is the same across all buildkite agents.
-      # so copy the source into /build/cardano-ledger
-      - "rm -rf /build/cardano-ledger"
-      - "cp -R . /build/cardano-ledger"
-      - "cd /build/cardano-ledger"
-      - "nix-build scripts/buildkite -o stack-rebuild"
-      - "./stack-rebuild"
+      - "nix-build .buildkite/default.nix -o sr"
+      - "./sr/bin/rebuild --build-dir /build/cardano-ledger --cache-dir /build/cardano-ledger.cache"
     agents:
       system: x86_64-linux
 
