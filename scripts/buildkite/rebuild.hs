@@ -149,7 +149,7 @@ buildStep dryRun bk =
     echo "+++ Build"
         *> build Fast ["--test", "--no-run-tests"] .&&.
     echo "+++ Test"
-        *> timeout 30 (test Fast Serial .&&. test Fast Parallel)
+        *> timeout 30 (test Fast Serial) -- .&&. test Fast Parallel)
   where
     build opt args =
         run dryRun "stack" $ concat
@@ -174,12 +174,12 @@ buildStep dryRun bk =
             , case qaLevel bk of
                 QuickTest -> skip "integration"
                 FullTest -> []
-            , case behavior of
-                Serial ->
-                    ta (match serialTests ++ jobs 1) ++ jobs 1
-                Parallel ->
-                    ta (skip serialTests)
-            , [ "--ta"], ["--scenario=ContinuousIntegration"]
+            -- , case behavior of
+            --     Serial ->
+            --         ta (match serialTests ++ jobs 1) ++ jobs 1
+            --     Parallel ->
+            --         ta (skip serialTests)
+            , [ "--ta"], ["'--scenario=ContinuousIntegration'"]
             ]
 
     color arg = ["--color", arg]
