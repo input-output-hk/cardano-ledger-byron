@@ -74,7 +74,8 @@ main = do
             doMaybe (setupBuildDirectory optDryRun) optBuildDirectory
             whenRun optDryRun $ cacheGetStep cacheConfig
             buildResult <- buildStep optDryRun bk
-            when (shouldUploadCoverage bk) $ uploadCoverageStep optDryRun
+            -- TODO: uncomment this: when (shouldUploadCoverage bk) $
+            uploadCoverageStep optDryRun
             whenRun optDryRun $ cachePutStep cacheConfig
             void $ weederStep optDryRun
             exitWith buildResult
