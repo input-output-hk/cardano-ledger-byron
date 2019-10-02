@@ -149,7 +149,7 @@ buildStep dryRun bk =
     echo "+++ Build"
         *> build Fast ["--test", "--no-run-tests"] .&&.
     echo "+++ Test"
-        *> timeout 30 (test Fast Serial) -- .&&. test Fast Parallel)
+        *> timeout 60 (test Standard Serial) -- .&&. test Fast Parallel)
   where
     build opt args =
         run dryRun "stack" $ concat
