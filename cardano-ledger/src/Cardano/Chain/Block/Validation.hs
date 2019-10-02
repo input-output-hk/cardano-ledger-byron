@@ -445,30 +445,12 @@ updateBody
   -> ABlock ByteString
   -> m BodyState
 updateBody env bs b = do
-  -- Validate the block size
-  blockLength b <= maxBlockSize
-    `orThrowErrorInBlockValidationMode`
-      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
-
-  -- Validate the delegation, transaction, and update payload proofs.
-  whenBlockValidation (validateBlockProofs b)
-    `wrapErrorWithValidationMode` ChainValidationProofValidationError
-
-  -- Update the delegation state
-  delegationState' <-
-    DI.updateDelegation delegationEnv delegationState certificates
-      `wrapError` ChainValidationDelegationSchedulingError
-
+  (updateState', delegationState') <-
+    updateBodyDelegationUpdate env updateState delegationState b
   -- Update the UTxO
   utxo' <-
     UTxO.updateUTxO utxoEnv utxo txs
       `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
-
-  -- Update the update state
-  updateState' <-
-    UPI.registerUpdate updateEnv updateState updateSignal
-      `wrapError` ChainValidationUpdateError currentSlot
-
   pure $ BodyState
     { utxo        = utxo'
     , updateState = updateState'
@@ -477,18 +459,45 @@ updateBody env bs b = do
  where
   BodyEnvironment { protocolMagic, k, allowedDelegators
                   , utxoConfiguration, currentEpoch } = env
-
   BodyState { utxo, updateState, delegationState } = bs
+  txs           = aUnTxPayload $ blockTxPayload b
+  utxoEnv = UTxO.Environment
+    { UTxO.protocolMagic = protocolMagic
+    , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
+    , UTxO.utxoConfiguration = utxoConfiguration
+    }
 
+updateBodyDelegationUpdate
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => BodyEnvironment
+  -> UPI.State
+  -> DI.State
+  -> ABlock ByteString
+  -> m (UPI.State, DI.State)
+updateBodyDelegationUpdate env updateState delegationState b = do
+  -- Validate the block size
+  blockLength b <= maxBlockSize
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
+  -- Validate the delegation, transaction, and update payload proofs.
+  whenBlockValidation (validateBlockProofs b)
+    `wrapErrorWithValidationMode` ChainValidationProofValidationError
+  -- Update the delegation state
+  delegationState' <-
+    DI.updateDelegation delegationEnv delegationState certificates
+      `wrapError` ChainValidationDelegationSchedulingError
+  -- Update the update state
+  updateState' <-
+    UPI.registerUpdate updateEnv updateState updateSignal
+      `wrapError` ChainValidationUpdateError currentSlot
+  pure (updateState', delegationState')
+ where
+  BodyEnvironment { protocolMagic, k, allowedDelegators, currentEpoch } 
+    = env
   maxBlockSize =
     Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters updateState
-
-  currentSlot   = blockSlot b
-
-  certificates  = Delegation.getPayload $ blockDlgPayload b
-
-  txs           = aUnTxPayload $ blockTxPayload b
-
+  currentSlot = blockSlot b
+  certificates = Delegation.getPayload $ blockDlgPayload b
   delegationEnv = DI.Environment
     { DI.protocolMagic = getAProtocolMagicId protocolMagic
     , DI.allowedDelegators = allowedDelegators
@@ -496,13 +505,6 @@ updateBody env bs b = do
     , DI.currentEpoch = currentEpoch
     , DI.currentSlot = currentSlot
     }
-
-  utxoEnv = UTxO.Environment
-    { UTxO.protocolMagic = protocolMagic
-    , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
-    , UTxO.utxoConfiguration = utxoConfiguration
-    }
-
   updateEnv = UPI.Environment
     { UPI.protocolMagic = getAProtocolMagicId protocolMagic
     , UPI.k = k
@@ -511,11 +513,12 @@ updateBody env bs b = do
     , UPI.delegationMap = DI.delegationMap delegationState
     }
   updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
-
   updateProposal = Update.payloadProposal $ blockUpdatePayload b
   updateVotes    = Update.payloadVotes $ blockUpdatePayload b
   updateEndorsement =
     Endorsement (blockProtocolVersion b) (hashKey $ blockIssuer b)
+
+
 
 
 toNumGenKeys :: Integral n => n -> Word8
