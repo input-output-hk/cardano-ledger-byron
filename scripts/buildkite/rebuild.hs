@@ -292,10 +292,10 @@ uploadCoverageStep dryRun = do
         , "--all"
         ] ++ map (format fp) tixFiles)
     upload repoToken = do
-        let shcArgs = [ "combined"
-                      , "custom"
-                      ]
-                    ++ extraShcArgs
+        let shcArgs =  extraShcArgs
+                    ++ [ "combined"
+                       , "custom"
+                       ]
         logCommand "shc" shcArgs
         whenRun' dryRun ExitSuccess $
             proc "shc" (["--repo-token", repoToken] ++ shcArgs) empty
