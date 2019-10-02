@@ -64,6 +64,9 @@ extraShcArgs = [ "--exclude-dirs"
                , "crypto/test"
                ]
 
+tixFolder :: FilePath
+tixFolder = "."
+
 main :: IO ()
 main = do
     (RebuildOpts{..}, cmd) <- parseOpts
@@ -282,7 +285,7 @@ uploadCoverageStep dryRun = do
                 ExitFailure _ -> echo "Coverage information upload failed."
   where
     var = coverallsRepoTokenEnvVar
-    findTix = fold (find (suffix ".tix") "lib") Fold.list
+    findTix = fold (find (suffix ".tix") tixFolder) Fold.list
     generate tixFiles = run dryRun "stack"
         ([ "hpc"
         , "report"
