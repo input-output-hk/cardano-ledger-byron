@@ -124,7 +124,6 @@ import Cardano.Chain.Block.Header
   , headerSoftwareVersion
   , headerToSign
   , mkHeaderExplicit
-  , toCBORHeader
   , toCBORABoundaryHeader
   )
 import Cardano.Chain.Block.Proof (Proof(..))
@@ -161,11 +160,10 @@ data Block = Block
 
 -- | Smart constructor for 'Block'
 mkBlock
-  :: EpochSlots
-  -> Header
+  :: Header
   -> Body
   -> Block
-mkBlock epochSlots header body =
+mkBlock header body =
   let bytes = serializeEncoding' $ encodeListLen 3
               <> toCBOR header
               <> toCBOR body
@@ -202,7 +200,7 @@ mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert bo
           body
           pv
           sv
-    in mkBlock epochSlots header body
+    in mkBlock header body
 
 
 --------------------------------------------------------------------------------

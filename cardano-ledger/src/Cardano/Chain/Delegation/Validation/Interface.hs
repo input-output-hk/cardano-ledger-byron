@@ -29,7 +29,6 @@ import Cardano.Binary
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
-  , serialize'
   )
 import Cardano.Chain.Common (BlockCount(..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation

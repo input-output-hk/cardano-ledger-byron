@@ -21,7 +21,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: a112c321a161e5daec0a1dfc164bcc4a2ee05af7
+    commit: 9d845cbd5005b0683014c134f9c70b9117911379
     subdirs:
       - binary
       - binary/test

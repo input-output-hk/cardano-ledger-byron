@@ -17,7 +17,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Word (Word64)
 
-import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block
   ( Block (..)
   , Header (..)
@@ -214,21 +213,21 @@ createInitialDIState dState =
     }
 
 modifyHeader
-  :: (Header ByteString -> Header)
+  :: (Header -> Header)
   -> Block
   -> Block
-modifyHeader ahModifier ab =
-  ab { blockHeader = ahModifier (blockHeader ab) }
+modifyHeader hModifier ab =
+  ab { blockHeader = hModifier (blockHeader ab) }
 
 modifyProof
-  :: (Annotated Proof ByteString -> Annotated Proof ByteString)
+  :: (Proof -> Proof)
   -> Block
   -> Block
-modifyProof apModifier ab =
-  modifyHeader ahModifier ab
+modifyProof pModifier b =
+  modifyHeader hModifier b
  where
-  ahModifier :: Header -> Header
-  ahModifier ah = ah { aHeaderProof = apModifier (aHeaderProof ah) }
+  hModifier :: Header -> Header
+  hModifier h = h { headerProof = pModifier (headerProof h) }
 
 modifyDelegationProof
   :: (Hash Delegation.Payload -> Hash Delegation.Payload)
@@ -237,22 +236,18 @@ modifyDelegationProof
 modifyDelegationProof dpModifier ab =
   modifyProof apModifier ab
  where
-  apModifier :: Annotated Proof ByteString -> Annotated Proof ByteString
-  apModifier (Annotated p bs) = Annotated
-    p { proofDelegation = dpModifier (proofDelegation p) }
-    bs
+  apModifier :: Proof -> Proof
+  apModifier p = p { proofDelegation = dpModifier (proofDelegation p) }
 
 modifyTxProof
   :: (TxProof -> TxProof)
   -> Block
   -> Block
 modifyTxProof tpModifier ab =
-  modifyProof apModifier ab
+  modifyProof pModifier ab
  where
-  apModifier :: Annotated Proof ByteString -> Annotated Proof ByteString
-  apModifier (Annotated p bs) = Annotated
-    p { proofUTxO = tpModifier (proofUTxO p) }
-    bs
+  pModifier :: Proof -> Proof
+  pModifier p = p { proofUTxO = tpModifier (proofUTxO p) }
 
 invalidateABlockProof
   :: Block
@@ -273,14 +268,14 @@ invalidateABlockProof ab =
       , feedPM Update.genProof
       ]
     pure $ modifyProof
-      (\(Annotated p bs) -> Annotated
+      (\p ->
         (p
           { proofUTxO = txProof
           , proofDelegation = dlgProof
           , proofUpdate = updProof
           }
         )
-        bs
+        
       )
       ab
 

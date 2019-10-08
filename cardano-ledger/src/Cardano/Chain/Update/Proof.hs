@@ -6,8 +6,7 @@ module Cardano.Chain.Update.Proof
 where
 
 import Cardano.Chain.Update.Payload (Payload(..))
-import Cardano.Crypto (Hash, hash, hashDecoded)
-import Cardano.Prelude
+import Cardano.Crypto (Hash, hash)
 
 
 -- | Proof that body of update message contains 'Update.Payload'
@@ -17,4 +16,4 @@ mkProof :: Payload -> Proof
 mkProof = hash
 
 recoverProof :: Payload -> Proof
-recoverProof = hashDecoded
+recoverProof = hash

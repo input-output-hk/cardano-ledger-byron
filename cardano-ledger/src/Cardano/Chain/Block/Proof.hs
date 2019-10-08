@@ -5,7 +5,13 @@
 {-# LANGUAGE PatternSynonyms   #-}
 
 module Cardano.Chain.Block.Proof
-  ( Proof(..)
+  ( Proof
+    ( proofUTxO
+    , proofSsc
+    , proofDelegation
+    , proofUpdate
+    , proofSerialized
+    )
   , pattern Proof
   , ProofValidationError (..)
   , mkProof
@@ -34,7 +40,7 @@ import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof(..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
-import Cardano.Crypto (Hash, hash, hashDecoded)
+import Cardano.Crypto (Hash, hash)
 
 
 -- | Proof of everything contained in the payload
@@ -91,7 +97,7 @@ recoverProof :: Body -> Proof
 recoverProof body = Proof
    (recoverTxProof $ bodyTxPayload body)
    SscProof
-   (hashDecoded $ bodyDlgPayload body)
+   (hash $ bodyDlgPayload body)
    (Update.recoverProof $ bodyUpdatePayload body)
 
 -- | Error which can result from attempting to validate an invalid payload

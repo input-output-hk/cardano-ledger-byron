@@ -23,7 +23,6 @@ module Cardano.Chain.Block.Header
   -- * Header Accessors
   , headerProtocolMagicId
   , headerPrevHash
-  , headerProof
   , headerSlot
   , headerIssuer
   , headerLength
@@ -83,7 +82,6 @@ import Cardano.Binary
   , FromCBORAnnotated(..)
   , ToCBOR(..)
   , annotatedDecoder
-  , fromCBORAnnotated
   , dropBytes
   , dropInt32
   , encodeListLen
@@ -293,8 +291,8 @@ instance ToCBOR Header where
 
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
-toCBORHeader :: EpochSlots -> Header -> Encoding
-toCBORHeader es h = toCBOR h
+toCBORHeader :: Header -> Encoding
+toCBORHeader h = toCBOR h
 
 toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
 toCBORBlockVersions pv sv =
@@ -407,10 +405,10 @@ fromCBORHeaderToHash epochSlots = do
 --------------------------------------------------------------------------------
 
 instance B.Buildable (WithEpochSlots Header) where
-  build (WithEpochSlots es header) = renderHeader es header
+  build (WithEpochSlots _ header) = renderHeader header
 
-renderHeader :: EpochSlots -> Header -> Builder
-renderHeader es header = bprint
+renderHeader :: Header -> Builder
+renderHeader header = bprint
   ( "Header:\n"
   . "    hash: " . hashHexF . "\n"
   . "    previous block: " . hashHexF . "\n"
@@ -641,7 +639,7 @@ instance FromCBORAnnotated ToSign where
     lift $ enforceSize "ToSign" 5
     headerHash <- lift fromCBOR
     bodyProof <- fromCBORAnnotated'
-    slotCount <- lift fromCBOR
+    slotCount' <- lift fromCBOR
     difficulty <- lift fromCBOR
     (protocolVersion, softwareVersion) <- lift fromCBORBlockVersions
-    pure $ ToSign headerHash bodyProof slotCount difficulty protocolVersion softwareVersion
+    pure $ ToSign headerHash bodyProof slotCount' difficulty protocolVersion softwareVersion

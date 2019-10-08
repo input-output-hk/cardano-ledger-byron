@@ -15,13 +15,11 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 import Formatting hiding (bytes)
 
-import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO

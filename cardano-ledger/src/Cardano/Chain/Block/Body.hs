@@ -20,7 +20,7 @@ import Cardano.Prelude
 import Cardano.Binary
   (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize,
   FromCBORAnnotated(..), serializeEncoding', encodePreEncoded, serialize',
-  liftByteSpanDecoder, withSlice')
+  withSlice')
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.UTxO.Tx (Tx)

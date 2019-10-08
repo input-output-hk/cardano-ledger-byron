@@ -11,12 +11,10 @@ import Cardano.Prelude
 
 import Cardano.Binary
   ( DecoderError(..)
-  , FromCBOR(..)
   , FromCBORAnnotated(..)
   , ToCBOR(..)
   , decodeWord8
   , encodeListLen
-  , enforceSize
   , decodeListLen
   , matchSize
   )

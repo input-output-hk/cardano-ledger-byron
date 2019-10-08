@@ -15,7 +15,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 
-import Cardano.Binary (Annotated (..), serialize')
+import Cardano.Binary (serialize')
 import Cardano.Chain.Block (BlockValidationMode (..))
 import Cardano.Chain.Common
   ( TxFeePolicy (..)
@@ -27,7 +27,6 @@ import Cardano.Chain.UTxO
   ( TxAux (..)
   , Environment (..)
   , TxId
-  , TxWitness
   , pattern TxWitness
   , TxValidationError (..)
   , TxValidationMode (..)

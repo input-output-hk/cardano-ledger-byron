@@ -91,7 +91,7 @@ elaborate
   -> Abstract.Block
   -> (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
-  ( Concrete.mkBlock epochSlots bh0 bb0
+  ( Concrete.mkBlock bh0 bb0
   , AbstractToConcreteIdMaps
     { transactionIds = txIdMap'
     , proposalIds = proposalsIdMap'
