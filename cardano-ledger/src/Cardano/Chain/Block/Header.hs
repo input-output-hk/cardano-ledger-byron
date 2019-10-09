@@ -30,7 +30,6 @@ module Cardano.Chain.Block.Header
   , headerToSign
 
   -- * Header Binary Serialization
-  , toCBORHeader
   , toCBORHeaderToHash
   , fromCBORHeader
   , fromCBORHeaderToHash
@@ -288,12 +287,6 @@ headerLength = fromIntegral . BS.length . headerAnnotation
 instance ToCBOR Header where
   toCBOR = encodePreEncoded . headerAnnotation
 
-
--- | Encode a header, without taking in to account deprecated epoch boundary
--- blocks.
-toCBORHeader :: Header -> Encoding
-toCBORHeader h = toCBOR h
-
 toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
 toCBORBlockVersions pv sv =
   encodeListLen 4
@@ -329,48 +322,6 @@ fromCBORHeader epochSlots = withSlice' $ do
     sig
     extraBytes
 
-{-
-
-fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
-fromCBORAHeader epochSlots = do
-  Annotated
-    ( pm
-    , prevHash
-    , proof
-    , (slot, genesisKey, difficulty, sig)
-    , Annotated (protocolVersion, softwareVersion) extraByteSpan
-    )
-    byteSpan <-
-    annotatedDecoder $ do
-      enforceSize "Header" 5
-      (,,,,)
-        <$> fromCBORAnnotated
-        <*> fromCBORAnnotated
-        <*> fromCBORAnnotated'
-        <*> do
-              enforceSize "ConsensusData" 4
-              (,,,)
-                -- Next, we decode a 'EpochAndSlotCount' into a 'SlotNumber': the `EpochAndSlotCount`
-                -- used in 'AConsensusData' is encoded as a epoch and slot-count
-                -- pair.
-                <$> fmap (first (toSlotNumber epochSlots)) fromCBORAnnotated
-                <*> fromCBOR
-                <*> fromCBORAnnotated
-                <*> fromCBOR
-        <*> annotatedDecoder fromCBORBlockVersions
-  pure $ AHeader
-    pm
-    prevHash
-    slot
-    difficulty
-    protocolVersion
-    softwareVersion
-    proof
-    genesisKey
-    sig
-    byteSpan
-    extraByteSpan
--}
 fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
 fromCBORBlockVersions = do
   enforceSize "BlockVersions" 4

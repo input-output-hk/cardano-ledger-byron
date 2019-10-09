@@ -25,7 +25,7 @@ import Data.Maybe (fromJust)
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder, goldenTestExplicit)
+import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder, toCBOR)
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
@@ -42,6 +42,7 @@ import Cardano.Chain.Block
   , fromCBORBoundaryConsensusData
   , fromCBORABoundaryHeader
   , fromCBORBOBBlock
+  , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
   , toCBORBOBBlock
@@ -69,6 +70,8 @@ import Cardano.Crypto
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
   , goldenTestCBOR
+  , goldenTestCBORAnnotated
+  , goldenTestExplicit
   , roundTripsCBORAnnotatedShow
   , roundTripsCBORAnnotatedBuildable
   , roundTripsCBORBuildable
@@ -97,9 +100,8 @@ exampleEs = EpochSlots 50
 
 goldenHeader :: Property
 goldenHeader = goldenTestExplicit
-  "Header"
-  (toCBORHeader exampleEs)
-  (fromCBORHeader exampleEs)
+  (serializeEncoding . toCBOR)
+  (decodeAnnotatedDecoder "header" $ fromCBORHeader exampleEs)
   exampleHeader
   "test/golden/cbor/block/Header"
 
@@ -141,11 +143,9 @@ ts_roundTripBlockCompat = eachOfTS
 --------------------------------------------------------------------------------
 -- BlockSignature
 --------------------------------------------------------------------------------
-{-- TODO!
 goldenBlockSignature :: Property
 goldenBlockSignature =
-  goldenTestCBOR exampleBlockSignature "test/golden/cbor/block/BlockSignature"
---}
+  goldenTestCBORAnnotated exampleBlockSignature "test/golden/cbor/block/BlockSignature"
 
 ts_roundTripBlockSignatureCBOR :: TSProperty
 ts_roundTripBlockSignatureCBOR =
@@ -232,8 +232,8 @@ goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
 -- Body
 --------------------------------------------------------------------------------
 
---goldenBody :: Property
---goldenBody = goldenTestCBOR exampleBody "test/golden/cbor/block/Body"
+goldenBody :: Property
+goldenBody = goldenTestCBORAnnotated exampleBody "test/golden/cbor/block/Body"
 
 ts_roundTripBodyCBOR :: TSProperty
 ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORAnnotatedShow
@@ -243,10 +243,8 @@ ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORAnnotatedShow
 -- Proof
 --------------------------------------------------------------------------------
 
-{-- TODO!
 goldenProof :: Property
-goldenProof = goldenTestCBOR exampleProof "test/golden/cbor/block/Proof"
---}
+goldenProof = goldenTestCBORAnnotated exampleProof "test/golden/cbor/block/Proof"
 
 ts_roundTripProofCBOR :: TSProperty
 ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORAnnotatedBuildable
@@ -270,10 +268,8 @@ ts_roundTripSigningHistoryCBOR =
 -- ToSign
 --------------------------------------------------------------------------------
 
-{-- TODO!
 goldenToSign :: Property
-goldenToSign = goldenTestCBOR exampleToSign "test/golden/cbor/block/ToSign"
---}
+goldenToSign = goldenTestCBORAnnotated exampleToSign "test/golden/cbor/block/ToSign"
 
 ts_roundTripToSignCBOR :: TSProperty
 ts_roundTripToSignCBOR =

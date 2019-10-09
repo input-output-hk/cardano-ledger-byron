@@ -11,7 +11,7 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestCBOR, roundTripsCBORAnnotatedShow)
+  (goldenTestCBORAnnotated, roundTripsCBORAnnotatedShow)
 import Test.Cardano.Chain.MempoolPayload.Example
     (exampleMempoolPayload, exampleMempoolPayload1, exampleMempoolPayload2)
 import Test.Cardano.Chain.MempoolPayload.Gen (genMempoolPayload)
@@ -23,22 +23,20 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 -- MempoolPayload
 --------------------------------------------------------------------------------
 
-{- TODO!
 goldenMempoolPayload :: Property
-goldenMempoolPayload = goldenTestCBOR
+goldenMempoolPayload = goldenTestCBORAnnotated
   exampleMempoolPayload
   "test/golden/cbor/MempoolPayload"
 
 goldenMempoolPayload1 :: Property
-goldenMempoolPayload1 = goldenTestCBOR
+goldenMempoolPayload1 = goldenTestCBORAnnotated
   exampleMempoolPayload1
   "test/golden/cbor/MempoolPayload1"
 
 goldenMempoolPayload2 :: Property
-goldenMempoolPayload2 = goldenTestCBOR
+goldenMempoolPayload2 = goldenTestCBORAnnotated
   exampleMempoolPayload2
   "test/golden/cbor/MempoolPayload2"
--}
 
 ts_roundTripMempoolPayload :: TSProperty
 ts_roundTripMempoolPayload =

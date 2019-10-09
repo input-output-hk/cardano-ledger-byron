@@ -8,12 +8,10 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as BSL
 
 import Hedgehog (Group, Property, assert, discover, forAll, property)
 import qualified Hedgehog.Gen as Gen
 
-import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Chain.Delegation
   (Certificate(delegateVK), isValid, signCertificate)
 
