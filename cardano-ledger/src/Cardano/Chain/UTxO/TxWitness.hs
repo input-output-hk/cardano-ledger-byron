@@ -66,6 +66,8 @@ data TxWitness = TxWitness'
 instance ToCBOR TxWitness where
   toCBOR = encodePreEncoded . txWitnessSerialized
 
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy :: Proxy (Vector TxInWitness))
+
 pattern TxWitness :: Vector TxInWitness -> TxWitness
 pattern TxWitness wits <- TxWitness' wits _
   where
