@@ -12,7 +12,7 @@
 module Cardano.Chain.Block.Block
   (
   -- * Block
-    Block (..)
+    Block (blockHeader, blockBody, blockSerialized)
 
   -- * Block Constructors
   , mkBlock

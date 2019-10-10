@@ -14,7 +14,19 @@
 module Cardano.Chain.Block.Header
   (
   -- * Header
-  Header(..)
+  Header
+    ( aHeaderProtocolMagicId
+    , aHeaderPrevHash
+    , aHeaderSlot
+    , aHeaderDifficulty
+    , headerProtocolVersion
+    , headerSoftwareVersion
+    , headerProof
+    , headerGenesisKey
+    , headerSignature
+    , headerExtraAnnotation
+    , headerAnnotation
+    )
 
   -- * Header Constructors
   , mkHeader

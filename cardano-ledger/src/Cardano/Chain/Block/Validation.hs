@@ -408,13 +408,7 @@ validateBlockProofs
   => Block
   -> m ()
 validateBlockProofs b =
-  validateHeaderMatchesBody blockHeader blockBody
- where
-  Block
-    { blockHeader
-    , blockBody
-    } = b
-
+  validateHeaderMatchesBody (blockHeader b) (blockBody b)
 
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
