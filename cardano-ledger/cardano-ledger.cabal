@@ -27,7 +27,6 @@ library
   exposed-modules:
                        Cardano.Chain.Block
                        Cardano.Chain.Common
-                       Cardano.Chain.Constants
                        Cardano.Chain.Delegation
                        Cardano.Chain.Delegation.Validation.Activation
                        Cardano.Chain.Delegation.Validation.Interface

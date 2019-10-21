@@ -28,7 +28,7 @@ import Cardano.Chain.Common
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , mkAttributes
-  , mkKnownLovelace
+  , mkLovelace
   , mkMerkleTree
   , mtRoot
   )
@@ -63,7 +63,6 @@ import Test.Cardano.Chain.Common.Gen
   , genBlockCount
   , genChainDifficulty
   , genLovelace
-  , genLovelaceError
   , genLovelacePortion
   , genMerkleTree
   , genMerkleRoot
@@ -181,17 +180,10 @@ ts_roundTripChainDifficultyCBOR =
 --------------------------------------------------------------------------------
 golden_Lovelace :: Property
 golden_Lovelace = goldenTestCBOR c "test/golden/cbor/common/Lovelace"
-  where c = mkKnownLovelace @9732
+  where c = mkLovelace 9732
 
 ts_roundTripLovelaceCBOR :: TSProperty
 ts_roundTripLovelaceCBOR = eachOfTS 1000 genLovelace roundTripsCBORBuildable
-
---------------------------------------------------------------------------------
--- LovelaceError
---------------------------------------------------------------------------------
-ts_roundTripLovelaceErrorCBOR :: TSProperty
-ts_roundTripLovelaceErrorCBOR =
-  eachOfTS 1000 genLovelaceError roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- LovelacePortion
@@ -226,8 +218,8 @@ golden_TxFeePolicy_Linear =
   goldenTestCBOR tfp "test/golden/cbor/common/TxFeePolicy_Linear"
  where
   tfp = TxFeePolicyTxSizeLinear (TxSizeLinear c1 c2)
-  c1 = mkKnownLovelace @99
-  c2 = mkKnownLovelace @777
+  c1 = mkLovelace 99
+  c2 = mkLovelace 777
 
 ts_roundTripTxFeePolicyCBOR :: TSProperty
 ts_roundTripTxFeePolicyCBOR =
@@ -241,8 +233,8 @@ golden_TxSizeLinear =
   goldenTestCBOR tsl "test/golden/cbor/common/TxSizeLinear"
  where
   tsl = TxSizeLinear c1 c2
-  c1 = mkKnownLovelace @99
-  c2 = mkKnownLovelace @777
+  c1 = mkLovelace 99
+  c2 = mkLovelace 777
 
 ts_roundTripTxSizeLinearCBOR :: TSProperty
 ts_roundTripTxSizeLinearCBOR =

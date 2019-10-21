@@ -218,12 +218,10 @@ abstractTxFee txIdMap tfp aUtxo aTx = do
         (elaborateTxId txIdMap)
         aTxWits
       cLovelace = case tfp of
-        TxFeePolicyTxSizeLinear txSizeLinear ->
-          either (panic . show)
-                  (\x -> x)
-                  (calculateTxSizeLinear
-                    txSizeLinear
-                    (fromIntegral $ BS.length txBytes))
+                    TxFeePolicyTxSizeLinear txSizeLinear ->
+                      calculateTxSizeLinear
+                        txSizeLinear
+                        (fromIntegral $ BS.length txBytes)
   Abstract.Lovelace (lovelaceToInteger cLovelace)
 
 elaborateTxId :: Map Abstract.TxId UTxO.TxId -> Abstract.TxId -> TxId

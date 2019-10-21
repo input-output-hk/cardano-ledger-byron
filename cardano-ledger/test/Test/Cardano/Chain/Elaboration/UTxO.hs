@@ -44,8 +44,8 @@ elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
     { Concrete.ppTxFeePolicy =
       Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear
-        (Concrete.mkKnownLovelace @0)
-        (Concrete.mkKnownLovelace @0)
+        (Concrete.mkLovelace 0)
+        (Concrete.mkLovelace 0)
     }
   , Concrete.UTxO.utxoConfiguration = Concrete.defaultUTxOConfiguration
   }
@@ -143,6 +143,4 @@ elaborateTxOut abstractTxOut = Concrete.TxOut
   Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Lovelace value) =
     abstractTxOut
 
-  lovelaceValue = case Concrete.mkLovelace (fromIntegral value) of
-    Left  err -> panic $ sformat build err
-    Right l   -> l
+  lovelaceValue = Concrete.integerToLovelace (toInteger value)

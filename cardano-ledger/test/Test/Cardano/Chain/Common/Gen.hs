@@ -16,7 +16,6 @@ module Test.Cardano.Chain.Common.Gen
   , genCompactAddress
   , genCustomLovelace
   , genLovelace
-  , genLovelaceError
   , genLovelaceWithRange
   , genLovelacePortion
   , genMerkleRoot
@@ -30,8 +29,6 @@ module Test.Cardano.Chain.Common.Gen
 where
 
 import Cardano.Prelude
-
-import Formatting (build, sformat)
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -48,7 +45,6 @@ import Cardano.Chain.Common
   , ChainDifficulty(..)
   , CompactAddress
   , Lovelace
-  , LovelaceError(..)
   , LovelacePortion(..)
   , MerkleRoot(..)
   , MerkleTree
@@ -59,8 +55,8 @@ import Cardano.Chain.Common
   , lovelacePortionDenominator
   , makeAddress
   , maxLovelaceVal
+  , integerToLovelace
   , mkAttributes
-  , mkLovelace
   , mkMerkleTree
   , hashKey
   , mtRoot
@@ -106,18 +102,13 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
  where
   genLovelace' :: Gen Lovelace
   genLovelace' =
-    mkLovelace
-      <$> Gen.word64 (Range.constant 0 maxCanonicalLovelaceVal)
-      >>= \case
-            Right lovelace -> pure lovelace
-            Left  err      -> panic $ sformat
-              ("The impossible happened in genLovelace: " . build)
-              err
+    genLovelaceWithRange (Range.constant 0 maxCanonicalLovelaceVal)
+
   -- | Maximal possible value of `Lovelace` in Canonical JSON (JSNum !Int54)
   -- This should be (2^53 - 1) ~ 9e15, however in the Canonical ToJSON instance of
   -- `TxFeePolicy` this number is multiplied by 1e9 to keep compatibility with 'Nano'
   --  coefficients
-  maxCanonicalLovelaceVal :: Word64
+  maxCanonicalLovelaceVal :: Integer
   maxCanonicalLovelaceVal = 9e6
 
 genChainDifficulty :: Gen ChainDifficulty
@@ -126,42 +117,14 @@ genChainDifficulty = ChainDifficulty <$> Gen.word64 Range.constantBounded
 genCompactAddress :: Gen CompactAddress
 genCompactAddress = toCompactAddress <$> genAddress
 
-genCustomLovelace :: Word64 -> Gen Lovelace
+genCustomLovelace :: Integer -> Gen Lovelace
 genCustomLovelace size = genLovelaceWithRange (Range.linear 0 size)
 
 genLovelace :: Gen Lovelace
 genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
 
-genLovelaceError :: Gen LovelaceError
-genLovelaceError = Gen.choice
-  [ LovelaceOverflow <$> Gen.word64 overflowRange
-  , LovelaceTooLarge <$> Gen.integral tooLargeRange
-  , LovelaceTooSmall <$> Gen.integral tooSmallRange
-  , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
-  ]
- where
-  overflowRange :: Range Word64
-  overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
-
-  tooLargeRange :: Range Integer
-  tooLargeRange = Range.constant (fromIntegral (maxLovelaceVal + 1))
-                                 (fromIntegral (maxBound :: Word64))
-
-  tooSmallRange :: Range Integer
-  tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
-
-  genUnderflowErrorValues :: Gen (Word64, Word64)
-  genUnderflowErrorValues = do
-    a <- Gen.word64 (Range.constant 0 (maxBound - 1))
-    b <- Gen.word64 (Range.constant a maxBound)
-    pure (a, b)
-
-genLovelaceWithRange :: Range Word64 -> Gen Lovelace
-genLovelaceWithRange r =
-  mkLovelace <$> Gen.word64 r >>= \case
-    Right lovelace -> pure lovelace
-    Left err ->
-      panic $ sformat ("The impossible happened in genLovelace: " . build) err
+genLovelaceWithRange :: Range Integer -> Gen Lovelace
+genLovelaceWithRange r = integerToLovelace <$> Gen.integral r
 
 genLovelacePortion :: Gen LovelacePortion
 genLovelacePortion =

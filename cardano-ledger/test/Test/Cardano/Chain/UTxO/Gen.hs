@@ -72,7 +72,7 @@ import Cardano.Crypto
   (Hash, ProtocolMagicId, decodeHash, getProtocolMagicId, sign)
 
 import Test.Cardano.Chain.Common.Gen
-  (genAddress, genLovelace, genLovelaceError, genMerkleRoot, genNetworkMagic)
+  (genAddress, genLovelace, genMerkleRoot, genNetworkMagic)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genProtocolMagic
@@ -156,10 +156,7 @@ genTxValidationError = do
   let pmi = getProtocolMagicId pm
       nm  = makeNetworkMagic pm
   Gen.choice
-    [ TxValidationLovelaceError
-        <$> Gen.text (Range.constant 0 1000) Gen.alphaNum
-        <*> genLovelaceError
-    , TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace
+    [ TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace
     , TxValidationWitnessWrongSignature
         <$> genTxInWitness pmi
         <*> pure pmi

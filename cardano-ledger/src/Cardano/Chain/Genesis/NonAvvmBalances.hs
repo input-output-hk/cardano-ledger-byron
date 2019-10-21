@@ -26,7 +26,6 @@ import Cardano.Binary (DecoderError)
 import Cardano.Chain.Common
   ( Address
   , Lovelace
-  , LovelaceError
   , addLovelace
   , fromCBORTextAddress
   , integerToLovelace
@@ -51,16 +50,11 @@ instance Monad m => ToJSON m GenesisNonAvvmBalances where
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
 
-data NonAvvmBalancesError
-  = NonAvvmBalancesLovelaceError LovelaceError
-  | NonAvvmBalancesDecoderError DecoderError
+data NonAvvmBalancesError = NonAvvmBalancesDecoderError DecoderError
 
 instance B.Buildable NonAvvmBalancesError where
-  build = \case
-    NonAvvmBalancesLovelaceError err -> bprint
-      ("Failed to construct a lovelace in NonAvvmBalances.\n Error: " . build)
-      err
-    NonAvvmBalancesDecoderError err -> bprint
+  build (NonAvvmBalancesDecoderError err) =
+     bprint
       ("Failed to decode NonAvvmBalances.\n Error: " . build)
       err
 
@@ -73,23 +67,13 @@ convertNonAvvmDataToBalances
   -> m GenesisNonAvvmBalances
 convertNonAvvmDataToBalances balances = fmap GenesisNonAvvmBalances $ do
   converted <- traverse convert (M.toList balances)
-  mkBalances converted
+  return $! mkBalances converted
  where
-  mkBalances :: [(Address, Lovelace)] -> m (Map Address Lovelace)
-  mkBalances =
-    -- Pull 'LovelaceError's out of the 'Map' and lift them to
-    -- 'NonAvvmBalancesError's
-    (`wrapError` NonAvvmBalancesLovelaceError)
-    . sequence
-    -- Make map joining duplicate keys with 'addLovelace' lifted from 'Lovelace ->
-    -- Lovelace -> Either LovelaceError Lovelace' to 'Either LovelaceError Lovelace -> Either
-    -- LovelaceError Lovelace -> Either LovelaceError Lovelace'
-    . M.fromListWith (\c -> join . liftM2 addLovelace c)
-    -- Lift the 'Lovelace's to 'Either LovelaceError Lovelace's
-    . fmap (second Right)
+  mkBalances :: [(Address, Lovelace)] -> Map Address Lovelace
+  mkBalances = M.fromListWith addLovelace
 
   convert :: (Text, Integer) -> m (Address, Lovelace)
   convert (txt, i) = do
     addr <- fromCBORTextAddress txt `wrapError` NonAvvmBalancesDecoderError
-    lovelace <-integerToLovelace i `wrapError` NonAvvmBalancesLovelaceError
+    let lovelace = integerToLovelace i
     return (addr, lovelace)

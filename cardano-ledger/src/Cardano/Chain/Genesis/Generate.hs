@@ -2,11 +2,8 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeApplications  #-}
 
 -- | Generation of genesis data for testnet
 
@@ -18,10 +15,6 @@ module Cardano.Chain.Genesis.Generate
   , generateGenesisData
   , generateGenesisConfig
   , GenesisDataGenerationError(..)
-
-  -- * Helpers which are also used by keygen.
-  , poorSecretToEncKey
-  , poorSecretToKey
   )
 where
 
@@ -39,13 +32,13 @@ import Cardano.Binary (serialize')
 import Cardano.Chain.Common
   ( Address
   , Lovelace
-  , LovelaceError
+  , mkLovelace
+  , integerToLovelace
+  , maxLovelaceVal
   , addLovelace
   , applyLovelacePortionDown
-  , deriveFirstHDAddress
   , divLovelace
   , makeVerKeyAddress
-  , mkKnownLovelace
   , hashKey
   , modLovelace
   , scaleLovelace
@@ -67,26 +60,21 @@ import Cardano.Chain.Genesis.Config (Config(..))
 import Cardano.Chain.UTxO.UTxOConfiguration (defaultUTxOConfiguration)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
 import Cardano.Crypto
-  ( EncryptedSigningKey
-  , SigningKey
+  ( SigningKey
   , deterministic
-  , emptyPassphrase
-  , encToSigning
   , getProtocolMagicId
   , getRequiresNetworkMagic
   , hash
   , keyGen
-  , noPassEncrypt
   , noPassSafeSigner
   , redeemDeterministicKeyGen
-  , safeKeyGen
   , toCompactRedeemVerificationKey
   , toVerification
   )
 
 
 -- | Poor node secret
-data PoorSecret = PoorSecret SigningKey | PoorEncryptedSecret EncryptedSigningKey
+newtype PoorSecret = PoorSecret { poorSecretToKey :: SigningKey }
   deriving (Generic, NoUnexpectedThunks)
 
 -- | Valuable secrets which can unlock genesis data.
@@ -114,13 +102,12 @@ data GenesisDataGenerationError
   = GenesisDataAddressBalanceMismatch Text Int Int
   | GenesisDataGenerationDelegationError GenesisDelegationError
   | GenesisDataGenerationDistributionMismatch Lovelace Lovelace
-  | GenesisDataGenerationLovelaceError LovelaceError
   | GenesisDataGenerationPassPhraseMismatch
   | GenesisDataGenerationRedeemKeyGen
   deriving (Eq, Show)
 
 instance B.Buildable GenesisDataGenerationError where
-  build = \case
+  build x = case x of
     GenesisDataAddressBalanceMismatch distr addresses balances ->
       bprint ("GenesisData address balance mismatch, Distribution: "
              . stext
@@ -145,11 +132,6 @@ instance B.Buildable GenesisDataGenerationError where
              )
              testBalance
              totalBalance
-    GenesisDataGenerationLovelaceError lovelaceErr ->
-      bprint ("GenesisDataGenerationLovelaceError: "
-             . build
-             )
-             lovelaceErr
     GenesisDataGenerationPassPhraseMismatch ->
       bprint "GenesisDataGenerationPassPhraseMismatch"
     GenesisDataGenerationRedeemKeyGen ->
@@ -213,36 +195,28 @@ generateGenesisData startTime genesisSpec = do
              (pure . toCompactRedeemVerificationKey . fst))
       $ fmap redeemDeterministicKeyGen (gsFakeAvvmSeeds generatedSecrets)
   let
-    fakeAvvmDistr = GenesisAvvmBalances . M.fromList $ map
-      (, faoOneBalance fao)
-      fakeAvvmVerificationKeys
+    fakeAvvmDistr = GenesisAvvmBalances $
+                      M.fromList
+                        [ (key, faoOneBalance fao)
+                        | key <- fakeAvvmVerificationKeys ]
 
   -- Non AVVM balances
   ---- Addresses
   let
-    createAddressPoor
-      :: MonadError GenesisDataGenerationError m => PoorSecret -> m Address
-    createAddressPoor (PoorEncryptedSecret hdwSk) =
-      maybe (throwError GenesisDataGenerationPassPhraseMismatch) (pure . fst)
-        $ deriveFirstHDAddress nm emptyPassphrase hdwSk
+    createAddressPoor :: PoorSecret -> Address
     createAddressPoor (PoorSecret secret) =
-      pure $ makeVerKeyAddress nm (toVerification secret)
+      makeVerKeyAddress nm (toVerification secret)
   let richAddresses = map (makeVerKeyAddress nm . toVerification) richSecrets
 
-  poorAddresses        <- mapM createAddressPoor poorSecrets
+  let poorAddresses = map createAddressPoor poorSecrets
 
   ---- Balances
-  totalFakeAvvmBalance <-
-    scaleLovelace (faoOneBalance fao) (faoCount fao)
-      `wrapError` GenesisDataGenerationLovelaceError
+  let totalFakeAvvmBalance = scaleLovelace (faoOneBalance fao) (faoCount fao)
 
   -- Compute total balance to generate
-  avvmSum <-
-    sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
-      `wrapError` GenesisDataGenerationLovelaceError
-  maxTnBalance <-
-    subLovelace maxBound avvmSum `wrapError` GenesisDataGenerationLovelaceError
-  let tnBalance = min maxTnBalance (tboTotalBalance tbo)
+  let avvmSum      = sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
+      maxTnBalance = subLovelace (integerToLovelace maxLovelaceVal) avvmSum
+      tnBalance    = min maxTnBalance (tboTotalBalance tbo)
 
   let
     safeZip
@@ -256,9 +230,7 @@ generateGenesisData startTime genesisSpec = do
         $ GenesisDataAddressBalanceMismatch s (length a) (length b)
       else pure $ zip a b
 
-  nonAvvmBalance <-
-    subLovelace tnBalance totalFakeAvvmBalance
-      `wrapError` GenesisDataGenerationLovelaceError
+  let nonAvvmBalance = subLovelace tnBalance totalFakeAvvmBalance
 
   (richBals, poorBals) <- genTestnetDistribution tbo nonAvvmBalance
 
@@ -326,9 +298,7 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
   replicateRich = replicateM (fromIntegral $ tboRichmen tbo)
 
   genPoorSecret :: MonadRandom m => m PoorSecret
-  genPoorSecret = if tboUseHDAddresses tbo
-    then PoorEncryptedSecret . snd <$> safeKeyGen emptyPassphrase
-    else PoorSecret . snd <$> keyGen
+  genPoorSecret = PoorSecret . snd <$> keyGen
 
 
 ----------------------------------------------------------------------------
@@ -359,19 +329,6 @@ generateGenesisConfig startTime genesisSpec = do
 
 
 ----------------------------------------------------------------------------
--- Exported helpers
-----------------------------------------------------------------------------
-
-poorSecretToKey :: PoorSecret -> SigningKey
-poorSecretToKey (PoorSecret          key   ) = key
-poorSecretToKey (PoorEncryptedSecret encKey) = encToSigning encKey
-
-poorSecretToEncKey :: PoorSecret -> EncryptedSigningKey
-poorSecretToEncKey (PoorSecret          key ) = noPassEncrypt key
-poorSecretToEncKey (PoorEncryptedSecret encr) = encr
-
-
-----------------------------------------------------------------------------
 -- Internal helpers
 ----------------------------------------------------------------------------
 
@@ -381,46 +338,41 @@ genTestnetDistribution
   => TestnetBalanceOptions
   -> Lovelace
   -> m ([Lovelace], [Lovelace])
-genTestnetDistribution tbo testBalance = do
-  (richBalances, poorBalances, totalBalance) <-
-    (`wrapError` GenesisDataGenerationLovelaceError) $ do
-      richmanBalance      <- divLovelace desiredRichBalance tboRichmen
-
-      richmanBalanceExtra <- modLovelace desiredRichBalance tboRichmen
-
-      richmanBalance'     <- if tboRichmen == 0
-        then pure $ mkKnownLovelace @0
-        else addLovelace
-          richmanBalance
-          (if richmanBalanceExtra > mkKnownLovelace @0
-            then mkKnownLovelace @1
-            else mkKnownLovelace @0
-          )
-
-      totalRichBalance    <- scaleLovelace richmanBalance' tboRichmen
-
-      desiredPoorsBalance <- subLovelace testBalance totalRichBalance
-
-      poorBalance         <- if tboPoors == 0
-        then pure $ mkKnownLovelace @0
-        else divLovelace desiredPoorsBalance tboPoors
-
-      totalPoorBalance <- scaleLovelace poorBalance tboPoors
-
-      totalBalance     <- addLovelace totalRichBalance totalPoorBalance
-
-      pure
-        ( replicate (fromIntegral tboRichmen) richmanBalance'
-        , replicate (fromIntegral tboPoors)   poorBalance
-        , totalBalance
-        )
-
-  if totalBalance <= testBalance
-    then pure (richBalances, poorBalances)
-    else throwError
-      $ GenesisDataGenerationDistributionMismatch testBalance totalBalance
+genTestnetDistribution tbo testBalance
+  | totalBalance <= testBalance
+              = pure (richBalances, poorBalances)
+  | otherwise = throwError $
+                  GenesisDataGenerationDistributionMismatch
+                    testBalance totalBalance
  where
   TestnetBalanceOptions { tboPoors, tboRichmen } = tbo
+
+  richmanBalance      = divLovelace desiredRichBalance tboRichmen
+  richmanBalanceExtra = modLovelace desiredRichBalance tboRichmen
+
+  richmanBalance'
+    | tboRichmen == 0 = mkLovelace 0
+    | otherwise       = addLovelace
+                          richmanBalance
+                          (if richmanBalanceExtra > mkLovelace 0
+                             then mkLovelace 1
+                             else mkLovelace 0
+                          )
+
+  totalRichBalance    = scaleLovelace richmanBalance' tboRichmen
+
+  desiredPoorsBalance = subLovelace testBalance totalRichBalance
+
+  poorBalance
+    | tboPoors == 0 = mkLovelace 0
+    | otherwise     = divLovelace desiredPoorsBalance tboPoors
+
+  totalPoorBalance = scaleLovelace poorBalance tboPoors
+
+  totalBalance = addLovelace totalRichBalance totalPoorBalance
+
+  richBalances = replicate (fromIntegral tboRichmen) richmanBalance'
+  poorBalances = replicate (fromIntegral tboPoors)   poorBalance
 
   desiredRichBalance =
     applyLovelacePortionDown (tboRichmenShare tbo) testBalance

@@ -46,7 +46,7 @@ import Cardano.Binary
   , matchSize
   )
 import Cardano.Chain.Common
-  (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
+  (Address, Lovelace, isRedeemAddress, sumLovelace)
 import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
 import Cardano.Chain.UTxO.Compact
   ( CompactTxIn
@@ -135,7 +135,7 @@ union (UTxO m) (UTxO m') = do
 concat :: MonadError UTxOError m => [UTxO] -> m UTxO
 concat = foldM union empty
 
-balance :: UTxO -> Either LovelaceError Lovelace
+balance :: UTxO -> Lovelace
 balance = sumLovelace . fmap compactTxOutValue . M.elems . unUTxO
  where
   compactTxOutValue :: CompactTxOut -> Lovelace

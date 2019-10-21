@@ -36,7 +36,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import Formatting (bprint, build, float, int, sformat)
+import Formatting (bprint, build, float, int)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
@@ -145,32 +145,19 @@ lovelacePortionToDouble (getLovelacePortion -> x) =
 --
 --   Use it for calculating lovelace amounts.
 applyLovelacePortionDown :: LovelacePortion -> Lovelace -> Lovelace
-applyLovelacePortionDown (getLovelacePortion -> p) (unsafeGetLovelace -> c) =
-  case c' of
-    Right lovelace -> lovelace
-    Left  err      -> panic $ sformat
-      ("The impossible happened in applyLovelacePortionDown: " . build)
-      err
- where
-  c' =
-    mkLovelace
-      .     fromInteger
+applyLovelacePortionDown (getLovelacePortion -> p) c =
+    integerToLovelace
       $     toInteger p
-      *     toInteger c
+      *     lovelaceToInteger c
       `div` toInteger lovelacePortionDenominator
 
 -- | Apply LovelacePortion to Lovelace (with rounding up)
 --
 --   Use it for calculating thresholds.
 applyLovelacePortionUp :: LovelacePortion -> Lovelace -> Lovelace
-applyLovelacePortionUp (getLovelacePortion -> p) (unsafeGetLovelace -> c) =
-  case mkLovelace c' of
-    Right lovelace -> lovelace
-    Left  err      -> panic $ sformat
-      ("The impossible happened in applyLovelacePortionUp: " . build)
-      err
+applyLovelacePortionUp (getLovelacePortion -> p) c =
+  integerToLovelace c'
  where
-  (d, m) =
-    divMod (toInteger p * toInteger c) (toInteger lovelacePortionDenominator)
-  c' :: Word64
-  c' = if m > 0 then fromInteger (d + 1) else fromInteger d
+  (d, m) = divMod (toInteger p * lovelaceToInteger c)
+                  (toInteger lovelacePortionDenominator)
+  c' = if m > 0 then d + 1 else d

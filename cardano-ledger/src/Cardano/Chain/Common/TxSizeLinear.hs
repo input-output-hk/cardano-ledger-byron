@@ -15,24 +15,21 @@ where
 import Cardano.Prelude
 
 import Data.Fixed (Nano)
-import Formatting (bprint, build, sformat)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Decoder
-  , DecoderError(..)
-  , FromCBOR(..)
+  ( FromCBOR(..)
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
   )
 import Cardano.Chain.Common.Lovelace
   ( Lovelace
-  , LovelaceError
   , addLovelace
   , mkLovelace
   , scaleLovelace
-  , unsafeGetLovelace
+  , lovelaceToInteger
   )
 
 
@@ -51,23 +48,18 @@ instance ToCBOR TxSizeLinear where
   -- We encode as 'Nano' for backwards compatibility
   toCBOR (TxSizeLinear a b) =
     encodeListLen 2
-      <> toCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
-      <> toCBOR (fromIntegral (unsafeGetLovelace b) :: Nano)
+      <> toCBOR (fromIntegral (lovelaceToInteger a) :: Nano)
+      <> toCBOR (fromIntegral (lovelaceToInteger b) :: Nano)
 
 instance FromCBOR TxSizeLinear where
   fromCBOR = do
     enforceSize "TxSizeLinear" 2
-    !a <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
-    !b <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
+    !a <- mkLovelace . round <$> fromCBOR @Nano
+    !b <- mkLovelace . round <$> fromCBOR @Nano
     return $ TxSizeLinear a b
-   where
-    wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace
-    wrapLovelaceError =
-      toCborError . first (DecoderErrorCustom "TxSizeLinear" . sformat build)
 
-calculateTxSizeLinear
-  :: TxSizeLinear -> Natural -> Either LovelaceError Lovelace
-calculateTxSizeLinear (TxSizeLinear a b) = addLovelace a <=< scaleLovelace b
+calculateTxSizeLinear :: TxSizeLinear -> Natural -> Lovelace
+calculateTxSizeLinear (TxSizeLinear a b) = addLovelace a . scaleLovelace b
 
 txSizeLinearMinValue :: TxSizeLinear -> Lovelace
 txSizeLinearMinValue (TxSizeLinear a _) = a

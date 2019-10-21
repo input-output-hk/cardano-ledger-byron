@@ -75,16 +75,10 @@ elaborateFeePolicy
 elaborateFeePolicy (Abstract.FactorA a) (Abstract.FactorB b) =
   Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
   where
-    aC = intToLovelace a
-    bC = intToLovelace
+    aC = Concrete.integerToLovelace (toInteger a)
+    bC = Concrete.integerToLovelace
        $ floor
        $ fromIntegral b / (fromIntegral GP.c :: Double)
-
-    intToLovelace :: Int -> Concrete.Lovelace
-    intToLovelace x =
-      case Concrete.mkLovelace (fromIntegral x) of
-        Left err -> panic $ "intToLovelace: " <> show err
-        Right l -> l
 
 elaborateProtocolVersion
   :: Abstract.ProtVer

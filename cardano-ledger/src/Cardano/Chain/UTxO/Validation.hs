@@ -40,7 +40,6 @@ import Cardano.Binary
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
-  , LovelaceError
   , NetworkMagic
   , TxFeePolicy(..)
   , addrNetworkMagic
@@ -48,7 +47,7 @@ import Cardano.Chain.Common
   , checkVerKeyAddress
   , checkRedeemAddress
   , makeNetworkMagic
-  , mkKnownLovelace
+  , mkLovelace
   , subLovelace
   , unknownAttributesLength
   )
@@ -78,8 +77,7 @@ import Cardano.Crypto
 
 -- | A representation of all the ways a transaction might be invalid
 data TxValidationError
-  = TxValidationLovelaceError Text LovelaceError
-  | TxValidationFeeTooSmall Tx Lovelace Lovelace
+  = TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationWitnessWrongSignature TxInWitness ProtocolMagicId TxSigData
   | TxValidationWitnessWrongKey TxInWitness Address
   | TxValidationMissingInput TxIn
@@ -92,11 +90,6 @@ data TxValidationError
 
 instance ToCBOR TxValidationError where
   toCBOR = \case
-    TxValidationLovelaceError text loveLaceError ->
-      encodeListLen 3
-        <> toCBOR @Word8 0
-        <> toCBOR text
-        <> toCBOR loveLaceError
     TxValidationFeeTooSmall tx lovelace1 lovelace2 ->
       encodeListLen 4
         <> toCBOR @Word8 1
@@ -142,7 +135,6 @@ instance FromCBOR TxValidationError where
         checkSize size = matchSize "TxValidationError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
       1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
       2 -> checkSize 4 >> TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR
       3 -> checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
@@ -185,21 +177,18 @@ validateTx env utxo (Annotated tx txBytes) = do
   txInputs tx `forM_` validateTxIn utxoConfiguration utxo
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
-  minFee <- if isRedeemUTxO inputUTxO
-    then pure $ mkKnownLovelace @0
-    else calculateMinimumFee feePolicy
+  let minFee
+        | isRedeemUTxO inputUTxO = mkLovelace 0
+        | otherwise              = calculateMinimumFee feePolicy
 
   -- Calculate the balance of the output 'UTxO'
-  balanceOut <- balance (txOutputUTxO tx)
-    `wrapError` TxValidationLovelaceError "Output Balance"
+  let balanceOut = balance (txOutputUTxO tx)
 
   -- Calculate the balance of the restricted input 'UTxO'
-  balanceIn <- balance inputUTxO
-    `wrapError` TxValidationLovelaceError "Input Balance"
+  let balanceIn = balance inputUTxO
 
   -- Calculate the 'fee' as the difference of the balances
-  fee <- subLovelace balanceIn balanceOut
-    `wrapError` TxValidationLovelaceError "Fee"
+  let fee = subLovelace balanceIn balanceOut
 
   -- Check that the fee is greater than the minimum
   (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
@@ -214,13 +203,9 @@ validateTx env utxo (Annotated tx txBytes) = do
 
   inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
-  calculateMinimumFee
-    :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
-  calculateMinimumFee = \case
-
-    TxFeePolicyTxSizeLinear txSizeLinear ->
+  calculateMinimumFee :: TxFeePolicy -> Lovelace
+  calculateMinimumFee (TxFeePolicyTxSizeLinear txSizeLinear) =
       calculateTxSizeLinear txSizeLinear txSize
-        `wrapError` TxValidationLovelaceError "Minimum Fee"
 
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'

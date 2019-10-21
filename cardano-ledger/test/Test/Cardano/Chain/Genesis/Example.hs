@@ -25,7 +25,7 @@ import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
-  , mkKnownLovelace
+  , mkLovelace
   , mkKnownLovelacePortion
   , hashKey
   )
@@ -75,8 +75,8 @@ exampleGenesisSpec = UnsafeGenesisSpec
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances = GenesisAvvmBalances $ M.fromList
-  [ (exampleCompactRVK' (0, 32) , mkKnownLovelace @36524597913081152)
-  , (exampleCompactRVK' (32, 32), mkKnownLovelace @37343863242999412)
+  [ (exampleCompactRVK' (0, 32) , mkLovelace 36524597913081152)
+  , (exampleCompactRVK' (32, 32), mkLovelace 37343863242999412)
   ]
  where
   exampleCompactRVK' :: (Int, Int) -> CompactRedeemVerificationKey
@@ -147,13 +147,12 @@ exampleGenesisInitializer = GenesisInitializer
   { giTestBalance = TestnetBalanceOptions
     { tboPoors          = 2448641325904532856
     , tboRichmen        = 14071205313513960321
-    , tboTotalBalance   = mkKnownLovelace @10953275486128625
+    , tboTotalBalance   = mkLovelace 10953275486128625
     , tboRichmenShare   = mkKnownLovelacePortion @366832547637728
-    , tboUseHDAddresses = True
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 17853231730478779264
-    , faoOneBalance = mkKnownLovelace @15087947214890024
+    , faoOneBalance = mkLovelace 15087947214890024
     }
   , giAvvmBalanceFactor = LovelacePortion {getLovelacePortion = 366832547637728}
   , giUseHeavyDlg = False
@@ -164,8 +163,8 @@ exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances
 exampleGenesisNonAvvmBalances0 = GenesisNonAvvmBalances
   $ M.fromList [(exampleAddress, coin), (exampleAddress1, coin1)]
  where
-  coin  = mkKnownLovelace @36524597913081152
-  coin1 = mkKnownLovelace @37343863242999412
+  coin  = mkLovelace 36524597913081152
+  coin1 = mkLovelace 37343863242999412
 
 exampleGenesisKeyHashes :: GenesisKeyHashes
 exampleGenesisKeyHashes = GenesisKeyHashes (Set.singleton exampleKeyHash)
