@@ -25,7 +25,7 @@ import Data.Maybe (fromJust)
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder, toCBOR)
+import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder, toCBOR, Decoder, fromCBORPlaceholder)
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
@@ -40,7 +40,6 @@ import Cardano.Chain.Block
   , dropBoundaryBody
   , fromCBORABoundaryBlock
   , fromCBORBoundaryConsensusData
-  , fromCBORABoundaryHeader
   , fromCBORBOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
@@ -49,6 +48,8 @@ import Cardano.Chain.Block
   , toCBORABoundaryBlock
   , toCBORHeaderToHash
   )
+
+import Cardano.Chain.Block.Header (BoundaryHeader)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
   ( EpochNumber(..)
@@ -159,24 +160,24 @@ ts_roundTripBlockSignatureCBOR =
 goldenDeprecatedBoundaryBlockHeader :: Property
 goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   "BoundaryBlockHeader"
-  (void fromCBORABoundaryHeader)
+  (void (fromCBORPlaceholder :: forall s. Decoder s BoundaryHeader))
   "test/golden/cbor/block/BoundaryBlockHeader"
 
 ts_roundTripBoundaryBlock :: TSProperty
 ts_roundTripBoundaryBlock = eachOfTS
     10
     (feedPM genBVDWithPM)
-    roundTripsBVD
+    (roundTripsBVD . snd)
   where
     -- We ignore the size of the BVD here, since calculating it is annoying.
-    roundTripsBVD :: (ProtocolMagicId, ABoundaryBlock ()) -> H.PropertyT IO ()
-    roundTripsBVD (pm, bvd) = trippingBuildable
+    roundTripsBVD :: ABoundaryBlock () -> H.PropertyT IO ()
+    roundTripsBVD bvd = trippingBuildable
       bvd
-      (serializeEncoding . toCBORABoundaryBlock pm)
+      (serializeEncoding . toCBORABoundaryBlock)
       (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryBlock" fromCBORABoundaryBlock)
 
     genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
-    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock
+    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock pm
 
     dropSize :: ABoundaryBlock a -> ABoundaryBlock a
     dropSize bvd = bvd { boundaryBlockLength = 0 }

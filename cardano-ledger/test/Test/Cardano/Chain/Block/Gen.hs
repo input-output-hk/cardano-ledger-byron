@@ -28,7 +28,8 @@ import Cardano.Chain.Block
   , Body
   , ABoundaryBlock(..)
   , ABoundaryBody(..)
-  , ABoundaryHeader(..)
+  , BoundaryHeader(..)
+  , mkBoundaryHeader
   , pattern Body
   , Header
   , HeaderHash
@@ -202,18 +203,18 @@ genBlock protocolMagicId epochSlots =
         )
         body
 
-genBoundaryBlock :: Gen (ABoundaryBlock ())
-genBoundaryBlock =
+genBoundaryBlock :: ProtocolMagicId -> Gen (ABoundaryBlock ())
+genBoundaryBlock pm =
   ABoundaryBlock
     <$> pure 0
-    <*> genBoundaryHeader
+    <*> genBoundaryHeader pm
     <*> pure (ABoundaryBody ())
     <*> pure ()
 
-genBoundaryHeader :: Gen (ABoundaryHeader ())
-genBoundaryHeader =
-  ABoundaryHeader
-    <$> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
+genBoundaryHeader :: ProtocolMagicId -> Gen BoundaryHeader
+genBoundaryHeader pm =
+  mkBoundaryHeader
+    <$> pure pm
+    <*> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
     <*> (Gen.word64 (Range.constantFrom 10 0 1000))
     <*> genChainDifficulty
-    <*> pure ()

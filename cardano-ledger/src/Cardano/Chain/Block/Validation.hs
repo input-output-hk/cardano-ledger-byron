@@ -41,8 +41,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq(..), (<|))
 import qualified Data.Sequence as Seq
@@ -78,12 +76,12 @@ import Cardano.Chain.Block.Block
   )
 import Cardano.Chain.Block.Header
   ( Header (..)
-  , ABoundaryHeader (..)
+  , BoundaryHeader (..)
+  , boundaryHeaderHashAnnotated
   , BlockSignature
   , HeaderHash
   , headerLength
   , headerProof
-  , wrapBoundaryBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
 import Cardano.Chain.Common
@@ -118,7 +116,6 @@ import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId
   , VerificationKey
-  , hashRaw
   , hashDecoded
   )
 import Cardano.Chain.ValidationMode
@@ -375,11 +372,7 @@ updateChainBoundary cvs bvd = do
   pure $ cvs
     { cvsPreviousHash =
       Right
-      . coerce
-      . hashRaw
-      . BSL.fromStrict
-      . wrapBoundaryBytes
-      $ boundaryHeaderAnnotation (boundaryHeader bvd)
+      $ boundaryHeaderHashAnnotated (boundaryHeader bvd)
     }
 
 

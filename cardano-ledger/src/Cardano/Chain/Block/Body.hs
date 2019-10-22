@@ -47,9 +47,6 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
         sscBytes = serialize' ssc
         dlgBytes = serialize' dlg
         updBytes = serialize' upd
-    -- FIXME: This constructs the members of members of the body with incorrect
-    -- bytestring references. We'd need to make the same change we made to body
-    -- all the way down to correct this problem.
     in Body' tx ssc dlg upd bytes
 
 -- | 'Body' consists of payloads of all block components

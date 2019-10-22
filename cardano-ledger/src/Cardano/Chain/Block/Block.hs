@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE PatternSynonyms      #-}
 
 module Cardano.Chain.Block.Block
   (
@@ -90,6 +91,7 @@ import Cardano.Binary
   , withSlice'
   , liftByteSpanDecoder
   , serializeEncoding'
+  , fromCBORPlaceholder
   )
 import Cardano.Chain.Block.Body
   ( Body
@@ -104,12 +106,11 @@ import Cardano.Chain.Block.Boundary
 import Cardano.Chain.Block.Header
   ( BlockSignature
   , Header(..)
-  , ABoundaryHeader(..)
+  , BoundaryHeader(..)
   , Header
   , HeaderHash
   , ToSign
   , boundaryHeaderHashAnnotated
-  , fromCBORABoundaryHeader
   , fromCBORHeader
   , hashHeader
   , headerDifficulty
@@ -124,7 +125,6 @@ import Cardano.Chain.Block.Header
   , headerSoftwareVersion
   , headerToSign
   , mkHeaderExplicit
-  , toCBORABoundaryHeader
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
@@ -322,11 +322,11 @@ toCBORBOBBlock block =
     <> toCBOR block
 
 -- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
-toCBORBOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-toCBORBOBBoundary pm bvd =
+toCBORBOBBoundary :: ABoundaryBlock a -> Encoding
+toCBORBOBBoundary bvd =
   encodeListLen 2
     <> toCBOR (0 :: Word)
-    <> toCBORABoundaryBlock pm bvd
+    <> toCBORABoundaryBlock bvd
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 fromCBORBOBBlock :: EpochSlots -> AnnotatedDecoder s (Maybe Block)
@@ -351,11 +351,10 @@ fromCBORBlockOrBoundary epochSlots = do
     1 -> BOBBlock <$> fromCBORBlock epochSlots
     t -> lift $ cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-toCBORBlockOrBoundary
-  :: ProtocolMagicId -> BlockOrBoundary -> Encoding
-toCBORBlockOrBoundary pm abob = case abob of
+toCBORBlockOrBoundary :: BlockOrBoundary -> Encoding
+toCBORBlockOrBoundary abob = case abob of
   BOBBlock    blk -> toCBORBOBBlock blk
-  BOBBoundary ebb -> toCBORBOBBoundary pm ebb
+  BOBBoundary ebb -> toCBORBOBBoundary ebb
 
 --------------------------------------------------------------------------------
 -- ABoundaryBlock
@@ -391,7 +390,7 @@ toCBORABoundaryBody _ =
 data ABoundaryBlock a = ABoundaryBlock
   { boundaryBlockLength     :: !Int64
   -- ^ Needed for validation.
-  , boundaryHeader          :: !(ABoundaryHeader a)
+  , boundaryHeader          :: !BoundaryHeader
   , boundaryBody            :: !(ABoundaryBody a)
   , boundaryAnnotation      :: !a
   } deriving (Eq, Show, Functor)
@@ -409,7 +408,7 @@ fromCBORABoundaryBlock = do
   Annotated (hdr, bod) bytespan@(ByteSpan start end) <- annotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
     -- 1 item (list of 5)
-    hdr <- fromCBORABoundaryHeader
+    hdr <- fromCBORPlaceholder
     -- 2 items (body and extra body data)
     bod <- fromCBORABoundaryBody
     pure (hdr, bod)
@@ -422,11 +421,11 @@ fromCBORABoundaryBlock = do
 
 -- | See note on `toCBORABoundaryHeader`. This as well does not necessarily
 -- invert the decoder `fromCBORABoundaryBlock`.
-toCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-toCBORABoundaryBlock pm ebb =
+toCBORABoundaryBlock :: ABoundaryBlock a -> Encoding
+toCBORABoundaryBlock ebb =
     encodeListLen 3
       -- 1 item (list of 5)
-      <> toCBORABoundaryHeader pm (boundaryHeader ebb)
+      <> toCBOR (boundaryHeader ebb)
       -- 2 items (body and extra body data)
       <> toCBORABoundaryBody (boundaryBody ebb)
 

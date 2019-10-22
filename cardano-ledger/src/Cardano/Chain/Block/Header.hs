@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE PatternSynonyms      #-}
 
 module Cardano.Chain.Block.Header
   (
@@ -51,9 +52,13 @@ module Cardano.Chain.Block.Header
   , renderHeader
 
   -- * Boundary Header
-  , ABoundaryHeader(..)
-  , toCBORABoundaryHeader
-  , fromCBORABoundaryHeader
+  , BoundaryHeader
+    ( boundaryPrevHash
+    , boundaryEpoch
+    , boundaryDifficulty
+    )
+  , pattern BoundaryHeader
+  , mkBoundaryHeader
   , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes
 
@@ -84,7 +89,6 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , AnnotatedDecoder
-  , ByteSpan
   , Decoded(..)
   , Decoder
   , DecoderError(..)
@@ -92,7 +96,6 @@ import Cardano.Binary
   , FromCBOR(..)
   , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
   , dropBytes
   , dropInt32
   , encodeListLen
@@ -128,7 +131,6 @@ import Cardano.Crypto
   , SigningKey
   , VerificationKey
   , hash
-  , hashDecoded
   , hashHexF
   , hashRaw
   , sign
@@ -357,7 +359,7 @@ fromCBORHeaderToHash epochSlots = do
   lift $ enforceSize "Header" 2
   lift (fromCBOR @Word) >>= \case
     0 -> do
-      void $ lift $ fromCBORABoundaryHeader
+      void $ (fromCBORAnnotated' :: AnnotatedDecoder s BoundaryHeader)
       pure Nothing
     1 -> Just <$!> fromCBORHeader epochSlots
     t -> lift $ cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
@@ -432,76 +434,75 @@ hashHeader = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash
 -- BoundaryHeader
 --------------------------------------------------------------------------------
 
-data ABoundaryHeader a = ABoundaryHeader
+pattern BoundaryHeader
+  :: (Either GenesisHash HeaderHash)
+  -> Word64
+  -> ChainDifficulty
+  -> BoundaryHeader
+pattern BoundaryHeader prevHash epoch difficulty <- BoundaryHeader' prevHash epoch difficulty _
+
+mkBoundaryHeader
+  :: ProtocolMagicId
+  -> (Either GenesisHash HeaderHash)
+  -> Word64
+  -> ChainDifficulty
+  -> BoundaryHeader
+mkBoundaryHeader pm prevHash epoch difficulty =
+    let bytes = serializeEncoding' $ encodeListLen 5
+          <> toCBOR pm
+          <> ( case prevHash of
+                 Left  gh -> toCBOR (genesisHeaderHash gh)
+                 Right hh -> toCBOR hh
+             )
+          -- Body proof
+          <> toCBOR (hash (mempty :: LByteString))
+          -- Consensus data
+          <> ( encodeListLen 2
+              -- Epoch
+              <> toCBOR epoch
+              -- Chain difficulty
+              <> toCBOR difficulty
+             )
+          -- Extra data
+          <> ( encodeListLen 1
+              <> toCBOR genesisTag
+             )
+       -- Genesis tag to indicate the presence of a genesis hash in a non-zero
+       -- epoch. See 'dropBoundaryExtraHeaderDataRetainGenesisTag' for more
+       -- details on this.
+        genesisTag = case (prevHash, epoch) of
+          (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
+          _ -> mempty :: Map Word8 LByteString
+    in BoundaryHeader' prevHash epoch difficulty bytes
+
+data BoundaryHeader = BoundaryHeader'
   { boundaryPrevHash         :: !(Either GenesisHash HeaderHash)
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
-  , boundaryHeaderAnnotation :: !a
-  } deriving (Eq, Show, Functor)
-
-instance Decoded (ABoundaryHeader ByteString) where
-  type BaseType (ABoundaryHeader ByteString) = ABoundaryHeader ()
-  recoverBytes = boundaryHeaderAnnotation
+  , boundaryHeaderSerialized :: ByteString
+  } deriving (Eq, Show)
 
 -- | Compute the hash of a boundary block header from its annotation.
 -- It uses `wrapBoundaryBytes`, for the hash must be computed on the header
 -- bytes tagged with the CBOR list length and tag discriminator, which is
 -- the encoding chosen by cardano-sl.
-boundaryHeaderHashAnnotated :: ABoundaryHeader ByteString -> HeaderHash
-boundaryHeaderHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
+boundaryHeaderHashAnnotated :: BoundaryHeader -> HeaderHash
+boundaryHeaderHashAnnotated = coerce . hash . wrapBoundaryBytes . boundaryHeaderSerialized
 
--- | Encode from a boundary header with any annotation. This does not
--- necessarily invert `fromCBORBoundaryHeader`, because that decoder drops
--- information that this encoder replaces, such as the body proof (assumes
--- the body is empty) and the extra header data (sets it to empty map).
-toCBORABoundaryHeader :: ProtocolMagicId -> ABoundaryHeader a -> Encoding
-toCBORABoundaryHeader pm hdr =
-    encodeListLen 5
-      <> toCBOR pm
-      <> ( case boundaryPrevHash hdr of
-             Left  gh -> toCBOR (genesisHeaderHash gh)
-             Right hh -> toCBOR hh
-         )
-      -- Body proof
-      <> toCBOR (hash (mempty :: LByteString))
-      -- Consensus data
-      <> ( encodeListLen 2
-          -- Epoch
-          <> toCBOR (boundaryEpoch hdr)
-          -- Chain difficulty
-          <> toCBOR (boundaryDifficulty hdr)
-         )
-      -- Extra data
-      <> ( encodeListLen 1
-          <> toCBOR genesisTag
-         )
-  where
-    -- Genesis tag to indicate the presence of a genesis hash in a non-zero
-    -- epoch. See 'dropBoundaryExtraHeaderDataRetainGenesisTag' for more
-    -- details on this.
-    genesisTag = case (boundaryPrevHash hdr, boundaryEpoch hdr) of
-      (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
-      _ -> mempty :: Map Word8 LByteString
-
-fromCBORABoundaryHeader :: Decoder s (ABoundaryHeader ByteSpan)
-fromCBORABoundaryHeader = do
-  Annotated header bytespan <- annotatedDecoder $ do
-    enforceSize "BoundaryHeader" 5
-    dropInt32
-    -- HeaderHash
-    hh <- fromCBOR
+instance FromCBORAnnotated BoundaryHeader where
+  fromCBORAnnotated' = withSlice' $ do
+    lift $ enforceSize "BoundaryHeader" 5
+    lift dropInt32
+    hh <- lift fromCBOR
     -- BoundaryBodyProof
-    dropBytes
-    (epoch, difficulty) <- fromCBORBoundaryConsensusData
-    isGen <- dropBoundaryExtraHeaderDataRetainGenesisTag
+    lift dropBytes
+    (epoch, difficulty) <- lift fromCBORBoundaryConsensusData
+    isGen <- lift dropBoundaryExtraHeaderDataRetainGenesisTag
     let hh' = if epoch == 0 || isGen then Left (coerce hh) else Right hh
-    pure $ ABoundaryHeader
-      { boundaryPrevHash         = hh'
-      , boundaryEpoch            = epoch
-      , boundaryDifficulty       = difficulty
-      , boundaryHeaderAnnotation = ()
-      }
-  pure (header { boundaryHeaderAnnotation = bytespan })
+    pure $ BoundaryHeader' hh' epoch difficulty
+
+instance ToCBOR BoundaryHeader where
+  toCBOR = encodePreEncoded . boundaryHeaderSerialized
 
 -- | These bytes must be prepended when hashing raw boundary header data
 --
@@ -510,7 +511,6 @@ fromCBORABoundaryHeader = do
 --   determined from the raw header data.
 wrapBoundaryBytes :: ByteString -> ByteString
 wrapBoundaryBytes = mappend "\130\NUL"
-
 
 --------------------------------------------------------------------------------
 -- BlockSignature
