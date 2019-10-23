@@ -162,12 +162,7 @@ isValid pm UnsafeCertificate { aEpoch, issuerVK, delegateVK, signature } =
 --------------------------------------------------------------------------------
 
 instance ToCBOR Certificate where
-  toCBOR cert =
-    encodeListLen 4
-      <> toCBOR (epoch cert)
-      <> toCBOR (issuerVK cert)
-      <> toCBOR (delegateVK cert)
-      <> toCBOR (signature cert)
+  toCBOR = encodePreEncoded . serialize
 
 instance FromCBORAnnotated Certificate where
   fromCBORAnnotated' = withSlice' $

@@ -25,31 +25,36 @@ import Data.Maybe (fromJust)
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder, toCBOR, Decoder, fromCBORPlaceholder)
+import Cardano.Binary
+  ( Decoder
+  , decodeAnnotatedDecoder
+  , dropBytes
+  , fromCBORPlaceholder
+  , serializeEncoding
+  , toCBOR
+  )
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
   , Body
-  , ABoundaryBlock(boundaryBlockLength)
   , pattern Body
+  , BoundaryBlock
+  , BoundaryHeader
   , Header
   , HeaderHash
   , Proof(..)
   , pattern Proof
   , ToSign(..)
   , dropBoundaryBody
-  , fromCBORABoundaryBlock
   , fromCBORBoundaryConsensusData
   , fromCBORBOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
   , toCBORBOBBlock
-  , toCBORABoundaryBlock
   , toCBORHeaderToHash
   )
 
-import Cardano.Chain.Block.Header (BoundaryHeader)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
   ( EpochNumber(..)
@@ -167,20 +172,10 @@ ts_roundTripBoundaryBlock :: TSProperty
 ts_roundTripBoundaryBlock = eachOfTS
     10
     (feedPM genBVDWithPM)
-    (roundTripsBVD . snd)
+    (roundTripsCBORAnnotatedBuildable . snd)
   where
-    -- We ignore the size of the BVD here, since calculating it is annoying.
-    roundTripsBVD :: ABoundaryBlock () -> H.PropertyT IO ()
-    roundTripsBVD bvd = trippingBuildable
-      bvd
-      (serializeEncoding . toCBORABoundaryBlock)
-      (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryBlock" fromCBORABoundaryBlock)
-
-    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
+    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, BoundaryBlock)
     genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock pm
-
-    dropSize :: ABoundaryBlock a -> ABoundaryBlock a
-    dropSize bvd = bvd { boundaryBlockLength = 0 }
 
 
 --------------------------------------------------------------------------------

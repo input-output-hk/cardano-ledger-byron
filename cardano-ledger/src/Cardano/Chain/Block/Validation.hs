@@ -61,7 +61,7 @@ import Cardano.Chain.Block.Body (Body (..))
 import Cardano.Chain.Block.Block
   ( Block(..)
   , BlockOrBoundary(..)
-  , ABoundaryBlock(..)
+  , BoundaryBlock(..)
   , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
@@ -348,7 +348,7 @@ updateChainBlockOrBoundary config c b = case b of
 updateChainBoundary
   :: MonadError ChainValidationError m
   => ChainValidationState
-  -> ABoundaryBlock ByteString
+  -> BoundaryBlock
   -> m ChainValidationState
 updateChainBoundary cvs bvd = do
   case (cvsPreviousHash cvs, boundaryPrevHash (boundaryHeader bvd)) of

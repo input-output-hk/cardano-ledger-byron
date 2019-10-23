@@ -26,8 +26,9 @@ import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
   , Body
-  , ABoundaryBlock(..)
-  , ABoundaryBody(..)
+  , BoundaryBlock(..)
+  , pattern BoundaryBlock
+  , pattern BoundaryBody
   , BoundaryHeader(..)
   , mkBoundaryHeader
   , pattern Body
@@ -203,13 +204,11 @@ genBlock protocolMagicId epochSlots =
         )
         body
 
-genBoundaryBlock :: ProtocolMagicId -> Gen (ABoundaryBlock ())
+genBoundaryBlock :: ProtocolMagicId -> Gen BoundaryBlock
 genBoundaryBlock pm =
-  ABoundaryBlock
-    <$> pure 0
-    <*> genBoundaryHeader pm
-    <*> pure (ABoundaryBody ())
-    <*> pure ()
+  BoundaryBlock
+    <$> genBoundaryHeader pm
+    <*> pure BoundaryBody
 
 genBoundaryHeader :: ProtocolMagicId -> Gen BoundaryHeader
 genBoundaryHeader pm =

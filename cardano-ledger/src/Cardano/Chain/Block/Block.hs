@@ -53,14 +53,14 @@ module Cardano.Chain.Block.Block
   , fromCBORBlockOrBoundary
   , toCBORBlockOrBoundary
 
-  -- * ABoundaryBlock
-  , ABoundaryBlock(..)
+  -- * BoundaryBlock
+  , BoundaryBlock(boundaryBlockLength, boundaryHeader, boundaryBody)
+  , pattern BoundaryBlock
   , boundaryHashAnnotated
-  , fromCBORABoundaryBlock
-  , toCBORABoundaryBlock
   , toCBORBOBBoundary
 
-  , ABoundaryBody(..)
+  , BoundaryBody
+  , pattern BoundaryBody
   )
 where
 
@@ -74,24 +74,18 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , AnnotatedDecoder
-  , ByteSpan(..)
-  , Decoded(..)
-  , Decoder
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
   , FromCBORAnnotated (..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeBreak
   , encodeListLen
   , encodeListLenIndef
   , encodePreEncoded
   , enforceSize
   , withSlice'
-  , liftByteSpanDecoder
   , serializeEncoding'
-  , fromCBORPlaceholder
   )
 import Cardano.Chain.Block.Body
   ( Body
@@ -311,7 +305,7 @@ renderBlock es block =
 
 data BlockOrBoundary
   = BOBBlock Block
-  | BOBBoundary (ABoundaryBlock ByteString)
+  | BOBBoundary BoundaryBlock
   deriving (Eq, Show)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
@@ -322,11 +316,11 @@ toCBORBOBBlock block =
     <> toCBOR block
 
 -- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
-toCBORBOBBoundary :: ABoundaryBlock a -> Encoding
+toCBORBOBBoundary :: BoundaryBlock -> Encoding
 toCBORBOBBoundary bvd =
   encodeListLen 2
     <> toCBOR (0 :: Word)
-    <> toCBORABoundaryBlock bvd
+    <> toCBOR bvd
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 fromCBORBOBBlock :: EpochSlots -> AnnotatedDecoder s (Maybe Block)
@@ -347,7 +341,7 @@ fromCBORBlockOrBoundary
 fromCBORBlockOrBoundary epochSlots = do
   lift $ enforceSize "Block" 2
   (lift $ fromCBOR @Word) >>= \case
-    0 -> BOBBoundary <$> liftByteSpanDecoder fromCBORABoundaryBlock
+    0 -> BOBBoundary <$> fromCBORAnnotated'
     1 -> BOBBlock <$> fromCBORBlock epochSlots
     t -> lift $ cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
@@ -357,79 +351,73 @@ toCBORBlockOrBoundary abob = case abob of
   BOBBoundary ebb -> toCBORBOBBoundary ebb
 
 --------------------------------------------------------------------------------
--- ABoundaryBlock
+-- BoundaryBlock
 --------------------------------------------------------------------------------
 
 -- | For boundary body data, we only keep an annotation. It's the body and
 -- extra body data.
-data ABoundaryBody a = ABoundaryBody
-  { boundaryBodyAnnotation :: !a
-  } deriving (Eq, Show, Functor)
+data BoundaryBody = BoundaryBody'
+  { boundaryBodySerialized :: ByteString
+  } deriving (Eq, Show)
 
-instance Decoded (ABoundaryBody ByteString) where
-  type BaseType (ABoundaryBody ByteString) = ABoundaryBody ()
-  recoverBytes = boundaryBodyAnnotation
+pattern BoundaryBody :: BoundaryBody
+pattern BoundaryBody <- BoundaryBody' _
+  where
+  -- | Every boundary body has the same encoding: empty.
+  BoundaryBody = BoundaryBody' $ serializeEncoding' $
+    (encodeListLenIndef <> encodeBreak)
+      <> ( encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
 
-fromCBORABoundaryBody :: Decoder s (ABoundaryBody ByteSpan)
-fromCBORABoundaryBody = do
-  Annotated _ bs <- annotatedDecoder $ do
-    dropBoundaryBody
-    dropBoundaryExtraBodyData
-  pure $ ABoundaryBody bs
+instance FromCBORAnnotated BoundaryBody where
+  fromCBORAnnotated' = withSlice' $
+    BoundaryBody'
+      <$ lift dropBoundaryBody
+      <* lift dropBoundaryExtraBodyData
 
--- | Every boundary body has the same encoding: empty.
-toCBORABoundaryBody :: ABoundaryBody a -> Encoding
-toCBORABoundaryBody _ =
-  (encodeListLenIndef <> encodeBreak)
-    <> ( encodeListLen 1
-        <> toCBOR (mempty :: Map Word8 LByteString)
-       )
+instance ToCBOR BoundaryBody where
+  toCBOR = encodePreEncoded . boundaryBodySerialized
 
 -- | For a boundary block, we keep the header, body, and an annotation for
 -- the whole thing (commonly the bytes from which it was decoded).
-data ABoundaryBlock a = ABoundaryBlock
-  { boundaryBlockLength     :: !Int64
+data BoundaryBlock = BoundaryBlock'
+  { boundaryBlockLength     :: Int64
   -- ^ Needed for validation.
-  , boundaryHeader          :: !BoundaryHeader
-  , boundaryBody            :: !(ABoundaryBody a)
-  , boundaryAnnotation      :: !a
-  } deriving (Eq, Show, Functor)
-
-instance Decoded (ABoundaryBlock ByteString) where
-  type BaseType (ABoundaryBlock ByteString) = ABoundaryBlock ()
-  recoverBytes = boundaryAnnotation
+  , boundaryHeader'         :: !BoundaryHeader
+  , boundaryBody'           :: !BoundaryBody
+  , boundarySerialized      :: ByteString
+  } deriving (Eq, Show)
 
 -- | Extract the hash of a boundary block from its annotation.
-boundaryHashAnnotated :: ABoundaryBlock ByteString -> HeaderHash
+boundaryHashAnnotated :: BoundaryBlock -> HeaderHash
 boundaryHashAnnotated = boundaryHeaderHashAnnotated . boundaryHeader
 
-fromCBORABoundaryBlock :: Decoder s (ABoundaryBlock ByteSpan)
-fromCBORABoundaryBlock = do
-  Annotated (hdr, bod) bytespan@(ByteSpan start end) <- annotatedDecoder $ do
-    enforceSize "BoundaryBlock" 3
+instance FromCBORAnnotated BoundaryBlock where
+  fromCBORAnnotated' = withSlice' $ do
+    lift $ enforceSize "BoundaryBlock" 3
     -- 1 item (list of 5)
-    hdr <- fromCBORPlaceholder
+    hdr <- fromCBORAnnotated'
     -- 2 items (body and extra body data)
-    bod <- fromCBORABoundaryBody
-    pure (hdr, bod)
-  pure $ ABoundaryBlock
-    { boundaryBlockLength = end - start
-    , boundaryHeader      = hdr
-    , boundaryBody        = bod
-    , boundaryAnnotation  = bytespan
-    }
+    bod <- fromCBORAnnotated'
+    pure $
+      \bytes -> BoundaryBlock' (fromIntegral $ BS.length bytes) hdr bod bytes
 
--- | See note on `toCBORABoundaryHeader`. This as well does not necessarily
--- invert the decoder `fromCBORABoundaryBlock`.
-toCBORABoundaryBlock :: ABoundaryBlock a -> Encoding
-toCBORABoundaryBlock ebb =
-    encodeListLen 3
-      -- 1 item (list of 5)
-      <> toCBOR (boundaryHeader ebb)
-      -- 2 items (body and extra body data)
-      <> toCBORABoundaryBody (boundaryBody ebb)
+pattern BoundaryBlock :: BoundaryHeader -> BoundaryBody -> BoundaryBlock
+pattern BoundaryBlock{ boundaryHeader, boundaryBody } <-
+  BoundaryBlock' _ boundaryHeader boundaryBody _
+  where
+    BoundaryBlock hdr bod =
+      let bytes = serializeEncoding' $ 
+            encodeListLen 3
+              -- 1 item (list of 5)
+              <> toCBOR hdr
+              -- 2 items (body and extra body data)
+              <> toCBOR bod
+      in BoundaryBlock' (fromIntegral $ BS.length bytes) hdr bod bytes
 
-instance B.Buildable (ABoundaryBlock a) where
+instance ToCBOR BoundaryBlock where
+  toCBOR = encodePreEncoded . boundarySerialized
+
+instance B.Buildable BoundaryBlock where
   build bvd = bprint
     ( "Boundary:\n"
     . "  Starting epoch: " . int . "\n"
