@@ -1,5 +1,8 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms   #-}
@@ -50,7 +53,8 @@ data Proof = Proof'
   , proofDelegation :: !(Hash Delegation.Payload)
   , proofUpdate     :: !Update.Proof
   , proofSerialized :: ByteString
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData)
+    deriving NoUnexpectedThunks via AllowThunksIn '["proofSerialized"] Proof
 
 pattern Proof :: TxProof -> SscProof -> (Hash Delegation.Payload) -> Update.Proof -> Proof
 pattern Proof proofUTxO proofSsc proofDelegation proofUpdate <-

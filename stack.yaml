@@ -15,7 +15,7 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: dc40b2e60cee4e808ffaa275926ade74a6c987d1
+    commit: 818f6c6c3d25f1980ab56cfa3571160abf3e4444
     subdirs:
       - .
       - test

@@ -1,8 +1,10 @@
 {-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveFunctor        #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
@@ -165,7 +167,8 @@ data Header = Header
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   , headerAnnotation       :: ByteString
   -- ^ An annotation that captures the full header bytes
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData)
+    deriving NoUnexpectedThunks via AllowThunksIn '["headerExtraAnnotation","headerAnnotation"] Header
 
 
 --------------------------------------------------------------------------------
@@ -440,7 +443,8 @@ data BoundaryHeader = BoundaryHeader'
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
   , boundaryHeaderSerialized :: ByteString
-  } deriving (Eq, Show, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic)
+    deriving NoUnexpectedThunks via AllowThunksIn '["boundaryHeaderSerialized"] BoundaryHeader
 
 pattern BoundaryHeader
   :: (Either GenesisHash HeaderHash)

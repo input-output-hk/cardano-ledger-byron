@@ -1,7 +1,9 @@
+{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -93,7 +95,8 @@ data Certificate = UnsafeCertificate
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   , serialize  :: ByteString
   } deriving (Eq, Ord, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData)
+    deriving NoUnexpectedThunks via AllowThunksIn '["serialize"] Certificate
 
 --------------------------------------------------------------------------------
 -- Certificate Constructors
