@@ -14,36 +14,34 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternSynonyms      #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 module Cardano.Chain.Block.Header
   (
   -- * Header
   Header
-    ( aHeaderProtocolMagicId
-    , aHeaderPrevHash
-    , aHeaderSlot
-    , aHeaderDifficulty
+    ( headerProtocolMagicId
+    , headerPrevHash
+    , headerSlot
+    , headerDifficulty
     , headerProtocolVersion
     , headerSoftwareVersion
     , headerProof
     , headerGenesisKey
     , headerSignature
-    , headerExtraAnnotation
-    , headerAnnotation
+    , headerEpochSlots
     )
+  , pattern UnsafeHeader
 
   -- * Header Constructors
   , mkHeader
   , mkHeaderExplicit
 
   -- * Header Accessors
-  , headerProtocolMagicId
-  , headerPrevHash
-  , headerSlot
   , headerIssuer
   , headerLength
-  , headerDifficulty
   , headerToSign
+  , aHeaderProtocolMagicId
 
   -- * Header Binary Serialization
   , toCBORHeaderToHash
@@ -145,30 +143,103 @@ import Cardano.Crypto
 -- Header
 --------------------------------------------------------------------------------
 
-data Header = Header
-  { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId ByteString)
-  , aHeaderPrevHash        :: !(Annotated HeaderHash ByteString)
+data Header = Header'
+  { aHeaderProtocolMagicId' :: !(Annotated ProtocolMagicId ByteString)
+  , aHeaderPrevHash         :: !(Annotated HeaderHash ByteString)
   -- ^ Pointer to the header of the previous block
-  , aHeaderSlot            :: !(Annotated SlotNumber ByteString)
+  , aHeaderSlot             :: !(Annotated SlotNumber ByteString)
   -- ^ The slot number this block was published for
-  , aHeaderDifficulty      :: !(Annotated ChainDifficulty ByteString)
+  , aHeaderDifficulty       :: !(Annotated ChainDifficulty ByteString)
   -- ^ The chain difficulty up to this block
-  , headerProtocolVersion  :: !ProtocolVersion
+  , headerProtocolVersion'  :: !ProtocolVersion
   -- ^ The version of the protocol parameters this block is using
-  , headerSoftwareVersion  :: !SoftwareVersion
+  , headerSoftwareVersion'  :: !SoftwareVersion
   -- ^ The software version this block was published from
-  , headerProof            :: !Proof
+  , headerProof'            :: !Proof
   -- ^ Proof of body
-  , headerGenesisKey       :: !VerificationKey
+  , headerGenesisKey'       :: !VerificationKey
   -- ^ The genesis key that is delegating to publish this block
-  , headerSignature        :: !BlockSignature
+  , headerSignature'        :: !BlockSignature
   -- ^ The signature of the block, which contains the delegation certificate
-  , headerExtraAnnotation  :: ByteString
+  , headerEpochSlots'       :: !EpochSlots
+  -- ^ Number of slots per epoch. This is needed to serialize the header.
+  , headerExtraAnnotation   :: ByteString
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
-  , headerAnnotation       :: ByteString
+  , headerAnnotation        :: ByteString
   -- ^ An annotation that captures the full header bytes
   } deriving (Eq, Show, Generic, NFData)
     deriving NoUnexpectedThunks via AllowThunksIn '["headerExtraAnnotation","headerAnnotation"] Header
+
+
+{-# COMPLETE UnsafeHeader #-}
+pattern UnsafeHeader
+ :: ProtocolMagicId
+ -> HeaderHash
+ -> SlotNumber
+ -> ChainDifficulty
+ -> ProtocolVersion
+ -> SoftwareVersion
+ -> Proof
+ -> VerificationKey
+ -> BlockSignature
+ -> EpochSlots
+ -> Header
+pattern UnsafeHeader
+  { headerProtocolMagicId
+  , headerPrevHash
+  , headerSlot
+  , headerDifficulty
+  , headerProtocolVersion
+  , headerSoftwareVersion
+  , headerProof
+  , headerGenesisKey
+  , headerSignature
+  , headerEpochSlots
+  } <- Header'
+    (unAnnotated -> headerProtocolMagicId)
+    (unAnnotated -> headerPrevHash)
+    (unAnnotated -> headerSlot)
+    (unAnnotated -> headerDifficulty)
+    headerProtocolVersion
+    headerSoftwareVersion
+    headerProof
+    headerGenesisKey
+    headerSignature
+    headerEpochSlots
+    _ _
+  where
+  UnsafeHeader pm prevHash slotNumber difficulty pv sv proof genesisVK sig
+    epochSlots =
+    let pmBytes = serialize' pm
+        prevHashBytes = serialize' prevHash
+        slotNumberBytes = serialize' (fromSlotNumber epochSlots $ slotNumber)
+        difficultyBytes = serialize' difficulty
+        headerExtraBytes = serializeEncoding' $ toCBORBlockVersions pv sv
+        headerBytes = serializeEncoding' $
+          encodeListLen 5
+            <> encodePreEncoded pmBytes
+            <> encodePreEncoded prevHashBytes
+            <> encodePreEncoded (serialize' proof)
+            <> (  encodeListLen 4
+               <> encodePreEncoded slotNumberBytes
+               <> toCBOR genesisVK
+               <> encodePreEncoded difficultyBytes
+               <> toCBOR sig
+               )
+            <> encodePreEncoded headerExtraBytes
+    in Header'
+          (Annotated pm pmBytes)
+          (Annotated prevHash prevHashBytes)
+          (Annotated slotNumber slotNumberBytes)
+          (Annotated difficulty difficultyBytes)
+          pv
+          sv
+          proof
+          genesisVK
+          sig
+          epochSlots
+          headerExtraBytes
+          headerBytes
 
 
 --------------------------------------------------------------------------------
@@ -224,62 +295,26 @@ mkHeaderExplicit
   -> SoftwareVersion
   -> Header
 mkHeaderExplicit pm prevHash difficulty epochSlots slotNumber sk dlgCert body pv sv
-  = Header
-    (Annotated pm pmBytes)
-    (Annotated prevHash prevHashBytes)
-    (Annotated slotNumber slotNumberBytes)
-    (Annotated difficulty difficultyBytes)
-    pv
-    sv
-    proof
-    genesisVK
-    sig
-    headerExtraBytes
-    headerBytes
+  = UnsafeHeader pm prevHash slotNumber difficulty pv sv
+    proof genesisVK sig epochSlots
  where
-  pmBytes = serialize' pm
-  prevHashBytes = serialize' prevHash
-  slotNumberBytes = serialize' (fromSlotNumber epochSlots $ slotNumber)
-  difficultyBytes = serialize' difficulty
-
   proof     = mkProof body
   genesisVK = Delegation.issuerVK dlgCert
   sig       = BlockSignature dlgCert $ sign pm (SignBlock genesisVK) sk toSign
   toSign    = ToSign prevHash proof epochAndSlotCount difficulty pv sv
   epochAndSlotCount = fromSlotNumber epochSlots slotNumber
 
-  headerExtraBytes = serializeEncoding' $ toCBORBlockVersions pv sv
 
-  headerBytes = serializeEncoding' $
-    encodeListLen 5
-      <> encodePreEncoded pmBytes
-      <> encodePreEncoded prevHashBytes
-      <> encodePreEncoded (serialize' proof)
-      <> (  encodeListLen 4
-         <> encodePreEncoded slotNumberBytes
-         <> toCBOR genesisVK
-         <> encodePreEncoded difficultyBytes
-         <> toCBOR sig
-         )
-      <> encodePreEncoded headerExtraBytes
+
+
+
+
 
 
 
 --------------------------------------------------------------------------------
 -- Header Accessors
 --------------------------------------------------------------------------------
-
-headerProtocolMagicId :: Header -> ProtocolMagicId
-headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
-
-headerPrevHash :: Header -> HeaderHash
-headerPrevHash = unAnnotated . aHeaderPrevHash
-
-headerSlot :: Header -> SlotNumber
-headerSlot = unAnnotated . aHeaderSlot
-
-headerDifficulty :: Header -> ChainDifficulty
-headerDifficulty = unAnnotated . aHeaderDifficulty
 
 headerIssuer :: Header -> VerificationKey
 headerIssuer h = case headerSignature h of
@@ -297,6 +332,8 @@ headerToSign epochSlots h = ToSign
 headerLength :: Header -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
 
+aHeaderProtocolMagicId :: Header -> Annotated ProtocolMagicId ByteString
+aHeaderProtocolMagicId = aHeaderProtocolMagicId'
 
 --------------------------------------------------------------------------------
 -- Header Binary Serialization
@@ -328,7 +365,7 @@ fromCBORHeader epochSlots = withSlice' $ do
   sig <- fromCBORAnnotated'
   ((protocolVersion, softwareVersion), extraBytes) <- withSlice' $
     (,) <$> lift fromCBORBlockVersions
-  pure $ Header
+  pure $ Header'
     pm
     prevHash
     slot
@@ -338,6 +375,7 @@ fromCBORHeader epochSlots = withSlice' $ do
     proof
     genesisKey
     sig
+    epochSlots
     extraBytes
 
 fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)

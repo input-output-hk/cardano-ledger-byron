@@ -13,21 +13,22 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Chain.Delegation.Certificate
   (
   -- * Certificate
-    Certificate(..)
+    Certificate(epoch, issuerVK, delegateVK, signature, serialize)
   , CertificateId
 
   -- * Certificate Constructors
   , signCertificate
-  , unsafeCertificate
+  , pattern UnsafeCertificate
 
   -- * Certificate Accessor
-  , epoch
   , certificateId
 
   -- * Certificate Predicate
@@ -84,14 +85,14 @@ type CertificateId = Hash Certificate
 --   Each delegator can publish at most one 'Certificate' per 'EpochNumber', and
 --   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
-data Certificate = UnsafeCertificate
+data Certificate = UnsafeCertificate'
   { aEpoch     :: !(Annotated EpochNumber ByteString)
   -- ^ The epoch from which the delegation is valid
-  , issuerVK   :: !VerificationKey
+  , issuerVK'  :: !VerificationKey
   -- ^ The issuer of the certificate, who delegates their right to sign blocks
-  , delegateVK :: !VerificationKey
+  , delegateVK':: !VerificationKey
   -- ^ The delegate, who gains the right to sign blocks
-  , signature  :: !(Signature EpochNumber)
+  , signature' :: !(Signature EpochNumber)
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   , serialize  :: ByteString
   } deriving (Eq, Ord, Show, Generic)
@@ -102,6 +103,29 @@ data Certificate = UnsafeCertificate
 -- Certificate Constructors
 --------------------------------------------------------------------------------
 
+-- | Create a certificate using the provided signature.
+{-# COMPLETE UnsafeCertificate #-}
+pattern UnsafeCertificate
+  :: EpochNumber
+  -> VerificationKey
+  -- ^ The issuer of the certificate.
+  -> VerificationKey
+  -- ^ The delegate of the certificate.
+  -> Signature EpochNumber
+  -> Certificate
+pattern UnsafeCertificate { epoch, issuerVK, delegateVK, signature } <-
+    UnsafeCertificate' (unAnnotated -> epoch) issuerVK delegateVK signature _
+  where
+  UnsafeCertificate epochNumber ivk dvk sig =
+    let serialize =  serializeEncoding' $ encodeListLen 4
+          <> encodePreEncoded epochNumberBytes
+          <> toCBOR ivk
+          <> toCBOR dvk
+          <> toCBOR sig
+        epochNumberBytes = serialize' epochNumber
+        aEpoch = Annotated epochNumber epochNumberBytes
+    in UnsafeCertificate' aEpoch ivk dvk sig serialize
+
 -- | Create a 'Certificate', signing it with the provided safe signer.
 signCertificate
   :: ProtocolMagicId
@@ -109,42 +133,19 @@ signCertificate
   -> EpochNumber
   -> SafeSigner
   -> Certificate
-signCertificate protocolMagicId delegateVK epochNumber safeSigner =
-  unsafeCertificate epochNumber issuerVK delegateVK signature
+signCertificate protocolMagicId dvk epochNumber safeSigner =
+  UnsafeCertificate epochNumber ivk dvk (coerce sig)
   where
-  issuerVK   = safeToVerification safeSigner
-  signature  = coerce sig :: Signature EpochNumber
+  ivk   = safeToVerification safeSigner
   sig = safeSign protocolMagicId SignCertificate safeSigner
     $ mconcat [ "00"
-              , CC.unXPub (unVerificationKey delegateVK)
+              , CC.unXPub (unVerificationKey dvk)
               , serialize' epochNumber]
-
--- | Create a certificate using the provided signature.
-unsafeCertificate
-  :: EpochNumber
-  -> VerificationKey
-  -- ^ The issuer of the certificate. See 'UnsafeCertificate'.
-  -> VerificationKey
-  -- ^ The delegate of the certificate. See 'UnsafeCertificate'.
-  -> Signature EpochNumber
-  -> Certificate
-unsafeCertificate epochNumber issuerVK delegateVK signature =
-  let serialize =  serializeEncoding' $ encodeListLen 4
-        <> encodePreEncoded epochNumberBytes
-        <> toCBOR issuerVK
-        <> toCBOR delegateVK
-        <> toCBOR signature
-      epochNumberBytes = serialize' epochNumber
-      aEpoch = Annotated epochNumber epochNumberBytes
-  in UnsafeCertificate { aEpoch, issuerVK, delegateVK, signature, serialize }
 
 
 --------------------------------------------------------------------------------
 -- Certificate Accessor
 --------------------------------------------------------------------------------
-
-epoch :: Certificate -> EpochNumber
-epoch = unAnnotated . aEpoch
 
 certificateId :: Certificate -> CertificateId
 certificateId = hash
@@ -158,16 +159,16 @@ isValid
   :: Annotated ProtocolMagicId ByteString
   -> Certificate
   -> Bool
-isValid pm UnsafeCertificate { aEpoch, issuerVK, delegateVK, signature } =
+isValid pm cert =
   verifySignatureDecoded
     pm
     SignCertificate
-    issuerVK
+    (issuerVK cert)
     (   serialize'
-    .   mappend ("00" <> CC.unXPub (unVerificationKey delegateVK))
-    <$> aEpoch
+    .   mappend ("00" <> CC.unXPub (unVerificationKey $ delegateVK cert))
+    <$> (aEpoch cert)
     )
-    signature
+    (signature cert)
 
 
 --------------------------------------------------------------------------------
@@ -179,7 +180,7 @@ instance ToCBOR Certificate where
 
 instance FromCBORAnnotated Certificate where
   fromCBORAnnotated' = withSlice' $
-    UnsafeCertificate <$ lift (enforceSize "Delegation.Certificate" 4)
+    UnsafeCertificate' <$ lift (enforceSize "Delegation.Certificate" 4)
       <*> fromCBORAnnotated'
       <*> lift fromCBOR
       <*> lift fromCBOR
@@ -191,13 +192,13 @@ instance FromCBORAnnotated Certificate where
 --------------------------------------------------------------------------------
 
 instance B.Buildable Certificate where
-  build (UnsafeCertificate e iVK dVK _ _) = bprint
+  build (UnsafeCertificate e iVK dVK _) = bprint
     ( "Delegation.Certificate { w = " . build
     . ", iVK = " . build
     . ", dVK = " . build
     . " }"
     )
-    (unAnnotated e)
+    e
     iVK
     dVK
 
@@ -217,7 +218,7 @@ instance Monad m => ToJSON m Certificate where
 
 instance MonadError SchemaError m => FromJSON m Certificate where
   fromJSON obj =
-    unsafeCertificate
+    UnsafeCertificate
       <$> (fromIntegral @Int54 <$> fromJSField obj "omega")
       <*> fromJSField obj "issuerPk"
       <*> fromJSField obj "delegatePk"

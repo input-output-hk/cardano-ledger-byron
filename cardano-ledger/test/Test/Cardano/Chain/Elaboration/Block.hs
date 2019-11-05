@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE PatternSynonyms    #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -91,7 +92,7 @@ elaborate
   -> Abstract.Block
   -> (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
-  ( Concrete.mkBlock (recomputeHashes bh0) bb0
+  ( Concrete.Block (recomputeHashes bh0) bb0
   , AbstractToConcreteIdMaps
     { transactionIds = txIdMap'
     , proposalIds = proposalsIdMap'
@@ -134,7 +135,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   bb0    = Concrete.Body
              (UTxO.TxPayload txPayload)
              Ssc.SscPayload
-             (Delegation.unsafePayload dcerts)
+             (Delegation.UnsafePayload dcerts)
              updatePayload
 
   dcerts =

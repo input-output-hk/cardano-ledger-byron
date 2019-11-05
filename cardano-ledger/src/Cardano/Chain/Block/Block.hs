@@ -16,7 +16,7 @@ module Cardano.Chain.Block.Block
     Block (blockHeader, blockBody, blockSerialized)
 
   -- * Block Constructors
-  , mkBlock
+  , pattern Block
   , mkBlockExplicit
 
   -- * Block Accessors
@@ -104,6 +104,7 @@ import Cardano.Chain.Block.Header
   , Header
   , HeaderHash
   , ToSign
+  , aHeaderProtocolMagicId
   , boundaryHeaderHashAnnotated
   , fromCBORHeader
   , hashHeader
@@ -141,9 +142,9 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 -- Block
 --------------------------------------------------------------------------------
 
-data Block = Block
-  { blockHeader     :: Header
-  , blockBody       :: Body
+data Block = Block'
+  { blockHeader'    :: !Header
+  , blockBody'      :: !Body
   , blockSerialized :: ByteString
   } deriving (Eq, Show, Generic, NFData)
 
@@ -153,21 +154,19 @@ data Block = Block
 --------------------------------------------------------------------------------
 
 -- | Smart constructor for 'Block'
-mkBlock
-  :: Header
-  -> Body
-  -> Block
-mkBlock header body =
-  let bytes = serializeEncoding' $ encodeListLen 3
-              <> toCBOR header
-              <> toCBOR body
-              <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
-  in Block header body bytes
+{-# COMPLETE Block #-}
+pattern Block :: Header -> Body -> Block
+pattern Block { blockHeader, blockBody } <- Block' blockHeader blockBody _
+  where
+  Block header body =
+    let bytes = serializeEncoding' $ encodeListLen 3
+                <> toCBOR header
+                <> toCBOR body
+                <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
+    in Block' header body bytes
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
---   These are derived from the previous header in 'mkBlock' so if you have
---   the previous header, consider using that one.
 mkBlockExplicit
   :: ProtocolMagicId
   -> ProtocolVersion
@@ -194,7 +193,7 @@ mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert bo
           body
           pv
           sv
-    in mkBlock header body
+    in Block header body
 
 
 --------------------------------------------------------------------------------
@@ -268,7 +267,7 @@ instance ToCBOR Block where
 
 fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
 fromCBORBlock epochSlots = withSlice' $
-  Block <$ lift (enforceSize "Block" 3)
+  Block' <$ lift (enforceSize "Block" 3)
     <*> fromCBORHeader epochSlots
     <*> fromCBORAnnotated'
     -- Drop the deprecated ExtraBodyData

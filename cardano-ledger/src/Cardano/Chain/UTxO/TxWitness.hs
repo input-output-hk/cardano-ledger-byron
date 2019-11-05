@@ -8,7 +8,7 @@
 {-# LANGUAGE PatternSynonyms     #-}
 
 module Cardano.Chain.UTxO.TxWitness
-  ( TxWitness(..)
+  ( TxWitness(txInWitnesses, txWitnessSerialized)
   , pattern TxWitness
   , TxInWitness(..)
   , TxSigData(..)
@@ -58,7 +58,7 @@ import Cardano.Crypto
 --   spends (by providing signatures, redeeming scripts, etc). A separate proof
 --   is provided for each input.
 data TxWitness = TxWitness'
-  { txInWitnesses :: !(Vector TxInWitness)
+  { txInWitnesses' :: !(Vector TxInWitness)
   , txWitnessSerialized :: ByteString
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
@@ -69,7 +69,7 @@ instance ToCBOR TxWitness where
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy :: Proxy (Vector TxInWitness))
 
 pattern TxWitness :: Vector TxInWitness -> TxWitness
-pattern TxWitness wits <- TxWitness' wits _
+pattern TxWitness{ txInWitnesses } <- TxWitness' txInWitnesses _
   where
   TxWitness wits = TxWitness' wits (serializeEncoding' $ toCBOR wits)
 

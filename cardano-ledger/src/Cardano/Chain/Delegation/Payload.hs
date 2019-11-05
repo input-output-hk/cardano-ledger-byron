@@ -7,10 +7,11 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Delegation.Payload
-  ( Payload(..)
-  , unsafePayload
+  ( Payload( getPayload, serializePayload )
+  , pattern UnsafePayload
   )
 where
 
@@ -31,21 +32,24 @@ import qualified Cardano.Chain.Delegation.Certificate as Delegation
 
 
 -- | The delegation 'Payload' contains a list of delegation 'Certificate's
-data Payload = UnsafePayload
-  { getPayload       :: ![Delegation.Certificate]
+data Payload = UnsafePayload'
+  { getPayload'      :: ![Delegation.Certificate]
   , serializePayload :: ByteString
   } deriving (Show, Eq, Generic)
     deriving anyclass NFData
 
-unsafePayload :: [Delegation.Certificate] -> Payload
-unsafePayload sks = UnsafePayload sks (serialize' sks)
+{-# COMPLETE UnsafePayload #-}
+pattern UnsafePayload :: [Delegation.Certificate] -> Payload
+pattern UnsafePayload { getPayload } <- UnsafePayload' getPayload _
+  where
+  UnsafePayload sks = UnsafePayload' sks (serialize' sks)
 
 instance Decoded Payload where
   type BaseType Payload = Payload
   recoverBytes = serializePayload
 
 instance Buildable Payload where
-  build (UnsafePayload psks _) = bprint
+  build (UnsafePayload psks) = bprint
     ("proxy signing keys (" . int . " items): " . listJson . "\n")
     (length psks)
     psks
@@ -54,4 +58,4 @@ instance ToCBOR Payload where
   toCBOR = encodePreEncoded . serializePayload
 
 instance FromCBORAnnotated Payload where
-  fromCBORAnnotated' = withSlice' $ UnsafePayload <$> fromCBORAnnotated'
+  fromCBORAnnotated' = withSlice' $ UnsafePayload' <$> fromCBORAnnotated'

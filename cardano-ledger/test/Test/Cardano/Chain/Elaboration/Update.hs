@@ -200,7 +200,7 @@ elaborateVote
   -> Abstract.Vote
   -> Concrete.Vote
 elaborateVote protocolMagicId proposalsIdMap abstractVote =
-  Concrete.unsafeVote
+  Concrete.UnsafeVote
     issuer
     (elaborateProposalId proposalsIdMap abstractProposalId)
     voteSignature

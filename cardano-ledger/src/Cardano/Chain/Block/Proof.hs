@@ -48,16 +48,17 @@ import Cardano.Crypto (Hash, hash)
 
 -- | Proof of everything contained in the payload
 data Proof = Proof'
-  { proofUTxO       :: !TxProof
-  , proofSsc        :: !SscProof
-  , proofDelegation :: !(Hash Delegation.Payload)
-  , proofUpdate     :: !Update.Proof
+  { proofUTxO'      :: !TxProof
+  , proofSsc'       :: !SscProof
+  , proofDelegation':: !(Hash Delegation.Payload)
+  , proofUpdate'    :: !Update.Proof
   , proofSerialized :: ByteString
   } deriving (Eq, Show, Generic, NFData)
     deriving NoUnexpectedThunks via AllowThunksIn '["proofSerialized"] Proof
 
+{-# COMPLETE Proof #-}
 pattern Proof :: TxProof -> SscProof -> (Hash Delegation.Payload) -> Update.Proof -> Proof
-pattern Proof proofUTxO proofSsc proofDelegation proofUpdate <-
+pattern Proof{ proofUTxO, proofSsc, proofDelegation, proofUpdate } <-
   Proof' proofUTxO proofSsc proofDelegation proofUpdate _
   where
   Proof utxo ssc delegation update =
@@ -67,8 +68,6 @@ pattern Proof proofUTxO proofSsc proofDelegation proofUpdate <-
           <> toCBOR delegation
           <> toCBOR update
     in Proof' utxo ssc delegation update bytes
-
-
 
 instance B.Buildable Proof where
   build proof = bprint

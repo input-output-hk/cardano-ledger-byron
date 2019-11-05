@@ -8,7 +8,13 @@
 {-# LANGUAGE ViewPatterns      #-}
 
 module Cardano.Chain.Block.Body
-  ( Body(..)
+  ( Body
+    ( bodyTxPayload
+    , bodySscPayload
+    , bodyDlgPayload
+    , bodyUpdatePayload
+    , bodySerialized
+    )
   , pattern Body
   , bodyTxs
   , bodyWitnesses
@@ -29,9 +35,14 @@ import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 
 -- | Constructor for 'Body'
+{-# COMPLETE Body #-}
 pattern Body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
-pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
-  Body'
+pattern Body
+  { bodyTxPayload
+  , bodySscPayload
+  , bodyDlgPayload
+  , bodyUpdatePayload
+  } <- Body'
     bodyTxPayload
     bodySscPayload
     bodyDlgPayload
@@ -51,13 +62,13 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
 
 -- | 'Body' consists of payloads of all block components
 data Body = Body'
-  { bodyTxPayload     :: !TxPayload
+  { bodyTxPayload'    :: !TxPayload
   -- ^ UTxO payload
-  , bodySscPayload    :: !SscPayload
+  , bodySscPayload'   :: !SscPayload
   -- ^ Ssc payload
-  , bodyDlgPayload    :: !Delegation.Payload
+  , bodyDlgPayload'   :: !Delegation.Payload
   -- ^ Heavyweight delegation payload (no-ttl certificates)
-  , bodyUpdatePayload :: !Update.Payload
+  , bodyUpdatePayload':: !Update.Payload
   -- ^ Additional update information for the update system
   , bodySerialized    :: ByteString
   } deriving (Eq, Show, Generic, NFData)

@@ -317,14 +317,14 @@ exampleProof = Proof
   SscProof
   (abstractHash dp)
   Update.exampleProof
-  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
+  where dp = Delegation.UnsafePayload (take 4 exampleCertificates)
 
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
 exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
-  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
+  where dp = Delegation.UnsafePayload (take 4 exampleCertificates)
 
 exampleToSign :: ToSign
 exampleToSign = ToSign
