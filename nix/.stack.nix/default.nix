@@ -15,7 +15,6 @@
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "cborg" = (((hackage.cborg)."0.2.2.0").revisions).default;
         "canonical-json" = (((hackage.canonical-json)."0.6.0.0").revisions).default;
-        } // {
         cardano-ledger = ./cardano-ledger.nix;
         cardano-ledger-test = ./cardano-ledger-test.nix;
         cardano-crypto-wrapper = ./cardano-crypto-wrapper.nix;
@@ -37,5 +36,6 @@
       compiler.nix-name = "ghc865";
       };
   resolver = "lts-13.26";
+  modules = [ ({ lib, ... }: { packages = {}; }) { packages = {}; } ];
   compiler = "ghc-8.6.5";
   }
