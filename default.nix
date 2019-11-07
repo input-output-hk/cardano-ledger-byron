@@ -1,44 +1,48 @@
-#
-# The default.nix file. This will generate targets for all
-# buildables.  These include anything from stack.yaml
-# (via nix-tools:stack-to-nix) or cabal.project (via
-# nix-tools:plan-to-nix). As well as custom definitions
-# on top.
-#
-# nix-tools stack-to-nix or plan-to-nix will generate
-# the `nix/plan.nix` file. Where further customizations
-# outside of the ones in stack.yaml/cabal.project can
-# be specified as needed for nix/ci.
-#
+################################################################################
+# See `skeleton` project at https://github.com/input-output-hk/iohk-nix/
+################################################################################
 
-# We will need to import the local lib, which will
-# give us the iohk-nix tooling, which also includes
-# the nix-tools tooling.
+{ system ? builtins.currentSystem
+, crossSystem ? null
+, config ? {}
+# Import IOHK common nix lib
+, iohkLib ? import ./nix/iohk-common.nix { inherit system crossSystem config; }
+# Use nixpkgs pin from iohkLib
+, pkgs ? iohkLib.pkgs
+}:
+
 let
-  localLib = import ./nix/lib.nix;
-in
-# This file needs to export a function that takes
-# the arguments it is passed and forwards them to
-# the default-nix template from iohk-nix. This is
-# important so that the release.nix file can properly
-# parameterize this file when targetting different
-# hosts.
-{ withHoogle ? true
-, ... }@args:
-# We will instantiate the default-nix template with the
-# nix/pkgs.nix file...
-let
-  defaultNix = localLib.nix-tools.default-nix ./nix/pkgs.nix args;
-in defaultNix //
-{
-  shell = defaultNix.nix-tools.shellFor {
-    inherit withHoogle;
-    # env will provide the dependencies of cardano-shell
-    packages = ps: with ps; [ cardano-ledger ];
-    # This adds git to the shell, which is used by stack.
-    buildInputs = [
-      defaultNix.nix-tools._raw.cabal-install.components.exes.cabal
-      localLib.iohkNix.cardano-repo-tool
-    ];
+  haskell = pkgs.callPackage iohkLib.nix-tools.haskell {};
+  src = iohkLib.cleanSourceHaskell ./.;
+  util = pkgs.callPackage ./nix/util.nix {};
+
+  # Import the Haskell package set.
+  haskellPackages = import ./nix/pkgs.nix {
+    inherit pkgs haskell src;
+    # Provide cross-compiling secret sauce
+    inherit (iohkLib.nix-tools) iohk-extras iohk-module;
   };
+
+in {
+  inherit pkgs iohkLib src haskellPackages;
+  inherit (haskellPackages.cardano-ledger.identifier) version;
+
+  tests = util.collectComponents "tests" util.isCardanoLedger haskellPackages;
+  benchmarks = util.collectComponents "benchmarks" util.isCardanoLedger haskellPackages;
+
+  # This provides a development environment that can be used with nix-shell or
+  # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
+  shell = haskellPackages.shellFor {
+    name = "cardano-ledger-shell";
+    # List all local packages in the project.
+    packages = ps: with ps; [
+      cardano-ledger
+    ];
+    # These programs will be available inside the nix-shell.
+    buildInputs =
+      with pkgs.haskellPackages; [ hlint stylish-haskell weeder ghcid lentil ]
+      # You can add your own packages to the shell.
+      ++ [  ];
+  };
+
 }
