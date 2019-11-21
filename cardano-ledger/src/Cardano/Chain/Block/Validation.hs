@@ -4,11 +4,14 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PatternSynonyms            #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -18,10 +21,12 @@ module Cardano.Chain.Block.Validation
   , headerIsValid
   , validateHeaderMatchesBody
   , updateBlock
+  , updateBlockWithoutUtxo
   , BodyState(..)
   , BodyEnvironment(..)
   , EpochEnvironment(..)
   , ChainValidationState(..)
+  , ChainValidationStateWithoutUtxo(..)
   , initialChainValidationState
   , ChainValidationError(..)
 
@@ -357,79 +362,7 @@ updateBody
   -> BodyState
   -> Block
   -> m BodyState
-updateBody env bs b = do
-  -- Validate the block size
-  blockLength b <= maxBlockSize
-    `orThrowErrorInBlockValidationMode`
-      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
-
-  -- Validate the delegation, transaction, and update payload proofs.
-  whenBlockValidation (validateBlockProofs b)
-    `wrapErrorWithValidationMode` ChainValidationProofValidationError
-
-  -- Update the delegation state
-  delegationState' <-
-    DI.updateDelegation delegationEnv delegationState certificates
-      `wrapError` ChainValidationDelegationSchedulingError
-
-  -- Update the UTxO
-  utxo' <-
-    UTxO.updateUTxO utxoEnv utxo txs
-      `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
-
-  -- Update the update state
-  updateState' <-
-    UPI.registerUpdate updateEnv updateState updateSignal
-      `wrapError` ChainValidationUpdateError currentSlot
-
-  pure $ BodyState
-    { utxo        = utxo'
-    , updateState = updateState'
-    , delegationState = delegationState'
-    }
- where
-  BodyEnvironment { protocolMagic, k, allowedDelegators
-                  , utxoConfiguration, currentEpoch } = env
-
-  BodyState { utxo, updateState, delegationState } = bs
-
-  maxBlockSize =
-    Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters updateState
-
-  currentSlot   = blockSlot b
-
-  certificates  = Delegation.getPayload $ blockDlgPayload b
-
-  txs           = unTxPayload $ blockTxPayload b
-
-  delegationEnv = DI.Environment
-    { DI.protocolMagic = getAProtocolMagicId protocolMagic
-    , DI.allowedDelegators = allowedDelegators
-    , DI.k = k
-    , DI.currentEpoch = currentEpoch
-    , DI.currentSlot = currentSlot
-    }
-
-  utxoEnv = UTxO.Environment
-    { UTxO.protocolMagic = protocolMagic
-    , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
-    , UTxO.utxoConfiguration = utxoConfiguration
-    }
-
-  updateEnv = UPI.Environment
-    { UPI.protocolMagic = getAProtocolMagicId protocolMagic
-    , UPI.k = k
-    , UPI.currentSlot = currentSlot
-    , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
-    , UPI.delegationMap = DI.delegationMap delegationState
-    }
-  updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
-
-  updateProposal = Update.payloadProposal $ blockUpdatePayload b
-  updateVotes    = Update.payloadVotes $ blockUpdatePayload b
-  updateEndorsement =
-    Endorsement (blockProtocolVersion b) (hashKey $ blockIssuer b)
-
+updateBody env bs b = revertBody <$> updateBodyI env (convertBody bs) b
 
 toNumGenKeys :: Integral n => n -> Word8
 toNumGenKeys n
@@ -502,63 +435,7 @@ updateBlock
   -> ChainValidationState
   -> Block
   -> m ChainValidationState
-updateBlock config cvs b = do
-
-  -- Compare the block's 'ProtocolMagic' to the configured value
-  blockProtocolMagicId b == configProtocolMagicId config
-    `orThrowErrorInBlockValidationMode`
-      ChainValidationProtocolMagicMismatch
-        (blockProtocolMagicId b)
-        (configProtocolMagicId config)
-
-  -- Process a potential epoch transition
-  let updateState' = epochTransition epochEnv (cvsUpdateState cvs) (blockSlot b)
-
-  -- Process header by checking its validity
-  headerIsValid updateState' (blockHeader b)
-
-
-  let
-    bodyEnv = BodyEnvironment
-      { protocolMagic = AProtocolMagic
-        (blockAProtocolMagicId b)
-        (configReqNetMagic config)
-      , k          = configK config
-      , allowedDelegators
-      , protocolParameters = UPI.adoptedProtocolParameters updateState'
-      , utxoConfiguration = Genesis.configUTxOConfiguration config
-      , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
-      }
-
-    bs = BodyState
-      { utxo        = cvsUtxo cvs
-      , updateState = updateState'
-      , delegationState = cvsDelegationState cvs
-      }
-
-  BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
-
-  pure $ cvs
-    { cvsLastSlot     = blockSlot b
-    , cvsPreviousHash = Right $! blockHashAnnotated b
-    , cvsUtxo         = utxo
-    , cvsUpdateState  = updateState
-    , cvsDelegationState = delegationState
-    }
- where
-  epochEnv = EpochEnvironment
-    { protocolMagic = blockAProtocolMagicId b
-    , k = configK config
-    , allowedDelegators
-    , delegationMap
-    , currentEpoch = slotNumberEpoch (configEpochSlots config) (cvsLastSlot cvs)
-    }
-
-  allowedDelegators :: Set KeyHash
-  allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
-
-  delegationMap = DI.delegationMap $ cvsDelegationState cvs
-
+updateBlock config cvs b = revert <$> updateBlockI config (convert cvs) b
 
 --------------------------------------------------------------------------------
 -- UTxO
@@ -611,3 +488,213 @@ calcUTxOSize utxo =
   ( HeapSize . heapWords $ unUTxO utxo
   , UTxOSize . M.size $ unUTxO utxo
   )
+
+--------------------------------------------------------------------------------
+-- Without UTxO
+--------------------------------------------------------------------------------
+
+data ChainValidationStateWithoutUtxo = ChainValidationStateWithoutUtxo
+  { cvswLastSlot        :: !SlotNumber
+  , cvswPreviousHash    :: !(Either GenesisHash HeaderHash)
+  , cvswUpdateState     :: !UPI.State
+  , cvswDelegationState :: !DI.State
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+
+updateBlockWithoutUtxo
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => Genesis.Config
+  -> ChainValidationStateWithoutUtxo
+  -> Block
+  -> m (ChainValidationStateWithoutUtxo)
+updateBlockWithoutUtxo config cvs b =  revertWithoutUtxo <$>
+  updateBlockI config (convertWithoutUtxo cvs) b
+
+--------------------------------------------------------------------------------
+-- Internal Representations
+--------------------------------------------------------------------------------
+
+data StaticMaybe (b :: Bool) a where
+  StaticJust :: a -> StaticMaybe 'True a
+  StaticNothing :: StaticMaybe 'False a
+
+deriving instance Eq a => Eq (StaticMaybe b a)
+deriving instance Show a => Show (StaticMaybe b a)
+
+data ChainValidationStateI b = ChainValidationStateI
+  { cvsiLastSlot        :: !SlotNumber
+  , cvsiPreviousHash    :: !(Either GenesisHash HeaderHash)
+  , cvsiUtxo            :: !(StaticMaybe b UTxO)
+  , cvsiUpdateState     :: !UPI.State
+  , cvsiDelegationState :: !DI.State
+  } deriving (Eq, Show)
+
+convert :: ChainValidationState -> ChainValidationStateI 'True
+convert (ChainValidationState slot hash utxo upd del) =
+    ChainValidationStateI slot hash (StaticJust utxo) upd del
+
+revert :: ChainValidationStateI 'True -> ChainValidationState
+revert (ChainValidationStateI slot hash (StaticJust utxo) upd del) =
+    ChainValidationState slot hash utxo upd del
+
+convertWithoutUtxo :: ChainValidationStateWithoutUtxo -> ChainValidationStateI 'False
+convertWithoutUtxo (ChainValidationStateWithoutUtxo slot hash upd del) =
+    ChainValidationStateI slot hash StaticNothing upd del
+
+revertWithoutUtxo :: ChainValidationStateI 'False -> ChainValidationStateWithoutUtxo
+revertWithoutUtxo (ChainValidationStateI slot hash StaticNothing upd del) =
+    ChainValidationStateWithoutUtxo slot hash upd del
+
+data BodyStateI b = BodyStateI
+  { bUtxo            :: !(StaticMaybe b UTxO)
+  , bUpdateState     :: !UPI.State
+  , bDelegationState :: !DI.State
+  }
+
+convertBody :: BodyState -> BodyStateI 'True
+convertBody (BodyState u upi di) = BodyStateI (StaticJust u) upi di
+
+revertBody :: BodyStateI 'True -> BodyState
+revertBody (BodyStateI (StaticJust u) upi di) = BodyState u upi di
+
+updateBlockI
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => Genesis.Config
+  -> ChainValidationStateI b
+  -> Block
+  -> m (ChainValidationStateI b)
+updateBlockI config cvs b = do
+  -- Compare the block's 'ProtocolMagic' to the configured value
+  blockProtocolMagicId b == configProtocolMagicId config
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationProtocolMagicMismatch
+        (blockProtocolMagicId b)
+        (configProtocolMagicId config)
+
+  -- Process a potential epoch transition
+  let updateState' = epochTransition epochEnv (cvsiUpdateState cvs) (blockSlot b)
+
+  -- Process header by checking its validity
+  headerIsValid updateState' (blockHeader b)
+  let
+    bodyEnv = BodyEnvironment
+      { protocolMagic = AProtocolMagic
+        (blockAProtocolMagicId b)
+        (configReqNetMagic config)
+      , k          = configK config
+      , allowedDelegators
+      , protocolParameters = UPI.adoptedProtocolParameters updateState'
+      , utxoConfiguration = Genesis.configUTxOConfiguration config
+      , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
+      }
+    bs = BodyStateI
+      { bUtxo        = cvsiUtxo cvs
+      , bUpdateState = updateState'
+      , bDelegationState = cvsiDelegationState cvs
+      }
+
+  BodyStateI { bUtxo, bUpdateState, bDelegationState } <- updateBodyI bodyEnv bs b
+
+  pure $ cvs
+    { cvsiLastSlot     = blockSlot b
+    , cvsiPreviousHash = Right $! blockHashAnnotated b
+    , cvsiUtxo         = bUtxo
+    , cvsiUpdateState  = bUpdateState
+    , cvsiDelegationState = bDelegationState
+    }
+ where
+  epochEnv = EpochEnvironment
+    { protocolMagic = blockAProtocolMagicId b
+    , k = configK config
+    , allowedDelegators
+    , delegationMap
+    , currentEpoch = slotNumberEpoch (configEpochSlots config) (cvsiLastSlot cvs)
+    }
+
+  allowedDelegators :: Set KeyHash
+  allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
+  delegationMap = DI.delegationMap $ cvsiDelegationState cvs
+
+
+updateBodyI
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => BodyEnvironment
+  -> BodyStateI b
+  -> Block
+  -> m (BodyStateI b)
+updateBodyI env bs b = do
+  -- Validate the block size
+  blockLength b <= maxBlockSize
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
+
+  -- Validate the delegation, transaction, and update payload proofs.
+  whenBlockValidation (validateBlockProofs b)
+    `wrapErrorWithValidationMode` ChainValidationProofValidationError
+
+  -- Update the delegation state
+  delegationState' <-
+    DI.updateDelegation delegationEnv bDelegationState certificates
+      `wrapError` ChainValidationDelegationSchedulingError
+
+  -- Update the UTxO
+  utxo' <- case bUtxo of
+    StaticNothing -> pure StaticNothing
+    StaticJust utxo -> fmap StaticJust $
+      UTxO.updateUTxO utxoEnv utxo txs
+      `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
+
+  -- Update the update state
+  updateState' <-
+    UPI.registerUpdate updateEnv bUpdateState updateSignal
+      `wrapError` ChainValidationUpdateError currentSlot
+
+  pure $ BodyStateI
+    { bUtxo        = utxo'
+    , bUpdateState = updateState'
+    , bDelegationState = delegationState'
+    }
+ where
+  BodyEnvironment { protocolMagic, k, allowedDelegators
+                  , utxoConfiguration, currentEpoch } = env
+
+  BodyStateI { bUtxo, bUpdateState, bDelegationState } = bs
+
+  maxBlockSize =
+    Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters bUpdateState
+
+  currentSlot   = blockSlot b
+
+  certificates  = Delegation.getPayload $ blockDlgPayload b
+
+  txs           = unTxPayload $ blockTxPayload b
+
+  delegationEnv = DI.Environment
+    { DI.protocolMagic = getAProtocolMagicId protocolMagic
+    , DI.allowedDelegators = allowedDelegators
+    , DI.k = k
+    , DI.currentEpoch = currentEpoch
+    , DI.currentSlot = currentSlot
+    }
+
+  utxoEnv = UTxO.Environment
+    { UTxO.protocolMagic = protocolMagic
+    , UTxO.protocolParameters = UPI.adoptedProtocolParameters bUpdateState
+    , UTxO.utxoConfiguration = utxoConfiguration
+    }
+
+  updateEnv = UPI.Environment
+    { UPI.protocolMagic = getAProtocolMagicId protocolMagic
+    , UPI.k = k
+    , UPI.currentSlot = currentSlot
+    , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
+    , UPI.delegationMap = DI.delegationMap bDelegationState
+    }
+
+  updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
+
+  updateProposal = Update.payloadProposal $ blockUpdatePayload b
+
+  updateVotes    = Update.payloadVotes $ blockUpdatePayload b
+
+  updateEndorsement =
+    Endorsement (blockProtocolVersion b) (hashKey $ blockIssuer b)
