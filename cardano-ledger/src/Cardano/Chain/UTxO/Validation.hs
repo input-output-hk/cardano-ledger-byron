@@ -86,6 +86,7 @@ data TxValidationError
   | TxValidationTxTooLarge Natural Natural
   | TxValidationUnknownAddressAttributes
   | TxValidationUnknownAttributes
+  | TxValidationOutputNotPositive TxOut
   deriving (Eq, Show)
 
 instance ToCBOR TxValidationError where
@@ -127,6 +128,10 @@ instance ToCBOR TxValidationError where
     TxValidationUnknownAttributes ->
       encodeListLen 1
         <> toCBOR @Word8 8
+    TxValidationOutputNotPositive txOut ->
+      encodeListLen 2
+        <> toCBOR @Word8 9
+        <> toCBOR txOut
 
 instance FromCBOR TxValidationError where
   fromCBOR = do
@@ -143,6 +148,7 @@ instance FromCBOR TxValidationError where
       6 -> checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
       7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
       8 -> checkSize 1 $> TxValidationUnknownAttributes
+      9 -> checkSize 2 $> TxValidationOutputNotPositive <$> fromCBOR
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
@@ -168,6 +174,9 @@ validateTx env utxo (Annotated tx txBytes) = do
   -- Check that the transaction attributes are less than the max size
   unknownAttributesLength (txAttributes tx) < 128
     `orThrowError` TxValidationUnknownAttributes
+
+  -- Check that outputs are strictly positive
+  txOutputs tx `forM_` validateTxOut
 
   -- Check that outputs have valid NetworkMagic
   let nm = makeNetworkMagic protocolMagic
@@ -228,6 +237,15 @@ validateTxIn UTxOConfiguration{tcAssetLockedSrcAddrs} utxo txIn
   | otherwise
   = throwError $ TxValidationMissingInput txIn
 
+
+-- | Validate the TxOut are strictly positive
+validateTxOut
+  :: MonadError TxValidationError m
+  => TxOut
+  -> m ()
+validateTxOut txOut =
+  txOutValue txOut > Lovelace 0
+    `orThrowError` TxValidationOutputNotPositive
 
 -- | Validate the NetworkMagic of a TxOut
 validateTxOutNM
