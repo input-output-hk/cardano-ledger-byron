@@ -22,7 +22,6 @@ module Cardano.Chain.Block.Block
   -- * Block Accessors
   , blockHash
   , blockHashAnnotated
-  , blockAProtocolMagicId
   , blockProtocolMagicId
   , blockPrevHash
   , blockProof
@@ -105,7 +104,6 @@ import Cardano.Chain.Block.Header
   , Header
   , HeaderHash
   , ToSign
-  , aHeaderProtocolMagicId
   , boundaryHeaderHashAnnotated
   , fromCBORHeader
   , hashHeader
@@ -209,9 +207,6 @@ blockHashAnnotated = hashHeader . blockHeader
 
 blockProtocolMagicId :: Block -> ProtocolMagicId
 blockProtocolMagicId = headerProtocolMagicId . blockHeader
-
-blockAProtocolMagicId :: Block -> Annotated ProtocolMagicId ByteString
-blockAProtocolMagicId = aHeaderProtocolMagicId . blockHeader
 
 blockPrevHash :: Block -> HeaderHash
 blockPrevHash = headerPrevHash . blockHeader

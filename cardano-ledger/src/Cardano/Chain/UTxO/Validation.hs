@@ -72,8 +72,9 @@ import Cardano.Chain.ValidationMode
   , wrapErrorWithValidationMode
   )
 import Cardano.Crypto
-  ( AProtocolMagic(..)
+  ( ProtocolMagic(..)
   , ProtocolMagicId
+  , getProtocolMagicId
   , SignTag(..)
   , verifySignatureDecoded
   , verifyRedeemSigDecoded
@@ -271,7 +272,7 @@ validateTxOutNM nm txOut = do
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
   :: MonadError TxValidationError m
-  => Annotated ProtocolMagicId ByteString
+  => ProtocolMagicId
   -> Annotated TxSigData ByteString
   -> Address
   -> TxInWitness
@@ -280,7 +281,7 @@ validateWitness pmi sigData addr witness = case witness of
   VKWitness vk sig -> do
     verifySignatureDecoded pmi SignTx vk sigData sig
       `orThrowError` TxValidationWitnessWrongSignature
-      witness (unAnnotated pmi) (unAnnotated sigData)
+      witness pmi (unAnnotated sigData)
     checkVerKeyAddress vk addr
       `orThrowError` TxValidationWitnessWrongKey
       witness addr
@@ -288,12 +289,12 @@ validateWitness pmi sigData addr witness = case witness of
   RedeemWitness vk sig -> do
     verifyRedeemSigDecoded pmi SignRedeemTx vk sigData sig
       `orThrowError` TxValidationWitnessWrongSignature
-      witness (unAnnotated pmi) (unAnnotated sigData)
+      witness pmi (unAnnotated sigData)
     checkRedeemAddress vk addr
-      `orThrowError` TxValidationWitnessWrongKey       witness addr
+      `orThrowError` TxValidationWitnessWrongKey witness addr
 
 data Environment = Environment
-  { protocolMagic      :: !(AProtocolMagic ByteString)
+  { protocolMagic      :: !ProtocolMagic
   , protocolParameters :: !ProtocolParameters
   , utxoConfiguration  :: !UTxOConfiguration
   } deriving (Eq, Show)
@@ -359,7 +360,7 @@ updateUTxOTxWitness env utxo ta = do
   updateUTxOTx env utxo tx
  where
   Environment { protocolMagic } = env
-  pmi = getAProtocolMagicId protocolMagic
+  pmi = getProtocolMagicId protocolMagic
 
   TxAux { taTx = tx, taWitness = witness} = ta
   sigData = recoverSigData tx
