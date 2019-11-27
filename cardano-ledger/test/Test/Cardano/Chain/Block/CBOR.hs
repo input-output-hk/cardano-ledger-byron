@@ -36,14 +36,12 @@ import Cardano.Binary
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
-  , Body
-  , pattern Body
+  , Body (..)
   , BoundaryBlock
   , BoundaryHeader
   , Header
   , HeaderHash
   , Proof(..)
-  , pattern Proof
   , ToSign(..)
   , dropBoundaryBody
   , fromCBORBlock
@@ -64,7 +62,6 @@ import Cardano.Chain.Slotting
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagicId(..)
-  , pattern ProtocolMagicId
   , SignTag(..)
   , abstractHash
   , hash

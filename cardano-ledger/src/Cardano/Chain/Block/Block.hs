@@ -13,10 +13,9 @@
 module Cardano.Chain.Block.Block
   (
   -- * Block
-    Block (blockHeader, blockBody, blockSerialized)
+    Block (Block, blockHeader, blockBody, blockSerialized)
 
   -- * Block Constructors
-  , pattern Block
   , mkBlockExplicit
 
   -- * Block Accessors
@@ -52,13 +51,11 @@ module Cardano.Chain.Block.Block
   , toCBORBlockOrBoundary
 
   -- * BoundaryBlock
-  , BoundaryBlock(boundaryBlockLength, boundaryHeader, boundaryBody)
-  , pattern BoundaryBlock
+  , BoundaryBlock(BoundaryBlock, boundaryBlockLength, boundaryHeader, boundaryBody)
   , boundaryHashAnnotated
   , toCBORBOBBoundary
 
-  , BoundaryBody
-  , pattern BoundaryBody
+  , BoundaryBody(BoundaryBody)
   )
 where
 
