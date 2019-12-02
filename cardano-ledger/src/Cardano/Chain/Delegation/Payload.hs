@@ -58,4 +58,4 @@ instance ToCBOR Payload where
   toCBOR = encodePreEncoded . serializePayload
 
 instance FromCBORAnnotated Payload where
-  fromCBORAnnotated' = withSlice' $ UnsafePayload' <$> fromCBORAnnotated'
+  fromCBORAnnotated = withSlice' $ UnsafePayload' <$> fromCBORAnnotated

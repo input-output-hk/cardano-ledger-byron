@@ -81,6 +81,7 @@ where
 import Cardano.Prelude
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Text.Lazy.Builder (Builder)
@@ -102,10 +103,12 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   , serializeEncoding
-  , withSlice'
   , serialize'
   , encodePreEncoded
   , serializeEncoding'
+  , unwrapAnn
+  , withAnnotation
+  , withAnnotation'
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
@@ -304,14 +307,6 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotNumber sk dlgCert body pv
   toSign    = ToSign prevHash proof epochAndSlotCount difficulty pv sv
   epochAndSlotCount = fromSlotNumber epochSlots slotNumber
 
-
-
-
-
-
-
-
-
 --------------------------------------------------------------------------------
 -- Header Accessors
 --------------------------------------------------------------------------------
@@ -353,30 +348,37 @@ toCBORBlockVersions pv sv =
     <> toCBOR (hashRaw "\129\160")
 
 fromCBORHeader :: EpochSlots -> AnnotatedDecoder s Header
-fromCBORHeader epochSlots = withSlice' $ do
-  lift $ enforceSize "Header" 5
-  pm <- fromCBORAnnotated'
-  prevHash <- fromCBORAnnotated'
-  proof <- fromCBORAnnotated'
-  lift $ enforceSize "ConsensusData" 4
-  slot <- fmap (first (toSlotNumber epochSlots)) fromCBORAnnotated'
-  genesisKey <- lift fromCBOR
-  difficulty <- fromCBORAnnotated'
-  sig <- fromCBORAnnotated'
-  ((protocolVersion, softwareVersion), extraBytes) <- withSlice' $
-    (,) <$> lift fromCBORBlockVersions
-  pure $ Header'
-    pm
-    prevHash
-    slot
-    difficulty
-    protocolVersion
-    softwareVersion
-    proof
-    genesisKey
-    sig
-    epochSlots
-    extraBytes
+fromCBORHeader epochSlots =  withAnnotation $ do
+  enforceSize "Header" 5
+  pm <- unwrapAnn fromCBORAnnotated
+  prevHash <- unwrapAnn fromCBORAnnotated
+  proof <- unwrapAnn fromCBORAnnotated
+  enforceSize "ConsensusData" 4
+  slot <- unwrapAnn fromCBORAnnotated
+  genesisKey <- fromCBOR
+  difficulty <- unwrapAnn fromCBORAnnotated
+  sig <- unwrapAnn fromCBORAnnotated
+  vInfo <- unwrapAnn verInfo
+  pure $ \bytes -> let
+      ((protocolVersion, softwareVersion), extraBytes) = vInfo bytes
+    in Header'
+      (pm bytes)
+      (prevHash bytes)
+      (first (toSlotNumber epochSlots) $ slot bytes)
+      (difficulty bytes)
+      protocolVersion
+      softwareVersion
+      (proof bytes)
+      genesisKey
+      (sig bytes)
+      epochSlots
+      extraBytes
+      (BSL.toStrict bytes)
+  where
+    verInfo :: AnnotatedDecoder s ((ProtocolVersion, SoftwareVersion), ByteString)
+    verInfo = withAnnotation' $ do
+      dec <- fromCBORBlockVersions
+      return $ \bytes -> (dec, bytes)
 
 fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
 fromCBORBlockVersions = do
@@ -397,14 +399,14 @@ toCBORHeaderToHash h =
   encodeListLen 2 <> toCBOR (1 :: Word) <> toCBOR h
 
 fromCBORHeaderToHash :: EpochSlots -> AnnotatedDecoder s (Maybe Header)
-fromCBORHeaderToHash epochSlots = do
-  lift $ enforceSize "Header" 2
-  lift (fromCBOR @Word) >>= \case
+fromCBORHeaderToHash epochSlots = withAnnotation $ do
+  enforceSize "Header" 2
+  fromCBOR @Word >>= \case
     0 -> do
-      void $ (fromCBORAnnotated' :: AnnotatedDecoder s BoundaryHeader)
-      pure Nothing
-    1 -> Just <$!> fromCBORHeader epochSlots
-    t -> lift $ cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+      void $ unwrapAnn (fromCBORAnnotated :: AnnotatedDecoder s BoundaryHeader)
+      pure $ const Nothing
+    1 -> unwrapAnn $ Just <$> fromCBORHeader epochSlots
+    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
 
 
 --------------------------------------------------------------------------------
@@ -537,14 +539,14 @@ boundaryHeaderHashAnnotated :: BoundaryHeader -> HeaderHash
 boundaryHeaderHashAnnotated = coerce . hash . wrapBoundaryBytes . boundaryHeaderSerialized
 
 instance FromCBORAnnotated BoundaryHeader where
-  fromCBORAnnotated' = withSlice' $ do
-    lift $ enforceSize "BoundaryHeader" 5
-    lift dropInt32
-    hh <- lift fromCBOR
+  fromCBORAnnotated = withAnnotation' $ do
+    enforceSize "BoundaryHeader" 5
+    dropInt32
+    hh <- fromCBOR
     -- BoundaryBodyProof
-    lift dropBytes
-    (epoch, difficulty) <- lift fromCBORBoundaryConsensusData
-    isGen <- lift dropBoundaryExtraHeaderDataRetainGenesisTag
+    dropBytes
+    (epoch, difficulty) <- fromCBORBoundaryConsensusData
+    isGen <- dropBoundaryExtraHeaderDataRetainGenesisTag
     let hh' = if epoch == 0 || isGen then Left (coerce hh) else Right hh
     pure $ BoundaryHeader' hh' epoch difficulty
 
@@ -591,15 +593,16 @@ instance ToCBOR BlockSignature where
       <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
 
 instance FromCBORAnnotated BlockSignature where
-  fromCBORAnnotated' = do
-    lift $ enforceSize "BlockSignature" 2
-    lift fromCBOR >>= \case
-      2 ->
-        BlockSignature
-          <$  lift (enforceSize "BlockSignature" 2)
-          <*> fromCBORAnnotated'
-          <*> lift fromCBOR
-      t -> lift $ cborError $ DecoderErrorUnknownTag "BlockSignature" t
+  fromCBORAnnotated = withAnnotation $ do
+    enforceSize "BlockSignature" 2
+    fromCBOR >>= \case
+      2 -> do
+        enforceSize "BlockSignature" 2
+        a <- unwrapAnn fromCBORAnnotated
+        b <- fromCBOR
+        return $ \bytes ->
+          BlockSignature (a bytes) b
+      t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
 
 
@@ -645,11 +648,12 @@ instance ToCBOR ToSign where
       <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
 
 instance FromCBORAnnotated ToSign where
-  fromCBORAnnotated' = do
-    lift $ enforceSize "ToSign" 5
-    headerHash <- lift fromCBOR
-    bodyProof <- fromCBORAnnotated'
-    slotCount' <- lift fromCBOR
-    difficulty <- lift fromCBOR
-    (protocolVersion, softwareVersion) <- lift fromCBORBlockVersions
-    pure $ ToSign headerHash bodyProof slotCount' difficulty protocolVersion softwareVersion
+  fromCBORAnnotated = withAnnotation $ do
+    enforceSize "ToSign" 5
+    headerHash <- fromCBOR
+    bodyProof <- unwrapAnn fromCBORAnnotated
+    slotCount' <- fromCBOR
+    difficulty <- fromCBOR
+    (protocolVersion, softwareVersion) <- fromCBORBlockVersions
+    pure $ \bytes ->
+      ToSign headerHash (bodyProof bytes) slotCount' difficulty protocolVersion softwareVersion

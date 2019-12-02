@@ -52,6 +52,7 @@ import Cardano.Binary
   , serialize'
   , serializeEncoding'
   , withSlice'
+  , liftAnn
   )
 import qualified Cardano.Binary as Binary (annotation)
 import Cardano.Chain.Common (addressHash)
@@ -190,13 +191,13 @@ instance ToCBOR Vote where
   toCBOR = encodePreEncoded . serializeVote
 
 instance FromCBORAnnotated Vote where
-  fromCBORAnnotated' = withSlice' $
-    UnsafeVote' <$ lift (enforceSize "Vote" 4)
-      <*> lift fromCBOR
-      <*> fromCBORAnnotated'
+  fromCBORAnnotated = withSlice' $
+    UnsafeVote' <$ liftAnn (enforceSize "Vote" 4)
+      <*> liftAnn fromCBOR
+      <*> fromCBORAnnotated
       -- Drop the decision bit that previously allowed negative voting
-      <*  lift (fromCBOR @Bool)
-      <*> lift fromCBOR
+      <*  liftAnn (fromCBOR @Bool)
+      <*> liftAnn fromCBOR
 
 recoverSignedBytes :: Vote -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =

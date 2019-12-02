@@ -46,8 +46,8 @@ import Cardano.Chain.Block
   , pattern Proof
   , ToSign(..)
   , dropBoundaryBody
+  , fromCBORBlock
   , fromCBORBoundaryConsensusData
-  , fromCBORBOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
@@ -140,8 +140,8 @@ ts_roundTripBlockCompat = eachOfTS
   roundTripsBlockCompat esb@(WithEpochSlots es _) = trippingBuildable
     esb
     (serializeEncoding . toCBORBOBBlock . unWithEpochSlots)
-    ( fmap (WithEpochSlots es . fromJust)
-    . decodeAnnotatedDecoder "Block" (fromCBORBOBBlock es)
+    ( fmap (WithEpochSlots es )
+    . decodeAnnotatedDecoder "Block" (fromCBORBlock es)
     )
 
 

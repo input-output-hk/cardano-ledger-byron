@@ -18,6 +18,8 @@ import Cardano.Binary
   , decodeWord8
   , encodeListLen
   , enforceSize
+  , withAnnotation
+  , unwrapAnn
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (TxAux)
@@ -47,11 +49,11 @@ instance ToCBOR MempoolPayload where
     encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR upv
 
 instance FromCBORAnnotated MempoolPayload where
-  fromCBORAnnotated' = do
-    lift $ enforceSize "MempoolPayload" 2
-    (lift decodeWord8) >>= \case
-      0   -> MempoolTx             <$> fromCBORAnnotated'
-      1   -> MempoolDlg            <$> fromCBORAnnotated'
-      2   -> MempoolUpdateProposal <$> fromCBORAnnotated'
-      3   -> MempoolUpdateVote     <$> fromCBORAnnotated'
-      tag -> lift $ cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
+  fromCBORAnnotated = withAnnotation $ do
+    enforceSize "MempoolPayload" 2
+    decodeWord8 >>= \case
+      0   -> unwrapAnn $ MempoolTx             <$> fromCBORAnnotated
+      1   -> unwrapAnn $ MempoolDlg            <$> fromCBORAnnotated
+      2   -> unwrapAnn $ MempoolUpdateProposal <$> fromCBORAnnotated
+      3   -> unwrapAnn $ MempoolUpdateVote     <$> fromCBORAnnotated
+      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

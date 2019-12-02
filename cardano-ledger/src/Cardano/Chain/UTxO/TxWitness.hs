@@ -38,6 +38,7 @@ import Cardano.Binary
   , szCases
   , withSlice'
   , serializeEncoding'
+  , liftAnn
   )
 import Cardano.Chain.Common.CBOR
   (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
@@ -74,7 +75,7 @@ pattern TxWitness{ txInWitnesses } <- TxWitness' txInWitnesses _
   TxWitness wits = TxWitness' wits (serializeEncoding' $ toCBOR wits)
 
 instance FromCBORAnnotated TxWitness where
-  fromCBORAnnotated' = withSlice' . lift $
+  fromCBORAnnotated = withSlice' . liftAnn $
     TxWitness' <$> fromCBOR
 
 -- | A witness for a single input

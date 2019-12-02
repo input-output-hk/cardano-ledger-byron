@@ -55,6 +55,7 @@ import Cardano.Binary
   , serialize'
   , encodePreEncoded
   , serializeEncoding'
+  , liftAnn
   , withSlice'
   )
 import Cardano.Chain.Slotting (EpochNumber)
@@ -179,12 +180,12 @@ instance ToCBOR Certificate where
   toCBOR = encodePreEncoded . serialize
 
 instance FromCBORAnnotated Certificate where
-  fromCBORAnnotated' = withSlice' $
-    UnsafeCertificate' <$ lift (enforceSize "Delegation.Certificate" 4)
-      <*> fromCBORAnnotated'
-      <*> lift fromCBOR
-      <*> lift fromCBOR
-      <*> lift fromCBOR
+  fromCBORAnnotated = withSlice' $
+    UnsafeCertificate' <$ liftAnn (enforceSize "Delegation.Certificate" 4)
+      <*> fromCBORAnnotated
+      <*> liftAnn fromCBOR
+      <*> liftAnn fromCBOR
+      <*> liftAnn fromCBOR
 
 
 --------------------------------------------------------------------------------

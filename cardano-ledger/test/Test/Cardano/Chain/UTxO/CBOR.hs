@@ -210,10 +210,10 @@ ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORAnnotate
 --------------------------------------------------------------------------------
 
 goldenTxProof :: Property
-goldenTxProof = goldenTestCBORAnnotated exampleTxProof "test/golden/cbor/utxo/TxProof"
+goldenTxProof = goldenTestCBOR exampleTxProof "test/golden/cbor/utxo/TxProof"
 
 ts_roundTripTxProof :: TSProperty
-ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORAnnotatedBuildable
+ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------

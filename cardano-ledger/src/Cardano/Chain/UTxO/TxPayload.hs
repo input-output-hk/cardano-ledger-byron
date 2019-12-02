@@ -31,7 +31,7 @@ instance ToCBOR TxPayload where
   toCBOR = toCBOR . unTxPayload
 
 instance FromCBORAnnotated TxPayload where
-  fromCBORAnnotated' = TxPayload <$> fromCBORAnnotated'
+  fromCBORAnnotated = TxPayload <$> fromCBORAnnotated
 
 txpTxs :: TxPayload -> [Tx]
 txpTxs = fmap taTx . unTxPayload

@@ -35,7 +35,7 @@ import Cardano.Binary
   , enforceSize
   , serializeEncoding'
   , encodePreEncoded
-  , withSlice'
+  , withAnnotation'
   )
 import Cardano.Chain.Block.Body
   (Body(..), bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
@@ -81,12 +81,12 @@ instance ToCBOR Proof where
   toCBOR = encodePreEncoded . proofSerialized
 
 instance FromCBORAnnotated Proof where
-  fromCBORAnnotated' = withSlice' $
-     Proof' <$ lift (enforceSize "Proof" 4)
-     <*> fromCBORAnnotated'
-     <*> lift fromCBOR
-     <*> lift fromCBOR
-     <*> lift fromCBOR
+  fromCBORAnnotated = withAnnotation' $
+     Proof' <$ enforceSize "Proof" 4
+     <*> fromCBOR
+     <*> fromCBOR
+     <*> fromCBOR
+     <*> fromCBOR
 
 mkProof :: Body -> Proof
 mkProof body = Proof

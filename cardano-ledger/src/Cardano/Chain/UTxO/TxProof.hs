@@ -17,7 +17,6 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( FromCBOR(..)
-  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
@@ -55,12 +54,12 @@ instance ToCBOR TxProof where
       <> toCBOR (txpRoot proof)
       <> toCBOR (txpWitnessesHash proof)
 
-instance FromCBORAnnotated TxProof where
-  fromCBORAnnotated' =
-    TxProof <$ lift (enforceSize "TxProof" 3)
-      <*> lift fromCBOR
-      <*> lift fromCBOR
-      <*> lift fromCBOR
+instance FromCBOR TxProof where
+  fromCBOR=
+    TxProof <$ (enforceSize "TxProof" 3)
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 -- | Construct 'TxProof' which proves given 'TxPayload'
 --

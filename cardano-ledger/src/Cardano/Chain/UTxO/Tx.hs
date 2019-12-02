@@ -34,6 +34,7 @@ import Cardano.Binary
   , serializeEncoding'
   , szCases
   , withSlice'
+  , liftAnn
   )
 import Cardano.Chain.Common.CBOR
   (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
@@ -104,7 +105,7 @@ instance ToCBOR Tx where
       (txAttributes <$> pxy)
 
 instance FromCBORAnnotated Tx where
-  fromCBORAnnotated' = withSlice' . lift $
+  fromCBORAnnotated = withSlice' . liftAnn $
     Tx' <$ enforceSize "Tx" 3
       <*> fromCBOR
       <*> fromCBOR

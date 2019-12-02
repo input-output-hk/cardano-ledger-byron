@@ -15,7 +15,7 @@ module Cardano.Chain.Update.Payload
 where
 
 import Cardano.Prelude
-
+import qualified Data.ByteString.Lazy as BSL
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
@@ -27,7 +27,8 @@ import Cardano.Binary
   , encodePreEncoded
   , enforceSize
   , serializeEncoding'
-  , withSlice'
+  , unwrapAnn
+  , withAnnotation
   )
 import Cardano.Chain.Update.Proposal
   ( Proposal
@@ -41,7 +42,7 @@ import Cardano.Chain.Update.Vote
 
 {-# COMPLETE Payload #-}
 pattern Payload :: Maybe Proposal -> [Vote] -> Payload
-pattern Payload{payloadProposal, payloadVotes} <- 
+pattern Payload{payloadProposal, payloadVotes} <-
   Payload' payloadProposal payloadVotes _
   where
     Payload pp pv =
@@ -74,7 +75,8 @@ instance ToCBOR Payload where
   toCBOR = encodePreEncoded . payloadSerialized
 
 instance FromCBORAnnotated Payload where
-  fromCBORAnnotated' = withSlice' $
-    Payload' <$ lift (enforceSize "Update.Payload" 2)
-      <*> fromCBORAnnotated'
-      <*> fromCBORAnnotated'
+  fromCBORAnnotated = withAnnotation $ do
+    enforceSize "Update.Payload" 2
+    pp <- unwrapAnn fromCBORAnnotated
+    pv <- unwrapAnn fromCBORAnnotated
+    return $ \bytes -> Payload' (pp bytes) (pv bytes) (BSL.toStrict bytes)

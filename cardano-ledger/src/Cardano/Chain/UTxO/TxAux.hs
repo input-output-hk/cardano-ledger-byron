@@ -21,6 +21,7 @@ import Cardano.Binary
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
+  , liftAnn
   )
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxWitness (TxWitness(..))
@@ -49,7 +50,7 @@ instance ToCBOR TxAux where
   encodedSizeExpr size pxy = 1 + size (taTx <$> pxy) + size (taWitness <$> pxy)
 
 instance FromCBORAnnotated TxAux where
-  fromCBORAnnotated' =
-    TxAux <$ lift (enforceSize "TxAux" 2)
-      <*> fromCBORAnnotated'
-      <*> fromCBORAnnotated'
+  fromCBORAnnotated =
+    TxAux <$ liftAnn (enforceSize "TxAux" 2)
+      <*> fromCBORAnnotated
+      <*> fromCBORAnnotated
