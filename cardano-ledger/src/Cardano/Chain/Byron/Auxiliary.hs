@@ -29,22 +29,17 @@ module Cardano.Chain.Byron.Auxiliary (
     -- * Applying transactions
   , ApplyMempoolPayloadErr(..)
   , applyMempoolPayload
-  , mempoolPayloadRecoverBytes
   , mempoolPayloadReencode
-    -- * Annotations
-  , reAnnotateBlock
-  , reAnnotateBoundary
-  , reAnnotateUsing
     -- * Headers
-  , ABlockOrBoundaryHdr(..)
+  , BlockOrBoundaryHdr(..)
   , aBlockOrBoundaryHdr
-  , fromCBORABlockOrBoundaryHdr
-  , abobHdrFromBlock
-  , abobHdrSlotNo
-  , abobHdrChainDifficulty
-  , abobHdrHash
-  , abobHdrPrevHash
-  , abobMatchesBody
+  , fromCBORBlockOrBoundaryHdr
+  , bobHdrFromBlock
+  , bobHdrSlotNo
+  , bobHdrChainDifficulty
+  , bobHdrHash
+  , bobHdrPrevHash
+  , bobMatchesBody
   ) where
 
 import           Prelude (String)
@@ -183,8 +178,7 @@ mkEpochEnvironment :: Gen.Config
                    -> CC.ChainValidationState
                    -> CC.EpochEnvironment
 mkEpochEnvironment cfg state = CC.EpochEnvironment {
-      CC.protocolMagic     = reAnnotateMagicId $
-                               Gen.configProtocolMagicId cfg
+      CC.protocolMagic     = Gen.configProtocolMagicId cfg
     , CC.k                 = Gen.configK cfg
     , CC.allowedDelegators = allowedDelegators cfg
     , CC.delegationMap     = delegationMap
@@ -214,7 +208,7 @@ mkBodyEnvironment :: Gen.Config
                   -> CC.SlotNumber
                   -> CC.BodyEnvironment
 mkBodyEnvironment cfg params slotNo = CC.BodyEnvironment {
-      CC.protocolMagic      = reAnnotateMagic $ Gen.configProtocolMagic cfg
+      CC.protocolMagic      = Gen.configProtocolMagic cfg
     , CC.utxoConfiguration  = Gen.configUTxOConfiguration cfg
     , CC.k                  = Gen.configK cfg
     , CC.allowedDelegators  = allowedDelegators cfg
@@ -266,14 +260,14 @@ applyChainTick cfg slotNo state = state {
 -- changes arising from processing headers come from 'applyChainTick'.
 validateHeader :: MonadError CC.ChainValidationError m
                => CC.ValidationMode
-               -> U.Iface.State -> CC.AHeader ByteString -> m ()
+               -> U.Iface.State -> CC.Header -> m ()
 validateHeader validationMode updState hdr =
     flip runReaderT validationMode $
       CC.headerIsValid updState hdr
 
 validateBody :: MonadError CC.ChainValidationError m
              => CC.ValidationMode
-             -> CC.ABlock ByteString
+             -> CC.Block
              -> CC.BodyEnvironment -> CC.BodyState -> m CC.BodyState
 validateBody validationMode block bodyEnv bodyState =
     flip runReaderT validationMode $
@@ -282,7 +276,7 @@ validateBody validationMode block bodyEnv bodyState =
 validateBlock :: MonadError CC.ChainValidationError m
               => Gen.Config
               -> CC.ValidationMode
-              -> CC.ABlock ByteString
+              -> CC.Block
               -> CC.HeaderHash
               -> CC.ChainValidationState -> m CC.ChainValidationState
 validateBlock cfg validationMode block blkHash state = do
@@ -294,7 +288,7 @@ validateBlock cfg validationMode block blkHash state = do
     -- the ledger. If we take that point of view serious, we should think about
     -- what that third thing is precisely and what its responsibilities are.
     case ( CC.cvsPreviousHash state
-         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
+         , CC.headerPrevHash (CC.blockHeader block)
          ) of
       (Left gh, hh) ->
          throwError $ CC.ChainValidationExpectedGenesisHash gh hh
@@ -321,10 +315,10 @@ validateBlock cfg validationMode block blkHash state = do
 
 -- | Apply a boundary block
 --
--- NOTE: The `cvsLastSlot` calculation must match the one in 'abobHdrSlotNo'.
+-- NOTE: The `cvsLastSlot` calculation must match the one in 'bobHdrSlotNo'.
 validateBoundary :: MonadError CC.ChainValidationError m
                  => Gen.Config
-                 -> CC.ABoundaryBlock ByteString
+                 -> CC.BoundaryBlock
                  -> CC.ChainValidationState -> m CC.ChainValidationState
 validateBoundary cfg blk state = do
     -- TODO: Unfortunately, 'updateChainBoundary' doesn't take a hash as an
@@ -365,14 +359,14 @@ mkUtxoEnvironment cfg state = Utxo.Environment {
     , Utxo.utxoConfiguration  = Gen.configUTxOConfiguration cfg
     }
   where
-    protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
+    protocolMagic = Gen.configProtocolMagic cfg
     updateState   = CC.cvsUpdateState state
 
 mkDelegationEnvironment :: Gen.Config
                         -> CC.ChainValidationState
                         -> D.Iface.Environment
 mkDelegationEnvironment cfg state = D.Iface.Environment {
-      D.Iface.protocolMagic     = getAProtocolMagicId protocolMagic
+      D.Iface.protocolMagic     = getProtocolMagicId protocolMagic
     , D.Iface.allowedDelegators = allowedDelegators cfg
     , D.Iface.k                 = k
       -- By rights the 'currentEpoch' for checking a delegation certificate
@@ -386,7 +380,7 @@ mkDelegationEnvironment cfg state = D.Iface.Environment {
     }
   where
     k             = Gen.configK cfg
-    protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
+    protocolMagic = Gen.configProtocolMagic cfg
     currentSlot   = CC.cvsLastSlot state
     currentEpoch  = CC.slotNumberEpoch (Gen.configEpochSlots cfg) currentSlot
 
@@ -394,7 +388,7 @@ mkUpdateEnvironment :: Gen.Config
                     -> CC.ChainValidationState
                     -> U.Iface.Environment
 mkUpdateEnvironment cfg state = U.Iface.Environment {
-      U.Iface.protocolMagic = getAProtocolMagicId protocolMagic
+      U.Iface.protocolMagic = getProtocolMagicId protocolMagic
     , U.Iface.k             = k
     , U.Iface.currentSlot   = currentSlot
     , U.Iface.numGenKeys    = numGenKeys
@@ -402,7 +396,7 @@ mkUpdateEnvironment cfg state = U.Iface.Environment {
     }
   where
     k             = Gen.configK cfg
-    protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
+    protocolMagic = Gen.configProtocolMagic cfg
     currentSlot   = CC.cvsLastSlot state
     numGenKeys    = toNumGenKeys $ Set.size (allowedDelegators cfg)
     delegationMap = getDelegationMap state
@@ -420,7 +414,7 @@ mkUpdateEnvironment cfg state = U.Iface.Environment {
 applyTxAux :: MonadError Utxo.UTxOValidationError m
            => CC.ValidationMode
            -> Gen.Config
-           -> [Utxo.ATxAux ByteString]
+           -> [Utxo.TxAux]
            -> CC.ChainValidationState -> m CC.ChainValidationState
 applyTxAux validationMode cfg txs state =
     flip runReaderT validationMode $
@@ -432,7 +426,7 @@ applyTxAux validationMode cfg txs state =
 
 applyCertificate :: MonadError D.Sched.Error m
                  => Gen.Config
-                 -> [Delegation.ACertificate ByteString]
+                 -> [Delegation.Certificate]
                  -> CC.ChainValidationState -> m CC.ChainValidationState
 applyCertificate cfg certs state =
     (`setDelegationState` state) <$>
@@ -443,7 +437,7 @@ applyCertificate cfg certs state =
 
 applyUpdateProposal :: MonadError U.Iface.Error m
                     => Gen.Config
-                    -> Update.AProposal ByteString
+                    -> Update.Proposal
                     -> CC.ChainValidationState -> m CC.ChainValidationState
 applyUpdateProposal cfg proposal state =
     (`setUpdateState` state) <$>
@@ -454,7 +448,7 @@ applyUpdateProposal cfg proposal state =
 
 applyUpdateVote :: MonadError U.Iface.Error m
                 => Gen.Config
-                -> Update.AVote ByteString
+                -> Update.Vote
                 -> CC.ChainValidationState -> m CC.ChainValidationState
 applyUpdateVote cfg vote state =
     (`setUpdateState` state) <$>
@@ -490,20 +484,20 @@ instance ToCBOR ApplyMempoolPayloadErr where
   toCBOR (MempoolUpdateVoteErr err) =
     CBOR.encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
 
-instance FromCBOR ApplyMempoolPayloadErr where
-  fromCBOR = do
-    enforceSize "ApplyMempoolPayloadErr" 2
-    CBOR.decodeWord8 >>= \case
-      0   -> MempoolTxErr             <$> fromCBOR
-      1   -> MempoolDlgErr            <$> fromCBOR
-      2   -> MempoolUpdateProposalErr <$> fromCBOR
-      3   -> MempoolUpdateVoteErr     <$> fromCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
+instance FromCBORAnnotated ApplyMempoolPayloadErr where
+  fromCBORAnnotated' = do
+    lift $ enforceSize "ApplyMempoolPayloadErr" 2
+    lift CBOR.decodeWord8 >>= \case
+      0   -> MempoolTxErr             <$> fromCBORAnnotated'
+      1   -> MempoolDlgErr            <$> lift fromCBOR
+      2   -> MempoolUpdateProposalErr <$> lift fromCBOR
+      3   -> MempoolUpdateVoteErr     <$> lift fromCBOR
+      tag -> lift $ cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
 
 applyMempoolPayload :: MonadError ApplyMempoolPayloadErr m
                     => CC.ValidationMode
                     -> Gen.Config
-                    -> CC.AMempoolPayload ByteString
+                    -> CC.MempoolPayload
                     -> CC.ChainValidationState -> m CC.ChainValidationState
 applyMempoolPayload validationMode cfg payload =
     case payload of
@@ -520,77 +514,15 @@ applyMempoolPayload validationMode cfg payload =
         (`wrapError` MempoolUpdateVoteErr) .
           applyUpdateVote cfg vote
 
--- | The encoding of the mempool payload (without a 'AMempoolPayload' envelope)
-mempoolPayloadRecoverBytes :: CC.AMempoolPayload ByteString -> ByteString
-mempoolPayloadRecoverBytes = go
-  where
-    go :: CC.AMempoolPayload ByteString -> ByteString
-    go (CC.MempoolTx             payload) = recoverBytes payload
-    go (CC.MempoolDlg            payload) = recoverBytes payload
-    go (CC.MempoolUpdateProposal payload) = recoverBytes payload
-    go (CC.MempoolUpdateVote     payload) = recoverBytes payload
-
 -- | Re-encode the mempool payload (without any envelope)
-mempoolPayloadReencode :: CC.AMempoolPayload a -> ByteString
+mempoolPayloadReencode :: CC.MempoolPayload -> ByteString
 mempoolPayloadReencode = go
   where
-    go (CC.MempoolTx             payload) = reencode payload
-    go (CC.MempoolDlg            payload) = reencode payload
-    go (CC.MempoolUpdateProposal payload) = reencode payload
-    go (CC.MempoolUpdateVote     payload) = reencode payload
+    go (CC.MempoolTx             payload) = serialize' payload
+    go (CC.MempoolDlg            payload) = serialize' payload
+    go (CC.MempoolUpdateProposal payload) = serialize' payload
+    go (CC.MempoolUpdateVote     payload) = serialize' payload
 
-    reencode :: (Functor f, ToCBOR (f ())) => f a -> ByteString
-    reencode = CBOR.toStrictByteString . toCBOR . void
-
-{-------------------------------------------------------------------------------
-  Annotations
--------------------------------------------------------------------------------}
-
-reAnnotateMagicId :: ProtocolMagicId -> Annotated ProtocolMagicId ByteString
-reAnnotateMagicId pmi = reAnnotate $ Annotated pmi ()
-
-reAnnotateMagic :: ProtocolMagic -> AProtocolMagic ByteString
-reAnnotateMagic (AProtocolMagic a b) = AProtocolMagic (reAnnotate a) b
-
-reAnnotateBlock :: CC.EpochSlots -> CC.ABlock () -> CC.ABlock ByteString
-reAnnotateBlock epochSlots =
-    reAnnotateUsing
-      (CC.toCBORBlock    epochSlots)
-      (CC.fromCBORABlock epochSlots)
-
-reAnnotateBoundary :: ProtocolMagicId
-                   -> CC.ABoundaryBlock ()
-                   -> CC.ABoundaryBlock ByteString
-reAnnotateBoundary pm =
-    reAnnotateUsing
-      (CC.toCBORABoundaryBlock pm)
-      CC.fromCBORABoundaryBlock
-
--- | Generalization of 'reAnnotate'
-reAnnotateUsing :: forall f a. Functor f
-                => (f a -> Encoding)
-                -> (forall s. Decoder s (f ByteSpan))
-                -> f a -> f ByteString
-reAnnotateUsing encoder decoder =
-      (\bs -> splice bs $ CBOR.deserialiseFromBytes decoder bs)
-    . CBOR.toLazyByteString
-    . encoder
-  where
-    splice :: Show err
-           => Lazy.ByteString
-           -> Either err (Lazy.ByteString, f ByteSpan)
-           -> f ByteString
-    splice bs (Right (left, fSpan))
-       | Lazy.null left = (Lazy.toStrict . slice bs) <$> fSpan
-       | otherwise      = roundtripFailure "leftover bytes"
-    splice _ (Left err) = roundtripFailure $ show err
-
-    roundtripFailure :: forall x. T.Text -> x
-    roundtripFailure err = panic $ T.intercalate ": " $ [
-          "annotateBoundary"
-        , "serialization roundtrip failure"
-        , show err
-        ]
 
 {-------------------------------------------------------------------------------
   Header of a regular block or EBB
@@ -598,52 +530,52 @@ reAnnotateUsing encoder decoder =
   The ledger layer defines 'ABlockOrBoundary', but no equivalent for headers.
 -------------------------------------------------------------------------------}
 
-data ABlockOrBoundaryHdr a =
-    ABOBBlockHdr    !(CC.AHeader         a)
-  | ABOBBoundaryHdr !(CC.ABoundaryHeader a)
-  deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+data BlockOrBoundaryHdr =
+    BOBBlockHdr    !CC.Header
+  | BOBBoundaryHdr !CC.BoundaryHeader
+  deriving (Eq, Show, Generic, NoUnexpectedThunks)
 
-fromCBORABlockOrBoundaryHdr :: CC.EpochSlots
-                            -> Decoder s (ABlockOrBoundaryHdr ByteSpan)
-fromCBORABlockOrBoundaryHdr epochSlots = do
-    enforceSize "ABlockOrBoundaryHdr" 2
-    fromCBOR @Word >>= \case
-      0 -> ABOBBoundaryHdr <$> CC.fromCBORABoundaryHeader
-      1 -> ABOBBlockHdr    <$> CC.fromCBORAHeader epochSlots
+fromCBORBlockOrBoundaryHdr :: CC.EpochSlots
+                            -> AnnotatedDecoder s BlockOrBoundaryHdr
+fromCBORBlockOrBoundaryHdr epochSlots = do
+    lift $ enforceSize "BlockOrBoundaryHdr" 2
+    lift (fromCBOR @Word) >>= \case
+      0 -> BOBBoundaryHdr <$> fromCBORAnnotated'
+      1 -> BOBBlockHdr    <$> CC.fromCBORHeader epochSlots
       t -> panic $ "Unknown tag in encoded HeaderOrBoundary" <> show t
 
 -- | The analogue of 'Data.Either.either'
-aBlockOrBoundaryHdr :: (CC.AHeader         a -> b)
-                    -> (CC.ABoundaryHeader a -> b)
-                    -> ABlockOrBoundaryHdr a -> b
-aBlockOrBoundaryHdr f _ (ABOBBlockHdr    hdr) = f hdr
-aBlockOrBoundaryHdr _ g (ABOBBoundaryHdr hdr) = g hdr
+aBlockOrBoundaryHdr :: (CC.Header         -> b)
+                    -> (CC.BoundaryHeader -> b)
+                    -> BlockOrBoundaryHdr -> b
+aBlockOrBoundaryHdr f _ (BOBBlockHdr    hdr) = f hdr
+aBlockOrBoundaryHdr _ g (BOBBoundaryHdr hdr) = g hdr
 
-abobHdrFromBlock :: CC.ABlockOrBoundary a -> ABlockOrBoundaryHdr a
-abobHdrFromBlock (CC.ABOBBlock    blk) = ABOBBlockHdr    $ CC.blockHeader    blk
-abobHdrFromBlock (CC.ABOBBoundary blk) = ABOBBoundaryHdr $ CC.boundaryHeader blk
+bobHdrFromBlock :: CC.BlockOrBoundary -> BlockOrBoundaryHdr
+bobHdrFromBlock (CC.BOBBlock    blk) = BOBBlockHdr    $ CC.blockHeader    blk
+bobHdrFromBlock (CC.BOBBoundary blk) = BOBBoundaryHdr $ CC.boundaryHeader blk
 
 -- | Slot number of the header
 --
 -- NOTE: Epoch slot number calculation must match the one in 'applyBoundary'.
-abobHdrSlotNo :: CC.EpochSlots -> ABlockOrBoundaryHdr a -> CC.SlotNumber
-abobHdrSlotNo epochSlots =
+bobHdrSlotNo :: CC.EpochSlots -> BlockOrBoundaryHdr -> CC.SlotNumber
+bobHdrSlotNo epochSlots =
     aBlockOrBoundaryHdr
       CC.headerSlot
       (boundaryBlockSlot epochSlots . CC.boundaryEpoch)
 
-abobHdrChainDifficulty :: ABlockOrBoundaryHdr a -> CC.ChainDifficulty
-abobHdrChainDifficulty =
+bobHdrChainDifficulty :: BlockOrBoundaryHdr -> CC.ChainDifficulty
+bobHdrChainDifficulty =
     aBlockOrBoundaryHdr
       CC.headerDifficulty
       CC.boundaryDifficulty
 
-abobHdrHash :: ABlockOrBoundaryHdr ByteString -> CC.HeaderHash
-abobHdrHash (ABOBBoundaryHdr hdr) = CC.boundaryHeaderHashAnnotated hdr
-abobHdrHash (ABOBBlockHdr    hdr) = CC.headerHashAnnotated         hdr
+bobHdrHash :: BlockOrBoundaryHdr -> CC.HeaderHash
+bobHdrHash (BOBBoundaryHdr hdr) = CC.boundaryHeaderHashAnnotated hdr
+bobHdrHash (BOBBlockHdr    hdr) = CC.hashHeader         hdr
 
-abobHdrPrevHash :: ABlockOrBoundaryHdr a -> Maybe CC.HeaderHash
-abobHdrPrevHash =
+bobHdrPrevHash :: BlockOrBoundaryHdr -> Maybe CC.HeaderHash
+bobHdrPrevHash =
     aBlockOrBoundaryHdr
       (Just                        . CC.headerPrevHash)
       (either (const Nothing) Just . CC.boundaryPrevHash)
@@ -654,16 +586,16 @@ abobHdrPrevHash =
 -- header-body validation but only checking whether an EBB header and EBB block
 -- were provided. This seems to be fine as it won't cause any loss of consensus
 -- with the old `cardano-sl` nodes.
-abobMatchesBody :: ABlockOrBoundaryHdr ByteString
-                -> CC.ABlockOrBoundary ByteString
+bobMatchesBody :: BlockOrBoundaryHdr
+                -> CC.BlockOrBoundary
                 -> Bool
-abobMatchesBody hdr blk =
+bobMatchesBody hdr blk =
     case (hdr, blk) of
-      (ABOBBlockHdr hdr', CC.ABOBBlock blk') -> matchesBody hdr' blk'
-      (ABOBBoundaryHdr _, CC.ABOBBoundary _) -> True
-      (ABOBBlockHdr    _, CC.ABOBBoundary _) -> False
-      (ABOBBoundaryHdr _, CC.ABOBBlock    _) -> False
+      (BOBBlockHdr hdr', CC.BOBBlock blk') -> matchesBody hdr' blk'
+      (BOBBoundaryHdr _, CC.BOBBoundary _) -> True
+      (BOBBlockHdr    _, CC.BOBBoundary _) -> False
+      (BOBBoundaryHdr _, CC.BOBBlock    _) -> False
   where
-    matchesBody :: CC.AHeader ByteString -> CC.ABlock ByteString -> Bool
+    matchesBody :: CC.Header -> CC.Block -> Bool
     matchesBody hdr' blk' = isRight $
         CC.validateHeaderMatchesBody hdr' (CC.blockBody blk')
