@@ -42,33 +42,25 @@ module Cardano.Chain.Byron.Auxiliary (
   , bobMatchesBody
   ) where
 
-import           Prelude (String)
-
-import           Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
-import qualified Codec.CBOR.Read as CBOR
-import qualified Codec.CBOR.Write as CBOR
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either (isRight)
 import qualified Data.Foldable as Foldable
-import           Data.List (intercalate)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as T
 import           Data.Word
 import           GHC.Generics (Generic)
 
 import           Cardano.Binary
 import           Cardano.Crypto.ProtocolMagic
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (state)
 
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Common as CC
