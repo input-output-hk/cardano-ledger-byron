@@ -51,7 +51,6 @@ import Cardano.Chain.Block
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
-  , toCBORBOBBlock
   , toCBORHeaderToHash
   )
 
@@ -139,7 +138,7 @@ ts_roundTripBlockCompat = eachOfTS
   roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
   roundTripsBlockCompat esb@(WithEpochSlots es _) = trippingBuildable
     esb
-    (serializeEncoding . toCBORBOBBlock . unWithEpochSlots)
+    (serializeEncoding . toCBOR . unWithEpochSlots)
     ( fmap (WithEpochSlots es )
     . decodeAnnotatedDecoder "Block" (fromCBORBlock es)
     )

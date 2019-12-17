@@ -26,14 +26,13 @@ import Cardano.Prelude
 import Cardano.Binary
   (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize,
   FromCBORAnnotated(..), serializeEncoding', encodePreEncoded, serialize'
-  , withAnnotation, unwrapAnn)
+  , withSlice', liftAnn)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload (TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import qualified Data.ByteString.Lazy as BSL
 
 -- | Constructor for 'Body'
 {-# COMPLETE Body #-}
@@ -78,14 +77,12 @@ instance ToCBOR Body where
   toCBOR = encodePreEncoded . bodySerialized
 
 instance FromCBORAnnotated Body where
-  fromCBORAnnotated = withAnnotation $ do
-    enforceSize "Body" 4
-    txp <- unwrapAnn fromCBORAnnotated
-    ssc <- fromCBOR
-    dlg <- unwrapAnn fromCBORAnnotated
-    upd <- unwrapAnn fromCBORAnnotated
-    return $ \bytes ->
-      Body' (txp bytes) ssc (dlg bytes) (upd bytes) (BSL.toStrict bytes)
+  fromCBORAnnotated = withSlice' $
+    Body' <$ liftAnn (enforceSize "Body" 4)
+          <*> fromCBORAnnotated
+          <*> liftAnn fromCBOR
+          <*> fromCBORAnnotated
+          <*> fromCBORAnnotated
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

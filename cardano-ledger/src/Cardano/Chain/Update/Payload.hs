@@ -15,7 +15,6 @@ module Cardano.Chain.Update.Payload
 where
 
 import Cardano.Prelude
-import qualified Data.ByteString.Lazy as BSL
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
@@ -27,8 +26,8 @@ import Cardano.Binary
   , encodePreEncoded
   , enforceSize
   , serializeEncoding'
-  , unwrapAnn
-  , withAnnotation
+  , AnnotatedDecoder(..)
+  , withSlice'
   )
 import Cardano.Chain.Update.Proposal
   ( Proposal
@@ -75,8 +74,8 @@ instance ToCBOR Payload where
   toCBOR = encodePreEncoded . payloadSerialized
 
 instance FromCBORAnnotated Payload where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = withSlice' . AnnotatedDecoder $ do
     enforceSize "Update.Payload" 2
     pp <- unwrapAnn fromCBORAnnotated
     pv <- unwrapAnn fromCBORAnnotated
-    return $ \bytes -> Payload' (pp bytes) (pv bytes) (BSL.toStrict bytes)
+    return $ \bytes -> Payload' (pp bytes) (pv bytes)

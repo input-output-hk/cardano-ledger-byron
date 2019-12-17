@@ -73,7 +73,7 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( Annotated(..)
-  , AnnotatedDecoder
+  , AnnotatedDecoder(..)
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
@@ -84,10 +84,9 @@ import Cardano.Binary
   , encodeListLenIndef
   , encodePreEncoded
   , enforceSize
+  , liftAnn
   , serializeEncoding'
-  , unwrapAnn
-  , withAnnotation
-  , withAnnotation'
+  , withSlice'
   )
 import Cardano.Chain.Block.Body
   ( Body
@@ -268,13 +267,12 @@ instance ToCBOR Block where
   toCBOR = encodePreEncoded . blockSerialized
 
 fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
-fromCBORBlock epochSlots = withAnnotation $ do
-  enforceSize "Block" 3
-  hdr <- unwrapAnn $ fromCBORHeader epochSlots
-  body <- unwrapAnn fromCBORAnnotated
-  -- Drop the deprecated ExtraBodyData
-  enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes
-  return $ \bytes -> Block' (hdr bytes) (body bytes) (BSL.toStrict bytes)
+fromCBORBlock epochSlots = withSlice' $
+  Block' <$ liftAnn (enforceSize "Block" 3)
+         <*> fromCBORHeader epochSlots
+         <*> fromCBORAnnotated
+         -- Drop the deprecated ExtraBodyData
+         <*  liftAnn (enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
 
 --------------------------------------------------------------------------------
 -- Block Formatting
@@ -333,7 +331,7 @@ toCBORBOBBoundary bvd =
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
 fromCBORBlockOrBoundary
   :: EpochSlots -> AnnotatedDecoder s BlockOrBoundary
-fromCBORBlockOrBoundary epochSlots = withAnnotation $ do
+fromCBORBlockOrBoundary epochSlots = AnnotatedDecoder $ do
   enforceSize "Block" 2
   fromCBOR @Word >>= \case
     0 -> fmap BOBBoundary <$> unwrapAnn fromCBORAnnotated
@@ -363,10 +361,10 @@ pattern BoundaryBody <- BoundaryBody' _
       <> ( encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
 
 instance FromCBORAnnotated BoundaryBody where
-  fromCBORAnnotated = withAnnotation' $
+  fromCBORAnnotated = withSlice' $
     BoundaryBody'
-      <$ dropBoundaryBody
-      <* dropBoundaryExtraBodyData
+      <$ liftAnn dropBoundaryBody
+      <* liftAnn dropBoundaryExtraBodyData
 
 instance ToCBOR BoundaryBody where
   toCBOR = encodePreEncoded . boundaryBodySerialized
@@ -386,7 +384,7 @@ boundaryHashAnnotated :: BoundaryBlock -> HeaderHash
 boundaryHashAnnotated = boundaryHeaderHashAnnotated . boundaryHeader
 
 instance FromCBORAnnotated BoundaryBlock where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = withSlice' . AnnotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
     -- 1 item (list of 5)
     hdr <- unwrapAnn fromCBORAnnotated
@@ -395,7 +393,7 @@ instance FromCBORAnnotated BoundaryBlock where
     pure $
       \bytes -> BoundaryBlock'
         (BSL.length bytes)
-        (hdr bytes) (bod bytes) (BSL.toStrict bytes)
+        (hdr bytes) (bod bytes)
 
 pattern BoundaryBlock :: BoundaryHeader -> BoundaryBody -> BoundaryBlock
 pattern BoundaryBlock{ boundaryHeader, boundaryBody } <-

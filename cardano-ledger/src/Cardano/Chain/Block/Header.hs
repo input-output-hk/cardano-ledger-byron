@@ -81,7 +81,6 @@ where
 import Cardano.Prelude
 
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Text.Lazy.Builder (Builder)
@@ -106,9 +105,9 @@ import Cardano.Binary
   , serialize'
   , encodePreEncoded
   , serializeEncoding'
-  , unwrapAnn
-  , withAnnotation
-  , withAnnotation'
+  , AnnotatedDecoder(..)
+  , withSlice'
+  , withAnnotationSlice'
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
@@ -348,7 +347,7 @@ toCBORBlockVersions pv sv =
     <> toCBOR (hashRaw "\129\160")
 
 fromCBORHeader :: EpochSlots -> AnnotatedDecoder s Header
-fromCBORHeader epochSlots =  withAnnotation $ do
+fromCBORHeader epochSlots =  withSlice' . AnnotatedDecoder $ do
   enforceSize "Header" 5
   pm <- unwrapAnn fromCBORAnnotated
   prevHash <- unwrapAnn fromCBORAnnotated
@@ -373,10 +372,9 @@ fromCBORHeader epochSlots =  withAnnotation $ do
       (sig bytes)
       epochSlots
       extraBytes
-      (BSL.toStrict bytes)
   where
     verInfo :: AnnotatedDecoder s ((ProtocolVersion, SoftwareVersion), ByteString)
-    verInfo = withAnnotation' $ do
+    verInfo = withAnnotationSlice' $ do
       dec <- fromCBORBlockVersions
       return $ \bytes -> (dec, bytes)
 
@@ -399,7 +397,7 @@ toCBORHeaderToHash h =
   encodeListLen 2 <> toCBOR (1 :: Word) <> toCBOR h
 
 fromCBORHeaderToHash :: EpochSlots -> AnnotatedDecoder s (Maybe Header)
-fromCBORHeaderToHash epochSlots = withAnnotation $ do
+fromCBORHeaderToHash epochSlots = AnnotatedDecoder $ do
   enforceSize "Header" 2
   fromCBOR @Word >>= \case
     0 -> do
@@ -539,7 +537,7 @@ boundaryHeaderHashAnnotated :: BoundaryHeader -> HeaderHash
 boundaryHeaderHashAnnotated = coerce . hash . wrapBoundaryBytes . boundaryHeaderSerialized
 
 instance FromCBORAnnotated BoundaryHeader where
-  fromCBORAnnotated = withAnnotation' $ do
+  fromCBORAnnotated = withAnnotationSlice' $ do
     enforceSize "BoundaryHeader" 5
     dropInt32
     hh <- fromCBOR
@@ -593,7 +591,7 @@ instance ToCBOR BlockSignature where
       <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
 
 instance FromCBORAnnotated BlockSignature where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = AnnotatedDecoder $ do
     enforceSize "BlockSignature" 2
     fromCBOR >>= \case
       2 -> do
@@ -648,7 +646,7 @@ instance ToCBOR ToSign where
       <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
 
 instance FromCBORAnnotated ToSign where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = AnnotatedDecoder $ do
     enforceSize "ToSign" 5
     headerHash <- fromCBOR
     bodyProof <- unwrapAnn fromCBORAnnotated

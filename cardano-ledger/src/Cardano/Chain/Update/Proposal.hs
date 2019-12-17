@@ -36,7 +36,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as M
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, build)
@@ -52,8 +51,8 @@ import Cardano.Binary
   , encodePreEncoded
   , enforceSize
   , serializeEncoding'
-  , withAnnotation
-  , withAnnotation'
+  , withAnnotationSlice'
+  , withSlice'
   )
 import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
@@ -145,15 +144,15 @@ instance ToCBOR Proposal where
   toCBOR = encodePreEncoded . proposalSerialized
 
 instance FromCBORAnnotated Proposal where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = withSlice' . AnnotatedDecoder $ do
       enforceSize "Proposal" 7
       body <- unwrapAnn fromCBORProposalBody
       iss <- fromCBOR
       sig <- fromCBOR
-      return $ \bytes -> Proposal' (body bytes) iss sig (BSL.toStrict bytes)
+      return $ \bytes -> Proposal' (body bytes) iss sig
     where
       fromCBORProposalBody :: AnnotatedDecoder s ProposalBody
-      fromCBORProposalBody = withAnnotation' $ fmap (. ("\133" <>)) $
+      fromCBORProposalBody = withAnnotationSlice' $ fmap (. ("\133" <>)) $
         ProposalBody'
           <$> fromCBOR
           <*> fromCBOR
@@ -249,7 +248,7 @@ instance ToCBOR ProposalBody where
   toCBOR = encodePreEncoded . proposalBodySerialized
 
 instance FromCBORAnnotated ProposalBody where
-  fromCBORAnnotated = withAnnotation' $ do
+  fromCBORAnnotated = withAnnotationSlice' $ do
     enforceSize "ProposalBody" 5
     ProposalBody'
       <$> fromCBOR

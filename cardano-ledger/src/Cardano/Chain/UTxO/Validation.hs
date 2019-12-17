@@ -37,7 +37,7 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   , matchSize
-  , withAnnotation
+  , AnnotatedDecoder (..)
   , unwrapAnn
   )
 import Cardano.Chain.Common
@@ -139,7 +139,7 @@ instance ToCBOR TxValidationError where
         <> toCBOR @Word8 8
 
 instance FromCBORAnnotated TxValidationError where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = AnnotatedDecoder $ do
     len <- decodeListLen
     let checkSize :: forall s. Int -> Decoder s ()
         checkSize size = matchSize "TxValidationError" size len
@@ -311,7 +311,7 @@ instance ToCBOR UTxOValidationError where
       encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR uTxOError
 
 instance FromCBORAnnotated UTxOValidationError where
-  fromCBORAnnotated = withAnnotation $ do
+  fromCBORAnnotated = AnnotatedDecoder $ do
     enforceSize "UTxOValidationError" 2
     decodeWord8 >>= \case
       0   -> do
