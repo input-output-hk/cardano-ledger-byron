@@ -26,7 +26,6 @@ import Cardano.Binary
   )
 import Cardano.Chain.Common.Lovelace
   ( Lovelace
-  , LovelaceError
   , addLovelace
   , scaleLovelace
   , lovelaceToNatural
@@ -59,9 +58,9 @@ instance FromCBOR TxSizeLinear where
     !b <- naturalToLovelace . round <$> fromCBOR @Nano
     return $ TxSizeLinear a b
 
-calculateTxSizeLinear
-  :: TxSizeLinear -> Natural -> Either LovelaceError Lovelace
-calculateTxSizeLinear (TxSizeLinear a b) = addLovelace a <=< scaleLovelace b
+calculateTxSizeLinear :: TxSizeLinear -> Natural -> Lovelace
+calculateTxSizeLinear (TxSizeLinear a b) sz =
+  addLovelace a (scaleLovelace b sz)
 
 txSizeLinearMinValue :: TxSizeLinear -> Lovelace
 txSizeLinearMinValue (TxSizeLinear a _) = a

@@ -185,17 +185,15 @@ validateTx env utxo (Annotated tx txBytes) = do
   txInputs tx `forM_` validateTxIn utxoConfiguration utxo
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
-  minFee <- if isRedeemUTxO inputUTxO
-    then pure $ naturalToLovelace 0
-    else calculateMinimumFee feePolicy
+  let minFee
+        | isRedeemUTxO inputUTxO = naturalToLovelace 0
+        | otherwise              = calculateMinimumFee feePolicy
 
   -- Calculate the balance of the output 'UTxO'
-  balanceOut <- balance (txOutputUTxO tx)
-    `wrapError` TxValidationLovelaceError "Output Balance"
+  let balanceOut = balance (txOutputUTxO tx)
 
   -- Calculate the balance of the restricted input 'UTxO'
-  balanceIn <- balance inputUTxO
-    `wrapError` TxValidationLovelaceError "Input Balance"
+  let balanceIn = balance inputUTxO
 
   -- Calculate the 'fee' as the difference of the balances
   fee <- subLovelace balanceIn balanceOut
@@ -214,13 +212,9 @@ validateTx env utxo (Annotated tx txBytes) = do
 
   inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
-  calculateMinimumFee
-    :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
-  calculateMinimumFee = \case
-
-    TxFeePolicyTxSizeLinear txSizeLinear ->
-      calculateTxSizeLinear txSizeLinear txSize
-        `wrapError` TxValidationLovelaceError "Minimum Fee"
+  calculateMinimumFee :: TxFeePolicy -> Lovelace
+  calculateMinimumFee (TxFeePolicyTxSizeLinear txSizeLinear) =
+    calculateTxSizeLinear txSizeLinear txSize
 
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'

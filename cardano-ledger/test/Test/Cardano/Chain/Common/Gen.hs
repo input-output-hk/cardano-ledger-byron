@@ -130,14 +130,9 @@ genLovelace :: Gen Lovelace
 genLovelace = genLovelaceWithRange (Range.constant minBound maxBound)
 
 genLovelaceError :: Gen LovelaceError
-genLovelaceError = Gen.choice
-  [ LovelaceTooSmall <$> Gen.integral tooSmallRange
-  , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
-  ]
+genLovelaceError =
+  uncurry LovelaceUnderflow <$> genUnderflowErrorValues
  where
-  tooSmallRange :: Range Integer
-  tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
-
   genUnderflowErrorValues :: Gen (Word64, Word64)
   genUnderflowErrorValues = do
     a <- Gen.word64 (Range.constant 0 (maxBound - 1))

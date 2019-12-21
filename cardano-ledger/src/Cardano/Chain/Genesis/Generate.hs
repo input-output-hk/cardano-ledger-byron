@@ -224,14 +224,11 @@ generateGenesisData startTime genesisSpec = do
   poorAddresses        <- mapM createAddressPoor poorSecrets
 
   ---- Balances
-  totalFakeAvvmBalance <-
-    scaleLovelace (faoOneBalance fao) (faoCount fao)
-      `wrapError` GenesisDataGenerationLovelaceError
+  let totalFakeAvvmBalance = scaleLovelace (faoOneBalance fao) (fromIntegral (faoCount fao))
 
   -- Compute total balance to generate
-  avvmSum <-
-    sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
-      `wrapError` GenesisDataGenerationLovelaceError
+  let avvmSum = sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
+
   maxTnBalance <-
     subLovelace genesisMaximumLovelaceSupply avvmSum
       `wrapError` GenesisDataGenerationLovelaceError
@@ -359,45 +356,44 @@ genTestnetDistribution
   => TestnetBalanceOptions
   -> Lovelace
   -> m ([Lovelace], [Lovelace])
-genTestnetDistribution tbo testBalance = do
-  (richBalances, poorBalances, totalBalance) <-
-    (`wrapError` GenesisDataGenerationLovelaceError) $ do
-      richmanBalance      <- divLovelace desiredRichBalance tboRichmen
+genTestnetDistribution TestnetBalanceOptions {
+                         tboPoors,
+                         tboRichmen,
+                         tboRichmenShare
+                       } testBalance = do
 
-      richmanBalanceExtra <- modLovelace desiredRichBalance tboRichmen
+    let desiredRichBalance  = scaleLovelaceRational testBalance tboRichmenShare
+        richmanBalance      = divLovelace desiredRichBalance (fromIntegral tboRichmen)
+        richmanBalanceExtra = modLovelace desiredRichBalance (fromIntegral tboRichmen)
 
-      richmanBalance'     <- if tboRichmen == 0
-        then pure $ naturalToLovelace 0
-        else addLovelace
-          richmanBalance
-          (if richmanBalanceExtra > naturalToLovelace 0
-            then naturalToLovelace 1
-            else naturalToLovelace 0
-          )
+        richmanBalance'
+          | tboRichmen == 0 = naturalToLovelace 0
+          | otherwise       = addLovelace
+                                richmanBalance
+                                (if richmanBalanceExtra > naturalToLovelace 0
+                                  then naturalToLovelace 1
+                                  else naturalToLovelace 0
+                                )
 
-      totalRichBalance    <- scaleLovelace richmanBalance' tboRichmen
+        totalRichBalance    = scaleLovelace richmanBalance' (fromIntegral tboRichmen)
 
-      desiredPoorsBalance <- subLovelace testBalance totalRichBalance
+    desiredPoorsBalance <- subLovelace testBalance totalRichBalance
+                             `wrapError` GenesisDataGenerationLovelaceError
 
-      poorBalance         <- if tboPoors == 0
-        then pure $ naturalToLovelace 0
-        else divLovelace desiredPoorsBalance tboPoors
+    let poorBalance
+          | tboPoors == 0 = naturalToLovelace 0
+          | otherwise     = divLovelace desiredPoorsBalance (fromIntegral tboPoors)
 
-      totalPoorBalance <- scaleLovelace poorBalance tboPoors
+        totalPoorBalance  = scaleLovelace poorBalance (fromIntegral tboPoors)
 
-      totalBalance     <- addLovelace totalRichBalance totalPoorBalance
+        totalBalance      = addLovelace totalRichBalance totalPoorBalance
 
-      pure
-        ( replicate (fromIntegral tboRichmen) richmanBalance'
-        , replicate (fromIntegral tboPoors)   poorBalance
-        , totalBalance
-        )
+        richBalances      = replicate (fromIntegral tboRichmen) richmanBalance'
+        poorBalances      = replicate (fromIntegral tboPoors)   poorBalance
 
-  if totalBalance <= testBalance
-    then pure (richBalances, poorBalances)
-    else throwError
-      $ GenesisDataGenerationDistributionMismatch testBalance totalBalance
- where
-  TestnetBalanceOptions { tboPoors, tboRichmen } = tbo
+    (totalBalance <= testBalance)
+      `orThrowError`  GenesisDataGenerationDistributionMismatch
+                        testBalance totalBalance
 
-  desiredRichBalance = scaleLovelaceRational testBalance (tboRichmenShare tbo)
+    pure (richBalances, poorBalances)
+

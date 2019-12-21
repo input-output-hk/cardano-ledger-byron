@@ -24,8 +24,8 @@ module Cardano.Chain.Common.Lovelace
   -- * Lovelace
     Lovelace
 
-    -- Only export the error cases that are still possible:
-  , LovelaceError(LovelaceTooSmall, LovelaceUnderflow)
+    -- Only export the error case that is still possible:
+  , LovelaceError(LovelaceUnderflow)
 
   -- * Conversions
   , naturalToLovelace
@@ -177,14 +177,12 @@ unsafeGetLovelace = fromIntegral . getLovelace
 
 -- | Compute sum of all lovelace in container. Result is 'Integer' as a
 --   protection against possible overflow.
-sumLovelace
-  :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
-sumLovelace = integerToLovelace . sum . map lovelaceToInteger
+sumLovelace :: Foldable t => t Lovelace -> Lovelace
+sumLovelace = fold
 
 -- | Addition of lovelace.
-addLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
-addLovelace (Lovelace a) (Lovelace b) = Right (Lovelace (a + b))
-{-# INLINE addLovelace #-}
+addLovelace :: Lovelace -> Lovelace -> Lovelace
+addLovelace (Lovelace a) (Lovelace b) = Lovelace (a + b)
 
 -- | Subtraction of lovelace, returning 'LovelaceError' on underflow
 subLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
@@ -192,33 +190,24 @@ subLovelace (Lovelace a) (Lovelace b)
   | a >= b    = Right (Lovelace (a - b))
   | otherwise = Left (LovelaceUnderflow (fromIntegral a) (fromIntegral b))
 
--- | Scale a 'Lovelace' by an 'Integral' factor, returning 'LovelaceError' when
---   the result is too large
-scaleLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
-scaleLovelace (Lovelace a) b = integerToLovelace $ toInteger a * toInteger b
-{-# INLINE scaleLovelace #-}
+-- | Scale a 'Lovelace' by an 'Natural' factor.
+scaleLovelace :: Lovelace -> Natural -> Lovelace
+scaleLovelace (Lovelace a) b = Lovelace (a * b)
 
--- | Scale a 'Lovelace' by a rational factor between @0..1@, rounding down.
+-- | Scale a 'Lovelace' by a 'Rational' factor between @0..1@, rounding down.
 scaleLovelaceRational :: Lovelace -> Rational -> Lovelace
 scaleLovelaceRational (Lovelace a) b =
-    Lovelace $ fromInteger $ toInteger a * n `div` d
+    Lovelace (a * n `div` d)
   where
-    n, d :: Integer
-    n = numerator b
-    d = denominator b
+    n, d :: Natural
+    n = fromInteger (numerator b)
+    d = fromInteger (denominator b)
 
--- | Integer division of a 'Lovelace' by an 'Integral' factor
-divLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
-divLovelace (Lovelace a) b = integerToLovelace $ toInteger a `div` toInteger b
-{-# INLINE divLovelace #-}
+-- | Integer division of a 'Lovelace' by an 'Natural' factor
+divLovelace :: Lovelace -> Natural -> Lovelace
+divLovelace (Lovelace a) b = Lovelace (a `div` b)
 
--- | Integer modulus of a 'Lovelace' by an 'Integral' factor
-modLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
-modLovelace (Lovelace a) b = integerToLovelace $ toInteger a `mod` toInteger b
-{-# INLINE modLovelace #-}
-
-integerToLovelace :: Integer -> Either LovelaceError Lovelace
-integerToLovelace n
-  | n < 0 = Left (LovelaceTooSmall n)
-  | otherwise = Right (Lovelace (fromInteger n))
+-- | Integer modulus of a 'Lovelace' by an 'Natural' factor
+modLovelace :: Lovelace -> Natural -> Lovelace
+modLovelace (Lovelace a) b = Lovelace (a `mod` b)
 
