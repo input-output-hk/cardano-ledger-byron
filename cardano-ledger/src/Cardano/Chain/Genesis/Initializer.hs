@@ -31,9 +31,9 @@ data GenesisInitializer = GenesisInitializer
 
 -- | These options determine balances of nodes specific for testnet
 data TestnetBalanceOptions = TestnetBalanceOptions
-  { tboPoors          :: !Word
+  { tboPoors          :: !Natural
   -- ^ Number of poor nodes (with small balance).
-  , tboRichmen        :: !Word
+  , tboRichmen        :: !Natural
   -- ^ Number of rich nodes (with huge balance).
   , tboTotalBalance   :: !Lovelace
   -- ^ Total balance owned by these nodes.
@@ -45,7 +45,7 @@ data TestnetBalanceOptions = TestnetBalanceOptions
 -- | These options determines balances of fake AVVM nodes which didn't really go
 --   through vending, but pretend they did
 data FakeAvvmOptions = FakeAvvmOptions
-  { faoCount      :: !Word
+  { faoCount      :: !Natural
   , faoOneBalance :: !Lovelace
   } deriving (Eq, Show, Generic)
 

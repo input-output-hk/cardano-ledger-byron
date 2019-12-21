@@ -98,7 +98,8 @@ genGenesisHash = GenesisHash . coerce <$> genTextHash
 
 genFakeAvvmOptions :: Gen FakeAvvmOptions
 genFakeAvvmOptions =
-  FakeAvvmOptions <$> Gen.word Range.constantBounded <*> genLovelace
+  FakeAvvmOptions <$> (fromIntegral <$> Gen.word Range.constantBounded)
+                  <*> genLovelace
 
 genGenesisDelegation :: ProtocolMagicId -> Gen GenesisDelegation
 genGenesisDelegation pm = mkGenesisDelegation' <$> genCertificateDistinctList pm
@@ -135,8 +136,8 @@ genGenesisSpec pm = either (panic . toS) identity <$> mkGenSpec
 genTestnetBalanceOptions :: Gen TestnetBalanceOptions
 genTestnetBalanceOptions =
   TestnetBalanceOptions
-    <$> Gen.word Range.constantBounded
-    <*> Gen.word Range.constantBounded
+    <$> (fromIntegral <$> Gen.word Range.constantBounded)
+    <*> (fromIntegral <$> Gen.word Range.constantBounded)
     <*> genLovelace
     <*> (realToFrac <$> Gen.double (Range.constant 0 1))
 

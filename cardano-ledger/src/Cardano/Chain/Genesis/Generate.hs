@@ -224,7 +224,7 @@ generateGenesisData startTime genesisSpec = do
   poorAddresses        <- mapM createAddressPoor poorSecrets
 
   ---- Balances
-  let totalFakeAvvmBalance = scaleLovelace (faoOneBalance fao) (fromIntegral (faoCount fao))
+  let totalFakeAvvmBalance = scaleLovelace (faoOneBalance fao) (faoCount fao)
 
   -- Compute total balance to generate
   let avvmSum = sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
@@ -363,8 +363,8 @@ genTestnetDistribution TestnetBalanceOptions {
                        } testBalance = do
 
     let desiredRichBalance  = scaleLovelaceRational testBalance tboRichmenShare
-        richmanBalance      = divLovelace desiredRichBalance (fromIntegral tboRichmen)
-        richmanBalanceExtra = modLovelace desiredRichBalance (fromIntegral tboRichmen)
+        richmanBalance      = divLovelace desiredRichBalance tboRichmen
+        richmanBalanceExtra = modLovelace desiredRichBalance tboRichmen
 
         richmanBalance'
           | tboRichmen == 0 = naturalToLovelace 0
@@ -375,16 +375,16 @@ genTestnetDistribution TestnetBalanceOptions {
                                   else naturalToLovelace 0
                                 )
 
-        totalRichBalance    = scaleLovelace richmanBalance' (fromIntegral tboRichmen)
+        totalRichBalance    = scaleLovelace richmanBalance' tboRichmen
 
     desiredPoorsBalance <- subLovelace testBalance totalRichBalance
                              `wrapError` GenesisDataGenerationLovelaceError
 
     let poorBalance
           | tboPoors == 0 = naturalToLovelace 0
-          | otherwise     = divLovelace desiredPoorsBalance (fromIntegral tboPoors)
+          | otherwise     = divLovelace desiredPoorsBalance tboPoors
 
-        totalPoorBalance  = scaleLovelace poorBalance (fromIntegral tboPoors)
+        totalPoorBalance  = scaleLovelace poorBalance tboPoors
 
         totalBalance      = addLovelace totalRichBalance totalPoorBalance
 
