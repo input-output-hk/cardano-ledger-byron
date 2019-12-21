@@ -60,7 +60,6 @@ import Cardano.Chain.Common
   , TxSizeLinear(..)
   , rationalToLovelacePortion
   , makeAddress
-  , maxLovelaceVal
   , mkAttributes
   , mkLovelace
   , mkMerkleTree
@@ -134,7 +133,7 @@ genCustomLovelace :: Word64 -> Gen Lovelace
 genCustomLovelace size = genLovelaceWithRange (Range.linear 0 size)
 
 genLovelace :: Gen Lovelace
-genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
+genLovelace = genLovelaceWithRange (Range.constant minBound maxBound)
 
 genLovelaceError :: Gen LovelaceError
 genLovelaceError = Gen.choice
@@ -144,6 +143,10 @@ genLovelaceError = Gen.choice
   , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
   ]
  where
+  -- TODO: This will be removed soon since overflow will no longer be possible.
+  maxLovelaceVal :: Word64
+  maxLovelaceVal = 45e15
+
   overflowRange :: Range Word64
   overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
 

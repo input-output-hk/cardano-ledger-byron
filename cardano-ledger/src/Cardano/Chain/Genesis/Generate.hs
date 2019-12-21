@@ -145,6 +145,10 @@ instance B.Buildable GenesisDataGenerationError where
     GenesisDataGenerationRedeemKeyGen ->
       bprint "GenesisDataGenerationRedeemKeyGen"
 
+-- | In Cardano Byron, the total supply is always limited to 45e15 Lovelace.
+--
+genesisMaximumLovelaceSupply :: Lovelace
+genesisMaximumLovelaceSupply = mkKnownLovelace @ 45000000000000000
 
 generateGenesisData
   :: MonadError GenesisDataGenerationError m
@@ -228,7 +232,8 @@ generateGenesisData startTime genesisSpec = do
     sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
       `wrapError` GenesisDataGenerationLovelaceError
   maxTnBalance <-
-    subLovelace maxBound avvmSum `wrapError` GenesisDataGenerationLovelaceError
+    subLovelace genesisMaximumLovelaceSupply avvmSum
+      `wrapError` GenesisDataGenerationLovelaceError
   let tnBalance = min maxTnBalance (tboTotalBalance tbo)
 
   let

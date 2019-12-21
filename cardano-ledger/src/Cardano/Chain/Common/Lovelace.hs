@@ -24,7 +24,6 @@ module Cardano.Chain.Common.Lovelace
   -- * Lovelace
     Lovelace
   , LovelaceError(..)
-  , maxLovelaceVal
 
   -- * Constructors
   , mkLovelace
@@ -77,10 +76,6 @@ newtype Lovelace = Lovelace
 instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n
 
-instance Bounded Lovelace where
-  minBound = Lovelace 0
-  maxBound = Lovelace (fromIntegral maxLovelaceVal)
-
 instance ToCBOR Lovelace where
   toCBOR = toCBOR . unsafeGetLovelace
   encodedSizeExpr size _pxy = encodedSizeExpr size (Proxy :: Proxy Word64)
@@ -118,7 +113,7 @@ instance B.Buildable LovelaceError where
     LovelaceTooSmall c -> bprint
       ("Lovelace value, " . build . ", is less than minimum, " . build)
       c
-      (minBound :: Lovelace)
+      (Lovelace 0)
     LovelaceUnderflow c c' -> bprint
       ("Lovelace underflow when subtracting " . build . " from " . build)
       c'
@@ -227,6 +222,6 @@ modLovelace (Lovelace a) b = integerToLovelace $ toInteger a `mod` toInteger b
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n
   | n < 0 = Left (LovelaceTooSmall n)
-  | n <= lovelaceToInteger (maxBound :: Lovelace) = Right
+  | n <= fromIntegral maxLovelaceVal = Right
   $ Lovelace (fromInteger n)
   | otherwise = Left (LovelaceTooLarge n)

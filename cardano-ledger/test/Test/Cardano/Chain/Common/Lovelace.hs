@@ -20,10 +20,10 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Common
-  ( LovelaceError(..)
+  ( Lovelace
+  , LovelaceError(..)
   , addLovelace
   , integerToLovelace
-  , maxLovelaceVal
   , mkKnownLovelace
   , mkLovelace
   , scaleLovelace
@@ -35,6 +35,15 @@ import Test.Cardano.Chain.Common.Gen (genLovelace, genCustomLovelace)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, withTestsTS)
 
 
+-- TODO: This will be removed soon since overflow will no longer be possible.
+maxLovelaceVal :: Word64
+maxLovelaceVal = 45e15
+
+maxLovelace :: Lovelace
+maxLovelace = case mkLovelace maxLovelaceVal of
+                Right v -> v
+                Left  _ -> panic "maxLovelace: impossible"
+
 ts_prop_addLovelace :: TSProperty
 ts_prop_addLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
@@ -45,7 +54,7 @@ ts_prop_addLovelace = withTestsTS 1000 . property $ do
 prop_addLovelaceOverflow :: Property
 prop_addLovelaceOverflow = property $ assertIsLeftConstr
   dummyLovelaceOverflow
-  (addLovelace (mkKnownLovelace @1) maxBound)
+  (addLovelace (mkKnownLovelace @1) maxLovelace)
 
 
 ts_prop_integerToLovelace :: TSProperty
@@ -81,7 +90,7 @@ prop_mkLovelaceTooLarge = property
 prop_scaleLovelaceTooLarge :: Property
 prop_scaleLovelaceTooLarge = property $ assertIsLeftConstr
   dummyLovelaceTooLarge
-  (scaleLovelace maxBound (2 :: Integer))
+  (scaleLovelace maxLovelace (2 :: Integer))
 
 
 ts_prop_subLovelace :: TSProperty
