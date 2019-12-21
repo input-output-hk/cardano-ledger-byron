@@ -50,7 +50,7 @@ import Cardano.Prelude
 
 import Data.Data (Data)
 import Data.Monoid (Monoid(..))
-import Formatting (Format, bprint, build, int, sformat)
+import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
@@ -67,9 +67,8 @@ import Cardano.Binary
 
 
 -- | Lovelace is the least possible unit of currency
-newtype Lovelace = Lovelace
-  { getLovelace :: Natural
-  } deriving (Show, Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
+newtype Lovelace = Lovelace { unLovelace :: Natural }
+  deriving (Show, Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
 
 instance Semigroup Lovelace where
   Lovelace a <> Lovelace b = Lovelace (a + b)
@@ -81,18 +80,16 @@ instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n
 
 instance ToCBOR Lovelace where
-  toCBOR = toCBOR . unsafeGetLovelace
+  toCBOR = toCBOR . unLovelace
   encodedSizeExpr size _pxy = encodedSizeExpr size (Proxy :: Proxy Word64)
 
 instance FromCBOR Lovelace where
   fromCBOR = do
     l <- fromCBOR
-    toCborError
-      . first (DecoderErrorCustom "Lovelace" . sformat build)
-      $ mkLovelace l
+    return $! Lovelace (fromIntegral (l :: Word64))
 
 instance Monad m => Canonical.ToJSON m Lovelace where
-  toJSON = Canonical.toJSON . unsafeGetLovelace
+  toJSON = Canonical.toJSON . unLovelace
 
 instance Canonical.ReportSchemaErrors m => Canonical.FromJSON m Lovelace where
   fromJSON = fmap (Lovelace . (fromIntegral :: Word64 -> Natural))
@@ -159,21 +156,9 @@ instance FromCBOR LovelaceError where
 maxLovelaceVal :: Word64
 maxLovelaceVal = 45e15
 
--- | Constructor for 'Lovelace' returning 'LovelaceError' when @c@ exceeds
---   'maxLovelaceVal'
-mkLovelace :: Word64 -> Either LovelaceError Lovelace
-mkLovelace c = Right (Lovelace (fromIntegral c))
-{-# INLINE mkLovelace #-}
-
 -- | Lovelace formatter which restricts type.
 lovelaceF :: Format r (Lovelace -> r)
 lovelaceF = build
-
--- | Unwraps 'Lovelace'. It's called “unsafe” so that people wouldn't use it
---   willy-nilly if they want to sum lovelace or something. It's actually safe.
-unsafeGetLovelace :: Lovelace -> Word64
-unsafeGetLovelace = fromIntegral . getLovelace
-{-# INLINE unsafeGetLovelace #-}
 
 -- | Compute sum of all lovelace in container. Result is 'Integer' as a
 --   protection against possible overflow.
