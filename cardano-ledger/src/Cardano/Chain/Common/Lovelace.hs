@@ -35,8 +35,10 @@ module Cardano.Chain.Common.Lovelace
   , lovelaceF
 
   -- * Conversions
-  , unsafeGetLovelace
+  , naturalToLovelace
+  , lovelaceToNatural
   , lovelaceToInteger
+  , unsafeGetLovelace
   , integerToLovelace
 
   -- * Arithmetic operations
@@ -102,6 +104,15 @@ instance Monad m => Canonical.ToJSON m Lovelace where
 instance Canonical.ReportSchemaErrors m => Canonical.FromJSON m Lovelace where
   fromJSON = fmap (Lovelace . (fromIntegral :: Word64 -> Natural))
            . Canonical.fromJSON
+
+naturalToLovelace :: Natural -> Lovelace
+naturalToLovelace = Lovelace
+
+lovelaceToNatural :: Lovelace -> Natural
+lovelaceToNatural (Lovelace n) = n
+
+lovelaceToInteger :: Lovelace -> Integer
+lovelaceToInteger = toInteger . lovelaceToNatural
 
 data LovelaceError
   = LovelaceOverflow Word64
@@ -181,10 +192,6 @@ unsafeGetLovelace = fromIntegral . getLovelace
 sumLovelace
   :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
 sumLovelace = integerToLovelace . sum . map lovelaceToInteger
-
-lovelaceToInteger :: Lovelace -> Integer
-lovelaceToInteger = toInteger . unsafeGetLovelace
-{-# INLINE lovelaceToInteger #-}
 
 -- | Addition of lovelace.
 addLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
