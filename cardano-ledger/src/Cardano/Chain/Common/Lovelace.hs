@@ -53,6 +53,7 @@ where
 import Cardano.Prelude
 
 import Data.Data (Data)
+import Data.Monoid (Monoid(..))
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
@@ -74,6 +75,12 @@ import Cardano.Binary
 newtype Lovelace = Lovelace
   { getLovelace :: Natural
   } deriving (Show, Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
+
+instance Semigroup Lovelace where
+  Lovelace a <> Lovelace b = Lovelace (a + b)
+
+instance Monoid Lovelace where
+  mempty = Lovelace 0
 
 instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n
