@@ -23,11 +23,10 @@ import Cardano.Chain.Common
   ( Lovelace
   , LovelaceError(..)
   , addLovelace
-  , integerToLovelace
   , mkKnownLovelace
   , mkLovelace
   , subLovelace
-  , unsafeGetLovelace
+  , lovelaceToNatural
   )
 
 import Test.Cardano.Chain.Common.Gen (genLovelace, genCustomLovelace)
@@ -46,21 +45,10 @@ maxLovelace = case mkLovelace maxLovelaceVal of
 ts_prop_addLovelace :: TSProperty
 ts_prop_addLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
-  let newRange = maxLovelaceVal - unsafeGetLovelace a
+  let newRange = maxLovelaceVal - fromIntegral (lovelaceToNatural a)
   b <- forAll $ genCustomLovelace newRange
   assertIsRight $ addLovelace a b
 
-
-ts_prop_integerToLovelace :: TSProperty
-ts_prop_integerToLovelace = withTestsTS 1000 . property $ do
-  testInt <- forAll
-    (Gen.integral $ Range.linear 0 (fromIntegral maxLovelaceVal :: Integer))
-  assertIsRight $ integerToLovelace testInt
-
-
-prop_integerToLovelaceTooSmall :: Property
-prop_integerToLovelaceTooSmall = property
-  $ assertIsLeftConstr dummyLovelaceTooSmall (integerToLovelace (negate 1))
 
 prop_maxLovelaceUnchanged :: Property
 prop_maxLovelaceUnchanged =
@@ -75,7 +63,7 @@ ts_prop_mkLovelace = withTestsTS 1000 . property $ do
 ts_prop_subLovelace :: TSProperty
 ts_prop_subLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
-  b <- forAll $ genCustomLovelace (unsafeGetLovelace a)
+  b <- forAll $ genCustomLovelace (fromIntegral (lovelaceToNatural a))
   assertIsRight $ subLovelace a b
 
 ts_prop_subLovelaceUnderflow :: TSProperty

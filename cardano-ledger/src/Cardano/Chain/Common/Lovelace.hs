@@ -38,8 +38,6 @@ module Cardano.Chain.Common.Lovelace
   , naturalToLovelace
   , lovelaceToNatural
   , lovelaceToInteger
-  , unsafeGetLovelace
-  , integerToLovelace
 
   -- * Arithmetic operations
   , sumLovelace
