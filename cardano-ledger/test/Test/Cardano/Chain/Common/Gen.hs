@@ -32,8 +32,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude (gen32Bytes)
 
-import Formatting (build, sformat)
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -61,7 +59,7 @@ import Cardano.Chain.Common
   , rationalToLovelacePortion
   , makeAddress
   , mkAttributes
-  , mkLovelace
+  , naturalToLovelace
   , mkMerkleTree
   , hashKey
   , mtRoot
@@ -109,13 +107,9 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
  where
   genLovelace' :: Gen Lovelace
   genLovelace' =
-    mkLovelace
+    (naturalToLovelace . fromIntegral)
       <$> Gen.word64 (Range.constant 0 maxCanonicalLovelaceVal)
-      >>= \case
-            Right lovelace -> pure lovelace
-            Left  err      -> panic $ sformat
-              ("The impossible happened in genLovelace: " . build)
-              err
+
   -- | Maximal possible value of `Lovelace` in Canonical JSON (JSNum !Int54)
   -- This should be (2^53 - 1) ~ 9e15, however in the Canonical ToJSON instance of
   -- `TxFeePolicy` this number is multiplied by 1e9 to keep compatibility with 'Nano'
@@ -152,10 +146,7 @@ genLovelaceError = Gen.choice
 
 genLovelaceWithRange :: Range Word64 -> Gen Lovelace
 genLovelaceWithRange r =
-  mkLovelace <$> Gen.word64 r >>= \case
-    Right lovelace -> pure lovelace
-    Left err ->
-      panic $ sformat ("The impossible happened in genLovelace: " . build) err
+  (naturalToLovelace . fromIntegral) <$> Gen.word64 r
 
 genLovelacePortion :: Gen LovelacePortion
 genLovelacePortion =

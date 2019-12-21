@@ -35,7 +35,7 @@ import Cardano.Chain.Common
   ( NetworkMagic(..)
   , makeVerKeyAddress
   , mkAttributes
-  , mkKnownLovelace
+  , naturalToLovelace
   , mkMerkleTree
   , mtRoot
   )
@@ -97,11 +97,12 @@ exampleTxInUtxo1 = TxInUtxo exampleHashTx 74
 
 exampleTxOut :: TxOut
 exampleTxOut = TxOut (makeVerKeyAddress NetworkMainOrStage vkey)
-                     (mkKnownLovelace @47)
+                     (naturalToLovelace 47)
   where Right vkey = VerificationKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOut1 :: TxOut
-exampleTxOut1 = TxOut (makeVerKeyAddress (NetworkTestnet 74) vkey) (mkKnownLovelace @47)
+exampleTxOut1 = TxOut (makeVerKeyAddress (NetworkTestnet 74) vkey)
+                      (naturalToLovelace 47)
   where Right vkey = VerificationKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)

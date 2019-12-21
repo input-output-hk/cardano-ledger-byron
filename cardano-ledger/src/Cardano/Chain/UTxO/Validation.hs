@@ -48,7 +48,7 @@ import Cardano.Chain.Common
   , checkVerKeyAddress
   , checkRedeemAddress
   , makeNetworkMagic
-  , mkKnownLovelace
+  , naturalToLovelace
   , subLovelace
   , unknownAttributesLength
   )
@@ -186,7 +186,7 @@ validateTx env utxo (Annotated tx txBytes) = do
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
   minFee <- if isRedeemUTxO inputUTxO
-    then pure $ mkKnownLovelace @0
+    then pure $ naturalToLovelace 0
     else calculateMinimumFee feePolicy
 
   -- Calculate the balance of the output 'UTxO'

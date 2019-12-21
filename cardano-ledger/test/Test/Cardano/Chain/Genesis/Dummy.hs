@@ -30,7 +30,7 @@ import Cardano.Chain.Common
   ( BlockCount (..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
-  , mkKnownLovelace
+  , naturalToLovelace
   , rationalToLovelacePortion
   )
 import Cardano.Chain.Genesis
@@ -121,7 +121,7 @@ dummyProtocolParameters = ProtocolParameters
     , srThdDecrement = rationalToLovelacePortion 0.05
     }
   , ppTxFeePolicy       = TxFeePolicyTxSizeLinear
-    (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
+    (TxSizeLinear (naturalToLovelace 155381) (naturalToLovelace 44))
   , ppUnlockStakeEpoch  = EpochNumber maxBound
   }
 
@@ -130,12 +130,12 @@ dummyGenesisInitializer = GenesisInitializer
   { giTestBalance = TestnetBalanceOptions
     { tboPoors          = 12
     , tboRichmen        = 4
-    , tboTotalBalance   = mkKnownLovelace @6000000000000000
+    , tboTotalBalance   = naturalToLovelace 6000000000000000
     , tboRichmenShare   = 0.99 :: Rational
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 10
-    , faoOneBalance = mkKnownLovelace @100000
+    , faoOneBalance = naturalToLovelace 100000
     }
   , giAvvmBalanceFactor = 1.0 :: Rational
   , giUseHeavyDlg = True

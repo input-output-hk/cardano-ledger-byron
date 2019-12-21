@@ -79,10 +79,7 @@ elaborateFeePolicy (Abstract.FactorA a) (Abstract.FactorB b) =
        $ fromIntegral b / (fromIntegral GP.c :: Double)
 
     intToLovelace :: Int -> Concrete.Lovelace
-    intToLovelace x =
-      case Concrete.mkLovelace (fromIntegral x) of
-        Left err -> panic $ "intToLovelace: " <> show err
-        Right l -> l
+    intToLovelace = Concrete.naturalToLovelace  . fromIntegral
 
 elaborateProtocolVersion
   :: Abstract.ProtVer

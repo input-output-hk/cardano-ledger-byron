@@ -19,7 +19,6 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
-import Formatting hiding (bytes)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Concrete
@@ -44,8 +43,8 @@ elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
     { Concrete.ppTxFeePolicy =
       Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear
-        (Concrete.mkKnownLovelace @0)
-        (Concrete.mkKnownLovelace @0)
+        (Concrete.naturalToLovelace 0)
+        (Concrete.naturalToLovelace 0)
     }
   , Concrete.UTxO.utxoConfiguration = Concrete.defaultUTxOConfiguration
   }
@@ -137,12 +136,9 @@ elaborateTxOut abstractTxOut = Concrete.TxOut
   { Concrete.txOutAddress = Concrete.makeVerKeyAddress
     (Concrete.makeNetworkMagic Dummy.protocolMagic)
     (elaborateVKey abstractVK)
-  , Concrete.txOutValue   = lovelaceValue
+  , Concrete.txOutValue   = Concrete.naturalToLovelace (fromIntegral value)
   }
  where
   Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Lovelace value) =
     abstractTxOut
 
-  lovelaceValue = case Concrete.mkLovelace (fromIntegral value) of
-    Left  err -> panic $ sformat build err
-    Right l   -> l

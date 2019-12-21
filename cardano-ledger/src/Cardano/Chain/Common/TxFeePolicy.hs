@@ -19,10 +19,10 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import Formatting (bprint, build, formatToString)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
-  (FromJSON(..), ToJSON(..), expected, fromJSField, mkObject)
+  (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary
   ( DecoderError(DecoderErrorUnknownTag)
@@ -34,7 +34,7 @@ import Cardano.Binary
 import Cardano.Chain.Common.CBOR
   (decodeKnownCborDataItem, encodeKnownCborDataItem)
 import Cardano.Chain.Common.Lovelace
-  (Lovelace, LovelaceError, lovelaceToInteger, mkLovelace)
+  (naturalToLovelace, lovelaceToInteger)
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear(..))
 
 
@@ -87,14 +87,9 @@ instance Monad m => ToJSON m TxFeePolicy where
 instance MonadError SchemaError m => FromJSON m TxFeePolicy where
   -- We div by 1e9 to keep compatibility with 'Nano' coefficients
   fromJSON obj = do
-    summand <- wrapLovelaceError . mkLovelace . (`div` 1e9) =<< fromJSField
-      obj
-      "summand"
-    multiplier <- wrapLovelaceError . mkLovelace . (`div` 1e9) =<< fromJSField
-      obj
-      "multiplier"
+    summand    <- (naturalToLovelace . (`div` 1e9))
+                  <$> fromJSField obj "summand"
+    multiplier <- (naturalToLovelace . (`div` 1e9))
+                  <$> fromJSField obj "multiplier"
     return $ TxFeePolicyTxSizeLinear (TxSizeLinear summand multiplier)
-   where
-    wrapLovelaceError :: Either LovelaceError Lovelace -> m Lovelace
-    wrapLovelaceError =
-      either (expected "Lovelace" . Just . formatToString build) pure
+

@@ -27,13 +27,6 @@ module Cardano.Chain.Common.Lovelace
     -- Only export the error cases that are still possible:
   , LovelaceError(LovelaceTooSmall, LovelaceUnderflow)
 
-  -- * Constructors
-  , mkLovelace
-  , mkKnownLovelace
-
-  -- * Formatting
-  , lovelaceF
-
   -- * Conversions
   , naturalToLovelace
   , lovelaceToNatural
@@ -47,6 +40,9 @@ module Cardano.Chain.Common.Lovelace
   , scaleLovelaceRational
   , divLovelace
   , modLovelace
+
+  -- * Formatting
+  , lovelaceF
   )
 where
 
@@ -56,7 +52,6 @@ import Data.Data (Data)
 import Data.Monoid (Monoid(..))
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
-import GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
@@ -169,11 +164,6 @@ maxLovelaceVal = 45e15
 mkLovelace :: Word64 -> Either LovelaceError Lovelace
 mkLovelace c = Right (Lovelace (fromIntegral c))
 {-# INLINE mkLovelace #-}
-
--- | Construct a 'Lovelace' from a 'KnownNat', known to be less than
---   'maxLovelaceVal'
-mkKnownLovelace :: forall n . (KnownNat n, n <= 45000000000000000) => Lovelace
-mkKnownLovelace = Lovelace . fromIntegral . natVal $ Proxy @n
 
 -- | Lovelace formatter which restricts type.
 lovelaceF :: Format r (Lovelace -> r)

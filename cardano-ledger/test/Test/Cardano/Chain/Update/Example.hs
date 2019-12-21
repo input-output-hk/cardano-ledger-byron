@@ -27,7 +27,7 @@ import qualified Data.Map.Strict as Map
 
 import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
-  ( mkKnownLovelace, rationalToLovelacePortion
+  ( naturalToLovelace, rationalToLovelacePortion
   , TxFeePolicy(..), TxSizeLinear(..) )
 import Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import Cardano.Chain.Update
@@ -80,8 +80,8 @@ exampleProtocolParameters = ProtocolParameters
   (EpochNumber 99)
  where
   tslin  = TxSizeLinear c1' c2'
-  c1'    = mkKnownLovelace @999
-  c2'    = mkKnownLovelace @77
+  c1'    = naturalToLovelace 999
+  c2'    = naturalToLovelace 77
   sfrule = SoftforkRule
     (rationalToLovelacePortion 99e-15)
     (rationalToLovelacePortion 99e-15)
@@ -105,8 +105,8 @@ exampleProtocolParametersUpdate = ProtocolParametersUpdate
   (Just $ EpochNumber 99)
  where
   tslin'  = TxSizeLinear co1 co2
-  co1     = mkKnownLovelace @999
-  co2     = mkKnownLovelace @77
+  co1     = naturalToLovelace 999
+  co2     = naturalToLovelace 77
   sfrule' = SoftforkRule
     (rationalToLovelacePortion 99e-15)
     (rationalToLovelacePortion 99e-15)

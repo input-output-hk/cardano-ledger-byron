@@ -36,10 +36,10 @@ import Cardano.Chain.Common
   ( Address
   , Lovelace
   , LovelaceError
+  , naturalToLovelace
   , addLovelace
   , divLovelace
   , makeVerKeyAddress
-  , mkKnownLovelace
   , hashKey
   , modLovelace
   , scaleLovelace
@@ -148,7 +148,7 @@ instance B.Buildable GenesisDataGenerationError where
 -- | In Cardano Byron, the total supply is always limited to 45e15 Lovelace.
 --
 genesisMaximumLovelaceSupply :: Lovelace
-genesisMaximumLovelaceSupply = mkKnownLovelace @ 45000000000000000
+genesisMaximumLovelaceSupply = naturalToLovelace 45000000000000000
 
 generateGenesisData
   :: MonadError GenesisDataGenerationError m
@@ -366,12 +366,12 @@ genTestnetDistribution tbo testBalance = do
       richmanBalanceExtra <- modLovelace desiredRichBalance tboRichmen
 
       richmanBalance'     <- if tboRichmen == 0
-        then pure $ mkKnownLovelace @0
+        then pure $ naturalToLovelace 0
         else addLovelace
           richmanBalance
-          (if richmanBalanceExtra > mkKnownLovelace @0
-            then mkKnownLovelace @1
-            else mkKnownLovelace @0
+          (if richmanBalanceExtra > naturalToLovelace 0
+            then naturalToLovelace 1
+            else naturalToLovelace 0
           )
 
       totalRichBalance    <- scaleLovelace richmanBalance' tboRichmen
@@ -379,7 +379,7 @@ genTestnetDistribution tbo testBalance = do
       desiredPoorsBalance <- subLovelace testBalance totalRichBalance
 
       poorBalance         <- if tboPoors == 0
-        then pure $ mkKnownLovelace @0
+        then pure $ naturalToLovelace 0
         else divLovelace desiredPoorsBalance tboPoors
 
       totalPoorBalance <- scaleLovelace poorBalance tboPoors

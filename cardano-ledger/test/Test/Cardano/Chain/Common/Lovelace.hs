@@ -23,9 +23,8 @@ import Cardano.Chain.Common
   ( Lovelace
   , LovelaceError(..)
   , addLovelace
-  , mkKnownLovelace
-  , mkLovelace
   , subLovelace
+  , naturalToLovelace
   , lovelaceToNatural
   )
 
@@ -36,11 +35,6 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, withTestsTS)
 -- TODO: This will be removed soon since overflow will no longer be possible.
 maxLovelaceVal :: Word64
 maxLovelaceVal = 45e15
-
-maxLovelace :: Lovelace
-maxLovelace = case mkLovelace maxLovelaceVal of
-                Right v -> v
-                Left  _ -> panic "maxLovelace: impossible"
 
 ts_prop_addLovelace :: TSProperty
 ts_prop_addLovelace = withTestsTS 1000 . property $ do
@@ -54,12 +48,6 @@ prop_maxLovelaceUnchanged :: Property
 prop_maxLovelaceUnchanged =
   property $ (fromIntegral maxLovelaceVal :: Integer) === 45e15
 
-ts_prop_mkLovelace :: TSProperty
-ts_prop_mkLovelace = withTestsTS 1000 . property $ do
-  testWrd <- forAll (Gen.word64 $ Range.linear 0 maxLovelaceVal)
-  assertIsRight $ mkLovelace testWrd
-
-
 ts_prop_subLovelace :: TSProperty
 ts_prop_subLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
@@ -72,7 +60,7 @@ ts_prop_subLovelaceUnderflow =
     . property
     $ do
         a <- forAll genLovelace
-        case addLovelace a (mkKnownLovelace @1) of
+        case addLovelace a (naturalToLovelace 1) of
           Right added ->
             assertIsLeftConstr dummyLovelaceUnderflow (subLovelace a added)
           Left err -> panic $ sformat
