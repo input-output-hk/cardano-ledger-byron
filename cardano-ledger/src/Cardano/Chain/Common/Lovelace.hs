@@ -23,7 +23,9 @@ module Cardano.Chain.Common.Lovelace
   (
   -- * Lovelace
     Lovelace
-  , LovelaceError(..)
+
+    -- Only export the error cases that are still possible:
+  , LovelaceError(LovelaceTooSmall, LovelaceUnderflow)
 
   -- * Constructors
   , mkLovelace
@@ -149,9 +151,7 @@ maxLovelaceVal = 45e15
 -- | Constructor for 'Lovelace' returning 'LovelaceError' when @c@ exceeds
 --   'maxLovelaceVal'
 mkLovelace :: Word64 -> Either LovelaceError Lovelace
-mkLovelace c
-  | c <= maxLovelaceVal = Right (Lovelace (fromIntegral c))
-  | otherwise           = Left (LovelaceTooLarge (toInteger c))
+mkLovelace c = Right (Lovelace (fromIntegral c))
 {-# INLINE mkLovelace #-}
 
 -- | Construct a 'Lovelace' from a 'KnownNat', known to be less than
@@ -179,13 +179,9 @@ lovelaceToInteger :: Lovelace -> Integer
 lovelaceToInteger = toInteger . unsafeGetLovelace
 {-# INLINE lovelaceToInteger #-}
 
--- | Addition of lovelace, returning 'LovelaceError' in case of overflow
+-- | Addition of lovelace.
 addLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
-addLovelace (Lovelace a) (Lovelace b)
-  | res >= a && res >= b && res <= fromIntegral maxLovelaceVal
-              = Right (Lovelace res)
-  | otherwise = Left (LovelaceOverflow (fromIntegral res))
-  where res = a + b
+addLovelace (Lovelace a) (Lovelace b) = Right (Lovelace (a + b))
 {-# INLINE addLovelace #-}
 
 -- | Subtraction of lovelace, returning 'LovelaceError' on underflow
@@ -222,6 +218,5 @@ modLovelace (Lovelace a) b = integerToLovelace $ toInteger a `mod` toInteger b
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n
   | n < 0 = Left (LovelaceTooSmall n)
-  | n <= fromIntegral maxLovelaceVal = Right
-  $ Lovelace (fromInteger n)
-  | otherwise = Left (LovelaceTooLarge n)
+  | otherwise = Right (Lovelace (fromInteger n))
+

@@ -26,7 +26,6 @@ import Cardano.Chain.Common
   , integerToLovelace
   , mkKnownLovelace
   , mkLovelace
-  , scaleLovelace
   , subLovelace
   , unsafeGetLovelace
   )
@@ -51,22 +50,12 @@ ts_prop_addLovelace = withTestsTS 1000 . property $ do
   b <- forAll $ genCustomLovelace newRange
   assertIsRight $ addLovelace a b
 
-prop_addLovelaceOverflow :: Property
-prop_addLovelaceOverflow = property $ assertIsLeftConstr
-  dummyLovelaceOverflow
-  (addLovelace (mkKnownLovelace @1) maxLovelace)
-
 
 ts_prop_integerToLovelace :: TSProperty
 ts_prop_integerToLovelace = withTestsTS 1000 . property $ do
   testInt <- forAll
     (Gen.integral $ Range.linear 0 (fromIntegral maxLovelaceVal :: Integer))
   assertIsRight $ integerToLovelace testInt
-
-prop_integerToLovelaceTooLarge :: Property
-prop_integerToLovelaceTooLarge = property $ assertIsLeftConstr
-  dummyLovelaceTooLarge
-  (integerToLovelace (fromIntegral (maxLovelaceVal + 1) :: Integer))
 
 
 prop_integerToLovelaceTooSmall :: Property
@@ -82,16 +71,6 @@ ts_prop_mkLovelace = withTestsTS 1000 . property $ do
   testWrd <- forAll (Gen.word64 $ Range.linear 0 maxLovelaceVal)
   assertIsRight $ mkLovelace testWrd
 
-prop_mkLovelaceTooLarge :: Property
-prop_mkLovelaceTooLarge = property
-  $ assertIsLeftConstr dummyLovelaceTooLarge (mkLovelace (maxLovelaceVal + 1))
-
-
-prop_scaleLovelaceTooLarge :: Property
-prop_scaleLovelaceTooLarge = property $ assertIsLeftConstr
-  dummyLovelaceTooLarge
-  (scaleLovelace maxLovelace (2 :: Integer))
-
 
 ts_prop_subLovelace :: TSProperty
 ts_prop_subLovelace = withTestsTS 1000 . property $ do
@@ -104,9 +83,7 @@ ts_prop_subLovelaceUnderflow =
   withTestsTS 1000
     . property
     $ do
-        -- (maxLovelaveVal - 1) to avoid an overflow error in `addLovelace`
-        -- in case expression
-        a <- forAll $ genCustomLovelace (maxLovelaceVal - 1)
+        a <- forAll genLovelace
         case addLovelace a (mkKnownLovelace @1) of
           Right added ->
             assertIsLeftConstr dummyLovelaceUnderflow (subLovelace a added)
@@ -121,12 +98,6 @@ tests = concatTSGroups [const $$discover, $$discoverPropArg]
 --------------------------------------------------------------------------------
 -- Dummy values for constructor comparison in assertIsLeftConstr tests
 --------------------------------------------------------------------------------
-
-dummyLovelaceOverflow :: Constr
-dummyLovelaceOverflow = toConstr $ LovelaceOverflow 1
-
-dummyLovelaceTooLarge :: Constr
-dummyLovelaceTooLarge = toConstr $ LovelaceTooLarge 1
 
 dummyLovelaceTooSmall :: Constr
 dummyLovelaceTooSmall = toConstr $ LovelaceTooSmall 1

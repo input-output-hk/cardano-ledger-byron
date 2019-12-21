@@ -137,23 +137,10 @@ genLovelace = genLovelaceWithRange (Range.constant minBound maxBound)
 
 genLovelaceError :: Gen LovelaceError
 genLovelaceError = Gen.choice
-  [ LovelaceOverflow <$> Gen.word64 overflowRange
-  , LovelaceTooLarge <$> Gen.integral tooLargeRange
-  , LovelaceTooSmall <$> Gen.integral tooSmallRange
+  [ LovelaceTooSmall <$> Gen.integral tooSmallRange
   , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
   ]
  where
-  -- TODO: This will be removed soon since overflow will no longer be possible.
-  maxLovelaceVal :: Word64
-  maxLovelaceVal = 45e15
-
-  overflowRange :: Range Word64
-  overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
-
-  tooLargeRange :: Range Integer
-  tooLargeRange = Range.constant (fromIntegral (maxLovelaceVal + 1))
-                                 (fromIntegral (maxBound :: Word64))
-
   tooSmallRange :: Range Integer
   tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
 
