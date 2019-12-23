@@ -36,8 +36,9 @@ import Cardano.Binary (serialize')
 import Cardano.Chain.Common
   ( Address
   , Lovelace
-  , LovelaceError
+  , LovelaceError(LovelaceUnderflow)
   , naturalToLovelace
+  , lovelaceToNatural
   , addLovelace
   , divLovelace
   , makeVerKeyAddress
@@ -229,9 +230,8 @@ generateGenesisData startTime genesisSpec = do
   -- Compute total balance to generate
   let avvmSum = sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
 
-  maxTnBalance <-
-    subLovelace genesisMaximumLovelaceSupply avvmSum
-      `wrapError` GenesisDataGenerationLovelaceError
+  maxTnBalance <- subLovelaceOrThrow genesisMaximumLovelaceSupply avvmSum
+
   let tnBalance = min maxTnBalance (tboTotalBalance tbo)
 
   let
@@ -246,9 +246,7 @@ generateGenesisData startTime genesisSpec = do
         $ GenesisDataAddressBalanceMismatch s (length a) (length b)
       else pure $ zip a b
 
-  nonAvvmBalance <-
-    subLovelace tnBalance totalFakeAvvmBalance
-      `wrapError` GenesisDataGenerationLovelaceError
+  nonAvvmBalance <- subLovelaceOrThrow tnBalance totalFakeAvvmBalance
 
   (richBals, poorBals) <- genTestnetDistribution tbo nonAvvmBalance
 
@@ -377,8 +375,7 @@ genTestnetDistribution TestnetBalanceOptions {
 
         totalRichBalance    = scaleLovelace richmanBalance' tboRichmen
 
-    desiredPoorsBalance <- subLovelace testBalance totalRichBalance
-                             `wrapError` GenesisDataGenerationLovelaceError
+    desiredPoorsBalance <- subLovelaceOrThrow testBalance totalRichBalance
 
     let poorBalance
           | tboPoors == 0 = naturalToLovelace 0
@@ -396,4 +393,14 @@ genTestnetDistribution TestnetBalanceOptions {
                         testBalance totalBalance
 
     pure (richBalances, poorBalances)
+
+subLovelaceOrThrow :: MonadError GenesisDataGenerationError m
+                   => Lovelace -> Lovelace -> m Lovelace
+subLovelaceOrThrow a b =
+    case subLovelace a b of
+      Just c  -> return c
+      Nothing -> throwError (GenesisDataGenerationLovelaceError
+                              (LovelaceUnderflow
+                                (fromIntegral (lovelaceToNatural a))
+                                (fromIntegral (lovelaceToNatural b))))
 

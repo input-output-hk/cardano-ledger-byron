@@ -40,7 +40,7 @@ import Cardano.Binary
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
-  , LovelaceError
+  , LovelaceError(LovelaceUnderflow)
   , NetworkMagic
   , TxFeePolicy(..)
   , addrNetworkMagic
@@ -49,6 +49,7 @@ import Cardano.Chain.Common
   , checkRedeemAddress
   , makeNetworkMagic
   , naturalToLovelace
+  , lovelaceToNatural
   , subLovelace
   , unknownAttributesLength
   )
@@ -196,8 +197,12 @@ validateTx env utxo (Annotated tx txBytes) = do
   let balanceIn = balance inputUTxO
 
   -- Calculate the 'fee' as the difference of the balances
-  fee <- subLovelace balanceIn balanceOut
-    `wrapError` TxValidationLovelaceError "Fee"
+  fee <- maybe (throwError $ TxValidationLovelaceError "Fee"
+                               (LovelaceUnderflow
+                                 (fromIntegral (lovelaceToNatural balanceIn))
+                                 (fromIntegral (lovelaceToNatural balanceOut))))
+               return
+               (subLovelace balanceIn balanceOut)
 
   -- Check that the fee is greater than the minimum
   (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee

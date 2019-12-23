@@ -170,10 +170,10 @@ addLovelace :: Lovelace -> Lovelace -> Lovelace
 addLovelace (Lovelace a) (Lovelace b) = Lovelace (a + b)
 
 -- | Subtraction of lovelace, returning 'LovelaceError' on underflow
-subLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
+subLovelace :: Lovelace -> Lovelace -> Maybe Lovelace
 subLovelace (Lovelace a) (Lovelace b)
-  | a >= b    = Right (Lovelace (a - b))
-  | otherwise = Left (LovelaceUnderflow (fromIntegral a) (fromIntegral b))
+  | a >= b    = Just $! Lovelace (a - b)
+  | otherwise = Nothing
 
 -- | Scale a 'Lovelace' by an 'Natural' factor.
 scaleLovelace :: Lovelace -> Natural -> Lovelace
