@@ -1,23 +1,14 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
-
--- This is for 'mkKnownLovelace''s @n <= 45000000000000000@ constraint, which is
--- considered redundant. TODO: investigate this.
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.Lovelace
   (
@@ -56,7 +47,8 @@ import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
 import Cardano.Binary
-  ( DecoderError(..)
+  ( Decoder
+  , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
   , decodeListLen
@@ -143,7 +135,8 @@ instance ToCBOR LovelaceError where
 instance FromCBOR LovelaceError where
   fromCBOR = do
     len <- decodeListLen
-    let checkSize size = matchSize "LovelaceError" size len
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "LovelaceError" size len
     tag <- decodeWord8
     case tag of
       0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
