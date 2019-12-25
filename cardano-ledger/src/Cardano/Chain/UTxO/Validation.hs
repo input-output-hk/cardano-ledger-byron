@@ -14,7 +14,6 @@ module Cardano.Chain.UTxO.Validation
   , TxValidationError (..)
   , Environment(..)
   , UTxOValidationError (..)
-  , LovelaceError(LovelaceUnderflow)
   )
 where
 
@@ -28,6 +27,7 @@ import qualified Data.Vector as V
 
 import Cardano.Binary
   ( Annotated(..)
+  , Encoding
   , Decoder
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
@@ -79,7 +79,7 @@ import Cardano.Crypto
 
 -- | A representation of all the ways a transaction might be invalid
 data TxValidationError
-  = TxValidationLovelaceError Text LovelaceError
+  = TxValidationLovelaceError Text Word64 Word64
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationWitnessWrongSignature TxInWitness ProtocolMagicId TxSigData
   | TxValidationWitnessWrongKey TxInWitness Address
@@ -93,11 +93,11 @@ data TxValidationError
 
 instance ToCBOR TxValidationError where
   toCBOR = \case
-    TxValidationLovelaceError text loveLaceError ->
+    TxValidationLovelaceError text c c' ->
       encodeListLen 3
         <> toCBOR @Word8 0
         <> toCBOR text
-        <> toCBOR loveLaceError
+        <> toCBORLovelaceError c c'
     TxValidationFeeTooSmall tx lovelace1 lovelace2 ->
       encodeListLen 4
         <> toCBOR @Word8 1
@@ -135,6 +135,11 @@ instance ToCBOR TxValidationError where
     TxValidationUnknownAttributes ->
       encodeListLen 1
         <> toCBOR @Word8 8
+    where
+      toCBORLovelaceError :: Word64 -> Word64 -> Encoding
+      toCBORLovelaceError c c' =
+        encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
+
 
 instance FromCBOR TxValidationError where
   fromCBOR = do
@@ -143,7 +148,7 @@ instance FromCBOR TxValidationError where
         checkSize size = matchSize "TxValidationError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
+      0 -> checkSize 3 >> (uncurry . TxValidationLovelaceError) <$> fromCBOR <*> fromCBORLovelaceError
       1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
       2 -> checkSize 4 >> TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR
       3 -> checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
@@ -153,37 +158,16 @@ instance FromCBOR TxValidationError where
       7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
       8 -> checkSize 1 $> TxValidationUnknownAttributes
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
-
-data LovelaceError
-  = LovelaceOverflow Word64
-  | LovelaceTooLarge Integer
-  | LovelaceTooSmall Integer
-  | LovelaceUnderflow Word64 Word64
-  deriving (Eq, Show)
-
-instance ToCBOR LovelaceError where
-  toCBOR = \case
-    LovelaceOverflow c ->
-      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
-    LovelaceTooLarge c ->
-      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
-    LovelaceTooSmall c ->
-      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
-    LovelaceUnderflow c c' ->
-      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
-
-instance FromCBOR LovelaceError where
-  fromCBOR = do
-    len <- decodeListLen
-    let checkSize :: Int -> Decoder s ()
-        checkSize size = matchSize "LovelaceError" size len
-    tag <- decodeWord8
-    case tag of
-      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
-      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
-      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
-      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+    where
+      fromCBORLovelaceError :: Decoder s (Word64, Word64)
+      fromCBORLovelaceError = do
+        len <- decodeListLen
+        let checkSize :: Int -> Decoder s ()
+            checkSize size = matchSize "LovelaceError" size len
+        tag <- decodeWord8
+        case tag of
+          3 -> checkSize 3 >> (,) <$> fromCBOR <*> fromCBOR
+          _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
 --
@@ -229,9 +213,8 @@ validateTx env utxo (Annotated tx txBytes) = do
 
   -- Calculate the 'fee' as the difference of the balances
   fee <- maybe (throwError $ TxValidationLovelaceError "Fee"
-                               (LovelaceUnderflow
                                  (fromIntegral (lovelaceToNatural balanceIn))
-                                 (fromIntegral (lovelaceToNatural balanceOut))))
+                                 (fromIntegral (lovelaceToNatural balanceOut)))
                return
                (subLovelace balanceIn balanceOut)
 
