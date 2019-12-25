@@ -60,6 +60,7 @@ import Cardano.Chain.UTxO
   , UTxO
   , UTxOError(..)
   , UTxOValidationError(..)
+  , LovelaceError(..)
   , fromList
   , mkTxAux
   , mkTxPayload
@@ -72,7 +73,7 @@ import Cardano.Crypto
   (Hash, ProtocolMagicId, decodeHash, getProtocolMagicId, sign)
 
 import Test.Cardano.Chain.Common.Gen
-  (genAddress, genLovelace, genLovelaceError, genMerkleRoot, genNetworkMagic)
+  (genAddress, genLovelace, genMerkleRoot, genNetworkMagic)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genProtocolMagic
@@ -173,6 +174,16 @@ genTxValidationError = do
     , pure TxValidationUnknownAddressAttributes
     , pure TxValidationUnknownAttributes
     ]
+
+genLovelaceError :: Gen LovelaceError
+genLovelaceError =
+  uncurry LovelaceUnderflow <$> genUnderflowErrorValues
+ where
+  genUnderflowErrorValues :: Gen (Word64, Word64)
+  genUnderflowErrorValues = do
+    a <- Gen.word64 (Range.constant 0 (maxBound - 1))
+    b <- Gen.word64 (Range.constant a maxBound)
+    pure (a, b)
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice [genVKWitness pm, genRedeemWitness pm]

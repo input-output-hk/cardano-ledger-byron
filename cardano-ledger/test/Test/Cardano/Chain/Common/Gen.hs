@@ -16,7 +16,6 @@ module Test.Cardano.Chain.Common.Gen
   , genCompactAddress
   , genCustomLovelace
   , genLovelace
-  , genLovelaceError
   , genLovelaceWithRange
   , genLovelacePortion
   , genMerkleRoot
@@ -48,7 +47,6 @@ import Cardano.Chain.Common
   , ChainDifficulty(..)
   , CompactAddress
   , Lovelace
-  , LovelaceError(..)
   , LovelacePortion
   , MerkleRoot(..)
   , MerkleTree
@@ -128,16 +126,6 @@ genCustomLovelace size = genLovelaceWithRange (Range.linear 0 size)
 
 genLovelace :: Gen Lovelace
 genLovelace = genLovelaceWithRange (Range.constant minBound maxBound)
-
-genLovelaceError :: Gen LovelaceError
-genLovelaceError =
-  uncurry LovelaceUnderflow <$> genUnderflowErrorValues
- where
-  genUnderflowErrorValues :: Gen (Word64, Word64)
-  genUnderflowErrorValues = do
-    a <- Gen.word64 (Range.constant 0 (maxBound - 1))
-    b <- Gen.word64 (Range.constant a maxBound)
-    pure (a, b)
 
 genLovelaceWithRange :: Range Word64 -> Gen Lovelace
 genLovelaceWithRange r =

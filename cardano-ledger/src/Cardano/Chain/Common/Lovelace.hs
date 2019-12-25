@@ -15,9 +15,6 @@ module Cardano.Chain.Common.Lovelace
   -- * Lovelace
     Lovelace
 
-    -- Only export the error case that is still possible:
-  , LovelaceError(LovelaceUnderflow)
-
   -- * Conversions
   , naturalToLovelace
   , lovelaceToNatural
@@ -47,14 +44,8 @@ import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
 import Cardano.Binary
-  ( Decoder
-  , DecoderError(..)
-  , FromCBOR(..)
+  ( FromCBOR(..)
   , ToCBOR(..)
-  , decodeListLen
-  , decodeWord8
-  , encodeListLen
-  , matchSize
   )
 
 
@@ -95,59 +86,6 @@ lovelaceToNatural (Lovelace n) = n
 
 lovelaceToInteger :: Lovelace -> Integer
 lovelaceToInteger = toInteger . lovelaceToNatural
-
-data LovelaceError
-  = LovelaceOverflow Word64
-  | LovelaceTooLarge Integer
-  | LovelaceTooSmall Integer
-  | LovelaceUnderflow Word64 Word64
-  deriving (Data, Eq, Show)
-
-instance B.Buildable LovelaceError where
-  build = \case
-    LovelaceOverflow c -> bprint
-      ("Lovelace value, " . build . ", overflowed")
-      c
-    LovelaceTooLarge c -> bprint
-      ("Lovelace value, " . build . ", exceeds maximum, " . build)
-      c
-      maxLovelaceVal
-    LovelaceTooSmall c -> bprint
-      ("Lovelace value, " . build . ", is less than minimum, " . build)
-      c
-      (Lovelace 0)
-    LovelaceUnderflow c c' -> bprint
-      ("Lovelace underflow when subtracting " . build . " from " . build)
-      c'
-      c
-
-instance ToCBOR LovelaceError where
-  toCBOR = \case
-    LovelaceOverflow c ->
-      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
-    LovelaceTooLarge c ->
-      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
-    LovelaceTooSmall c ->
-      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
-    LovelaceUnderflow c c' ->
-      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
-
-instance FromCBOR LovelaceError where
-  fromCBOR = do
-    len <- decodeListLen
-    let checkSize :: Int -> Decoder s ()
-        checkSize size = matchSize "LovelaceError" size len
-    tag <- decodeWord8
-    case tag of
-      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
-      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
-      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
-      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
-
--- | Maximal possible value of 'Lovelace'
-maxLovelaceVal :: Word64
-maxLovelaceVal = 45e15
 
 -- | Lovelace formatter which restricts type.
 lovelaceF :: Format r (Lovelace -> r)

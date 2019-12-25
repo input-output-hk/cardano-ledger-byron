@@ -14,6 +14,7 @@ module Cardano.Chain.UTxO.Validation
   , TxValidationError (..)
   , Environment(..)
   , UTxOValidationError (..)
+  , LovelaceError(LovelaceUnderflow)
   )
 where
 
@@ -40,7 +41,6 @@ import Cardano.Binary
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
-  , LovelaceError(LovelaceUnderflow)
   , NetworkMagic
   , TxFeePolicy(..)
   , addrNetworkMagic
@@ -153,6 +153,37 @@ instance FromCBOR TxValidationError where
       7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
       8 -> checkSize 1 $> TxValidationUnknownAttributes
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
+
+data LovelaceError
+  = LovelaceOverflow Word64
+  | LovelaceTooLarge Integer
+  | LovelaceTooSmall Integer
+  | LovelaceUnderflow Word64 Word64
+  deriving (Eq, Show)
+
+instance ToCBOR LovelaceError where
+  toCBOR = \case
+    LovelaceOverflow c ->
+      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
+    LovelaceTooLarge c ->
+      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
+    LovelaceTooSmall c ->
+      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
+    LovelaceUnderflow c c' ->
+      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
+
+instance FromCBOR LovelaceError where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "LovelaceError" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
+      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
+      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
+      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
+      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
 --
