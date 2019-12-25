@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
 
@@ -148,7 +149,7 @@ instance B.Buildable GenesisDataGenerationError where
 -- | In Cardano Byron, the total supply is always limited to 45e15 Lovelace.
 --
 genesisMaximumLovelaceSupply :: Lovelace
-genesisMaximumLovelaceSupply = naturalToLovelace 45000000000000000
+genesisMaximumLovelaceSupply = naturalToLovelace 45e15
 
 generateGenesisData
   :: MonadError GenesisDataGenerationError m
