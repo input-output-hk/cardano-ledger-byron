@@ -36,9 +36,7 @@ import Cardano.Binary (serialize')
 import Cardano.Chain.Common
   ( Address
   , Lovelace
-  , LovelaceError(LovelaceUnderflow)
   , naturalToLovelace
-  , lovelaceToNatural
   , addLovelace
   , divLovelace
   , makeVerKeyAddress
@@ -106,7 +104,7 @@ data GenesisDataGenerationError
   = GenesisDataAddressBalanceMismatch Text Int Int
   | GenesisDataGenerationDelegationError GenesisDelegationError
   | GenesisDataGenerationDistributionMismatch Lovelace Lovelace
-  | GenesisDataGenerationLovelaceError LovelaceError
+  | GenesisDataGenerationNotGreaterThan Text Text Lovelace Lovelace
   | GenesisDataGenerationPassPhraseMismatch
   | GenesisDataGenerationRedeemKeyGen
   deriving (Eq, Show)
@@ -137,11 +135,12 @@ instance B.Buildable GenesisDataGenerationError where
              )
              testBalance
              totalBalance
-    GenesisDataGenerationLovelaceError lovelaceErr ->
-      bprint ("GenesisDataGenerationLovelaceError: "
-             . build
+    GenesisDataGenerationNotGreaterThan thingA thingB valA valB ->
+      bprint ("GenesisDataGenerationNotGreaterThan: "
+             . stext . " should be greater than " . stext
+             . " but in fact " . build . " < " . build
              )
-             lovelaceErr
+             thingA thingB valA valB
     GenesisDataGenerationPassPhraseMismatch ->
       bprint "GenesisDataGenerationPassPhraseMismatch"
     GenesisDataGenerationRedeemKeyGen ->
@@ -230,7 +229,8 @@ generateGenesisData startTime genesisSpec = do
   -- Compute total balance to generate
   let avvmSum = sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
 
-  maxTnBalance <- subLovelaceOrThrow genesisMaximumLovelaceSupply avvmSum
+  maxTnBalance <- subLovelaceOrThrow "genesisMaximumLovelaceSupply" "avvmSum"
+                                      genesisMaximumLovelaceSupply   avvmSum
 
   let tnBalance = min maxTnBalance (tboTotalBalance tbo)
 
@@ -246,7 +246,8 @@ generateGenesisData startTime genesisSpec = do
         $ GenesisDataAddressBalanceMismatch s (length a) (length b)
       else pure $ zip a b
 
-  nonAvvmBalance <- subLovelaceOrThrow tnBalance totalFakeAvvmBalance
+  nonAvvmBalance <- subLovelaceOrThrow "tnBalance" "totalFakeAvvmBalance"
+                                        tnBalance   totalFakeAvvmBalance
 
   (richBals, poorBals) <- genTestnetDistribution tbo nonAvvmBalance
 
@@ -375,7 +376,8 @@ genTestnetDistribution TestnetBalanceOptions {
 
         totalRichBalance    = scaleLovelace richmanBalance' tboRichmen
 
-    desiredPoorsBalance <- subLovelaceOrThrow testBalance totalRichBalance
+    desiredPoorsBalance <- subLovelaceOrThrow "testBalance" "totalRichBalance"
+                                               testBalance   totalRichBalance
 
     let poorBalance
           | tboPoors == 0 = naturalToLovelace 0
@@ -395,12 +397,9 @@ genTestnetDistribution TestnetBalanceOptions {
     pure (richBalances, poorBalances)
 
 subLovelaceOrThrow :: MonadError GenesisDataGenerationError m
-                   => Lovelace -> Lovelace -> m Lovelace
-subLovelaceOrThrow a b =
-    case subLovelace a b of
-      Just c  -> return c
-      Nothing -> throwError (GenesisDataGenerationLovelaceError
-                              (LovelaceUnderflow
-                                (fromIntegral (lovelaceToNatural a))
-                                (fromIntegral (lovelaceToNatural b))))
+                   => Text -> Text -> Lovelace -> Lovelace -> m Lovelace
+subLovelaceOrThrow thingA thingB a b =
+    maybe (throwError err) return (subLovelace a b)
+  where
+    err = GenesisDataGenerationNotGreaterThan thingA thingB a b
 
