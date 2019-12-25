@@ -156,10 +156,7 @@ genTxValidationError = do
   let pmi = getProtocolMagicId pm
       nm  = makeNetworkMagic pm
   Gen.choice
-    [ TxValidationLovelaceError
-        <$> Gen.text (Range.constant 0 1000) Gen.alphaNum
-        <*> Gen.word64 (Range.constant minBound maxBound)
-        <*> Gen.word64 (Range.constant minBound maxBound)
+    [ TxValidationBalanceError <$> genLovelace <*> genLovelace
     , TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace
     , TxValidationWitnessWrongSignature
         <$> genTxInWitness pmi

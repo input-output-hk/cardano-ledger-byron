@@ -79,7 +79,7 @@ import Cardano.Crypto
 
 -- | A representation of all the ways a transaction might be invalid
 data TxValidationError
-  = TxValidationLovelaceError Text Word64 Word64
+  = TxValidationBalanceError Lovelace Lovelace
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationWitnessWrongSignature TxInWitness ProtocolMagicId TxSigData
   | TxValidationWitnessWrongKey TxInWitness Address
@@ -93,11 +93,12 @@ data TxValidationError
 
 instance ToCBOR TxValidationError where
   toCBOR = \case
-    TxValidationLovelaceError text c c' ->
+    TxValidationBalanceError c c' ->
       encodeListLen 3
         <> toCBOR @Word8 0
-        <> toCBOR text
-        <> toCBORLovelaceError c c'
+        <> toCBOR @Text ""
+        <> toCBORLovelaceError (fromIntegral (lovelaceToNatural c))
+                               (fromIntegral (lovelaceToNatural c'))
     TxValidationFeeTooSmall tx lovelace1 lovelace2 ->
       encodeListLen 4
         <> toCBOR @Word8 1
@@ -136,6 +137,9 @@ instance ToCBOR TxValidationError where
       encodeListLen 1
         <> toCBOR @Word8 8
     where
+      -- Retained to keep CBOR schema compatibility with the old constructors:
+      -- data TxValidationError = TxValidationLovelaceError Text LovelaceError
+      -- data LovelaceError = LovelaceUnderflow Word64 Word64
       toCBORLovelaceError :: Word64 -> Word64 -> Encoding
       toCBORLovelaceError c c' =
         encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
@@ -148,7 +152,7 @@ instance FromCBOR TxValidationError where
         checkSize size = matchSize "TxValidationError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 3 >> (uncurry . TxValidationLovelaceError) <$> fromCBOR <*> fromCBORLovelaceError
+      0 -> checkSize 3 >> txValidationLovelaceError <$> fromCBOR <*> fromCBORLovelaceError
       1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
       2 -> checkSize 4 >> TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR
       3 -> checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
@@ -159,6 +163,14 @@ instance FromCBOR TxValidationError where
       8 -> checkSize 1 $> TxValidationUnknownAttributes
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
     where
+      -- Retained to keep CBOR schema compatibility with the old constructors:
+      -- data TxValidationError = TxValidationLovelaceError Text LovelaceError
+      -- data LovelaceError = LovelaceUnderflow Word64 Word64
+      txValidationLovelaceError :: Text -> (Word64, Word64) -> TxValidationError
+      txValidationLovelaceError _ (c,c') = TxValidationBalanceError
+                                             (naturalToLovelace (fromIntegral c))
+                                             (naturalToLovelace (fromIntegral c'))
+
       fromCBORLovelaceError :: Decoder s (Word64, Word64)
       fromCBORLovelaceError = do
         len <- decodeListLen
@@ -212,9 +224,7 @@ validateTx env utxo (Annotated tx txBytes) = do
   let balanceIn = balance inputUTxO
 
   -- Calculate the 'fee' as the difference of the balances
-  fee <- maybe (throwError $ TxValidationLovelaceError "Fee"
-                                 (fromIntegral (lovelaceToNatural balanceIn))
-                                 (fromIntegral (lovelaceToNatural balanceOut)))
+  fee <- maybe (throwError (TxValidationBalanceError balanceIn balanceOut))
                return
                (subLovelace balanceIn balanceOut)
 
