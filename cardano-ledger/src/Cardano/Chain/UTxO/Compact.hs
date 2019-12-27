@@ -43,7 +43,8 @@ import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Compact
   (CompactAddress, fromCompactAddress, toCompactAddress)
-import Cardano.Chain.Common.Lovelace (Lovelace)
+import Cardano.Chain.Common.Lovelace
+  (Lovelace, lovelaceToNatural, naturalToLovelace)
 import Cardano.Chain.UTxO.Tx (TxId, TxIn(..), TxOut(..))
 
 --------------------------------------------------------------------------------
@@ -190,8 +191,13 @@ fromCompactTxId compactTxId =
 -- Convert using 'toCompactTxOut' and 'fromCompactTxOut'.
 --
 data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
-                                 {-# UNPACK #-} !Lovelace
+                                 {-# UNPACK #-} !CompactLovelace
   deriving (Eq, Ord, Generic, Show)
+  deriving anyclass (NFData, NoUnexpectedThunks)
+
+newtype CompactLovelace = CompactLovelace Word64
+  deriving (Eq, Ord, Generic, Show)
+  deriving newtype (ToCBOR, FromCBOR)
   deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance HeapWords CompactTxOut where
@@ -240,8 +246,16 @@ instance ToCBOR CompactTxOut where
 
 toCompactTxOut :: TxOut -> CompactTxOut
 toCompactTxOut (TxOut addr lovelace) =
-  CompactTxOut (toCompactAddress addr) lovelace
+  CompactTxOut (toCompactAddress addr)
+               (toCompactLovelace lovelace)
 
 fromCompactTxOut :: CompactTxOut -> TxOut
-fromCompactTxOut (CompactTxOut compactAddr lovelace) =
-  TxOut (fromCompactAddress compactAddr) lovelace
+fromCompactTxOut (CompactTxOut addr lovelace) =
+  TxOut (fromCompactAddress addr)
+        (fromCompactLovelace lovelace)
+
+toCompactLovelace :: Lovelace -> CompactLovelace
+toCompactLovelace = CompactLovelace . fromIntegral . lovelaceToNatural
+
+fromCompactLovelace :: CompactLovelace -> Lovelace
+fromCompactLovelace (CompactLovelace n) = naturalToLovelace (fromIntegral n)
