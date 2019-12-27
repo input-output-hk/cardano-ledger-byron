@@ -28,6 +28,8 @@ module Cardano.Chain.UTxO.Compact
   , CompactTxOut(..)
   , toCompactTxOut
   , fromCompactTxOut
+  , compactTxOutAddress
+  , compactTxOutValue
   )
 where
 
@@ -41,6 +43,7 @@ import qualified Data.ByteArray as BA (convert)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (Address)
 import Cardano.Chain.Common.Compact
   (CompactAddress, fromCompactAddress, toCompactAddress)
 import Cardano.Chain.Common.Lovelace
@@ -259,3 +262,10 @@ toCompactLovelace = CompactLovelace . fromIntegral . lovelaceToNatural
 
 fromCompactLovelace :: CompactLovelace -> Lovelace
 fromCompactLovelace (CompactLovelace n) = naturalToLovelace (fromIntegral n)
+
+compactTxOutAddress :: CompactTxOut -> Address
+compactTxOutAddress (CompactTxOut addr _) = fromCompactAddress addr
+
+compactTxOutValue :: CompactTxOut -> Lovelace
+compactTxOutValue (CompactTxOut _ lovelace) = fromCompactLovelace lovelace
+

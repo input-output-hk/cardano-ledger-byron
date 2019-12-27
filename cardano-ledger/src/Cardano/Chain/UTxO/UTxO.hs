@@ -55,6 +55,7 @@ import Cardano.Chain.UTxO.Compact
   , fromCompactTxOut
   , toCompactTxIn
   , toCompactTxOut
+  , compactTxOutValue
   )
 import Cardano.Crypto (hash)
 
@@ -137,9 +138,6 @@ concat = foldM union empty
 
 balance :: UTxO -> Lovelace
 balance = foldMap compactTxOutValue . unUTxO
- where
-  compactTxOutValue :: CompactTxOut -> Lovelace
-  compactTxOutValue = txOutValue . fromCompactTxOut
 
 (<|) :: Set TxIn -> UTxO -> UTxO
 (<|) inputs = UTxO . flip M.restrictKeys compactInputs . unUTxO
