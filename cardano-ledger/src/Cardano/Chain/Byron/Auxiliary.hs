@@ -477,14 +477,15 @@ instance ToCBOR ApplyMempoolPayloadErr where
     CBOR.encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
 
 instance FromCBORAnnotated ApplyMempoolPayloadErr where
-  fromCBORAnnotated' = do
+  fromCBORAnnotated = undefined {- do
     lift $ enforceSize "ApplyMempoolPayloadErr" 2
     lift CBOR.decodeWord8 >>= \case
-      0   -> MempoolTxErr             <$> fromCBORAnnotated'
+      0   -> MempoolTxErr             <$> fromCBORAnnotated
       1   -> MempoolDlgErr            <$> lift fromCBOR
       2   -> MempoolUpdateProposalErr <$> lift fromCBOR
       3   -> MempoolUpdateVoteErr     <$> lift fromCBOR
       tag -> lift $ cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
+      -}
 
 applyMempoolPayload :: MonadError ApplyMempoolPayloadErr m
                     => CC.ValidationMode
@@ -529,12 +530,13 @@ data BlockOrBoundaryHdr =
 
 fromCBORBlockOrBoundaryHdr :: CC.EpochSlots
                             -> AnnotatedDecoder s BlockOrBoundaryHdr
-fromCBORBlockOrBoundaryHdr epochSlots = do
+fromCBORBlockOrBoundaryHdr epochSlots = undefined {- do
     lift $ enforceSize "BlockOrBoundaryHdr" 2
     lift (fromCBOR @Word) >>= \case
-      0 -> BOBBoundaryHdr <$> fromCBORAnnotated'
+      0 -> BOBBoundaryHdr <$> fromCBORAnnotated
       1 -> BOBBlockHdr    <$> CC.fromCBORHeader epochSlots
       t -> panic $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+      -}
 
 -- | The analogue of 'Data.Either.either'
 aBlockOrBoundaryHdr :: (CC.Header         -> b)

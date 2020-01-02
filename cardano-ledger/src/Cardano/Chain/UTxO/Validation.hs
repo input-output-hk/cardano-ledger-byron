@@ -152,8 +152,9 @@ instance FromCBORAnnotated TxValidationError where
             b <- fromCBOR
             c <- fromCBOR
             return $ \bytes -> TxValidationFeeTooSmall (a bytes) b c
-      2 -> checkSize 4 >>
-            const <$> (TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR)
+      2 -> undefined
+      -- 2 -> checkSize 4 >>
+      --       const <$> (TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR)
       3 -> checkSize 3 >> const <$> (TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR)
       4 -> checkSize 2 >> const <$> (TxValidationMissingInput <$> fromCBOR)
       5 -> checkSize 3 >> const <$> (TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR)

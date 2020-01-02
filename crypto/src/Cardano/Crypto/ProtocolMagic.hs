@@ -62,7 +62,7 @@ pattern ProtocolMagicId { unProtocolMagicId } <- ProtocolMagicId' unProtocolMagi
   ProtocolMagicId w = ProtocolMagicId' w (serialize' w)
 
 instance FromCBORAnnotated ProtocolMagicId where
-  fromCBORAnnotated = withSlice' $ ProtocolMagicId' <$> (lift fromCBOR)
+  fromCBORAnnotated = undefined -- withSlice' $ ProtocolMagicId' <$> (lift fromCBOR)
 
 instance ToCBOR ProtocolMagicId where
   toCBOR = encodePreEncoded . serializeProtocolMagicId
