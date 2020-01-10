@@ -438,7 +438,11 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 --   The new version is valid for a given application if it is the same or one
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
-svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 1
-  Just (currentAppVersion, _, _) -> appVersion == currentAppVersion + 1
-  where SoftwareVersion appName appVersion = softwareVersion
+svCanFollow avs (SoftwareVersion appName appVersion) =
+  case M.lookup appName avs of
+    -- For new apps, must start at 1.
+    Nothing -> appVersion == 1 || appVersion == 0
+
+    -- For existing apps, same as current or one more than current
+    Just (currentAppVersion, _, _) -> appVersion == currentAppVersion
+                                   || appVersion == currentAppVersion + 1
