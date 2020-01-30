@@ -6,6 +6,7 @@ module Test.Cardano.Chain.UTxO.Gen
   , genRedeemWitness
   , genTx
   , genTxAttributes
+  , genATxAuxBS
   , genTxAux
   , genTxHash
   , genTxId
@@ -40,7 +41,8 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Common (makeNetworkMagic, mkAttributes)
 import Cardano.Chain.UTxO
-  ( CompactTxId
+  ( ATxAux
+  , CompactTxId
   , CompactTxIn
   , CompactTxOut
   , Tx(..)
@@ -60,6 +62,7 @@ import Cardano.Chain.UTxO
   , UTxO
   , UTxOError(..)
   , UTxOValidationError(..)
+  , annotateTxAux
   , fromList
   , mkTxAux
   , mkTxPayload
@@ -106,8 +109,11 @@ genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
 genTxAttributes :: Gen TxAttributes
 genTxAttributes = pure $ mkAttributes ()
 
+genATxAuxBS :: ProtocolMagicId -> Gen (ATxAux ByteString)
+genATxAuxBS pm = annotateTxAux <$> genTxAux pm
+
 genTxAux :: ProtocolMagicId -> Gen TxAux
-genTxAux pm = mkTxAux <$> genTx <*> (genTxWitness pm)
+genTxAux pm = mkTxAux <$> genTx <*> genTxWitness pm
 
 genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash

@@ -40,7 +40,8 @@ main =
   mainWithTestScenario
     $   testGroup "Cardano Ledger Tests"
     $   tsGroupToTree
-    <$> [ Test.Cardano.Chain.Block.CBOR.tests
+    <$>
+        [ Test.Cardano.Chain.Block.CBOR.tests
         , Test.Cardano.Chain.Block.Model.tests
         , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
         , Test.Cardano.Chain.Block.ValidationMode.tests

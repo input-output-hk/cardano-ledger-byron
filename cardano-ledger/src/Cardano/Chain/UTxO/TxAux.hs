@@ -14,6 +14,8 @@ module Cardano.Chain.UTxO.TxAux
   , ATxAux(..)
   , mkTxAux
   , annotateTxAux
+  , fromCborTxAux
+  , toCborTxAux
   , taTx
   , taWitness
   , txaF
@@ -29,11 +31,13 @@ import Cardano.Binary
   ( Annotated(..)
   , ByteSpan
   , Decoded(..)
+  , DecoderError
   , FromCBOR(..)
   , ToCBOR(..)
   , annotationBytes
   , annotatedDecoder
   , fromCBORAnnotated
+  , decodeFullDecoder
   , encodeListLen
   , enforceSize
   , serialize
@@ -41,6 +45,8 @@ import Cardano.Binary
   )
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
+
+import qualified Data.ByteString.Lazy.Char8 as LBS
 
 
 -- | Transaction + auxiliary data
@@ -93,8 +99,18 @@ instance FromCBOR TxAux where
 instance FromCBOR (ATxAux ByteSpan) where
   fromCBOR = do
     Annotated (tx, witness) byteSpan <- annotatedDecoder $ do
-      enforceSize "TxAux" 2
+      enforceSize "ATxAux" 2
       tx      <- fromCBORAnnotated
       witness <- fromCBORAnnotated
       pure (tx, witness)
     pure $ ATxAux tx witness byteSpan
+
+fromCborTxAux :: ByteString ->  Either DecoderError (ATxAux ByteString)
+fromCborTxAux bs =
+    fmap (annotationBytes lbs)
+      $ decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux" fromCBOR lbs
+  where
+    lbs = LBS.fromStrict bs
+
+toCborTxAux :: ATxAux ByteString -> ByteString
+toCborTxAux = aTaAnnotation -- The ByteString anotation is the CBOR encoded version.

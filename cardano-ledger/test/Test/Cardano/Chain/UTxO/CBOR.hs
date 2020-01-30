@@ -17,10 +17,10 @@ import Data.Vector (Vector)
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (ToCBOR, Case(..), LengthOf, SizeOverride(..), szCases)
+import Cardano.Binary (ToCBOR (..), Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
-import Cardano.Chain.UTxO
-  (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
+import Cardano.Chain.UTxO (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..),
+        fromCborTxAux, toCborTxAux, taTx, taWitness)
 import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
@@ -42,7 +42,8 @@ import Test.Cardano.Chain.UTxO.Example
   , exampleTxWitness
   )
 import Test.Cardano.Chain.UTxO.Gen
-  ( genTx
+  ( genATxAuxBS
+  , genTx
   , genTxAttributes
   , genTxAux
   , genTxHash
@@ -78,7 +79,6 @@ goldenTx = goldenTestCBOR tx "test/golden/cbor/utxo/Tx"
 ts_roundTripTx :: TSProperty
 ts_roundTripTx = eachOfTS 50 genTx roundTripsCBORBuildable
 
-
 --------------------------------------------------------------------------------
 -- TxAttributes
 --------------------------------------------------------------------------------
@@ -97,7 +97,6 @@ ts_roundTripTxAttributes = eachOfTS 10 genTxAttributes roundTripsCBORBuildable
 
 ts_roundTripTxAux :: TSProperty
 ts_roundTripTxAux = eachOfTS 100 (feedPM genTxAux) roundTripsCBORBuildable
-
 
 --------------------------------------------------------------------------------
 -- Tx Hash
@@ -351,6 +350,16 @@ sizeEstimates
         )
       ]
 
+fromCborTxAuxTest :: H.Group
+fromCborTxAuxTest =
+    H.Group "" [ ("prop_fromCborTxAux", prop_fromCborTxAux) ]
+  where
+    prop_fromCborTxAux :: Property
+    prop_fromCborTxAux = do
+       H.property $ do
+         tx <- H.forAll $ feedPM genATxAuxBS
+         H.tripping tx toCborTxAux fromCborTxAux
+
 
 --------------------------------------------------------------------------------
 -- Main test export
@@ -358,4 +367,4 @@ sizeEstimates
 
 tests :: TSGroup
 tests = concatTSGroups
-  [const $$discoverGolden, $$discoverRoundTripArg, const sizeEstimates]
+  [const $$discoverGolden, const fromCborTxAuxTest, $$discoverRoundTripArg, const sizeEstimates]
