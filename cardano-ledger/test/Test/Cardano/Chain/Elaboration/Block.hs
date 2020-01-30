@@ -28,7 +28,6 @@ import Cardano.Prelude hiding (to)
 import Control.Arrow ((&&&))
 import Control.Lens ((^.), to, (^..))
 import Data.Bimap (Bimap)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
 import Data.Monoid.Generic (GenericSemigroup (GenericSemigroup), GenericMonoid (GenericMonoid))
@@ -248,7 +247,7 @@ annotateBlock epochSlots block =
               $  "This function should be able to decode the block it encoded"
               <> ". Instead I got: "
               <> show err
-          Right abobb -> map (LBS.toStrict . Binary.slice bytes) abobb
+          Right abobb -> Binary.annotationBytes bytes abobb
   in
     case decodedABlockOrBoundary of
       Concrete.ABOBBlock bk -> bk

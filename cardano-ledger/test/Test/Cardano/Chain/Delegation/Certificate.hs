@@ -8,12 +8,10 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as BSL
-
 import Hedgehog (Group, Property, assert, discover, forAll, property)
 import qualified Hedgehog.Gen as Gen
 
-import Cardano.Binary (decodeFull, serialize, slice)
+import Cardano.Binary (annotationBytes, decodeFull, serialize)
 import Cardano.Chain.Delegation
   (ACertificate(delegateVK), Certificate, isValid, signCertificate)
 
@@ -66,7 +64,7 @@ prop_certificateIncorrect = property $ do
 
 annotateCert :: Certificate -> ACertificate ByteString
 annotateCert cert =
-  fmap (BSL.toStrict . slice bytes)
+  annotationBytes bytes
     . fromRight
         (panic "prop_certificateCorrect: Round trip broken for Certificate")
     $ decodeFull bytes

@@ -22,7 +22,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as Lazy
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
@@ -32,12 +31,12 @@ import Cardano.Binary
   , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , annotationBytes
   , annotatedDecoder
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   , serialize
-  , slice
   , unsafeDeserialize
   )
 import Cardano.Chain.UTxO.Tx (Tx)
@@ -51,7 +50,7 @@ mkTxAux :: Tx -> TxWitness -> TxAux
 mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
 
 annotateTxAux :: TxAux -> ATxAux ByteString
-annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
+annotateTxAux ta = annotationBytes bs ta'
   where
     bs  = serialize ta
     ta' = unsafeDeserialize bs

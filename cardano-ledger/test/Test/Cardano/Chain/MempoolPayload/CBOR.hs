@@ -11,7 +11,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as LBS
 import Hedgehog (Property, tripping)
 
 import Cardano.Binary
@@ -19,11 +18,11 @@ import Cardano.Binary
     , Decoder
     , FromCBOR(..)
     , ToCBOR
+    , annotationBytes
     , decodeFull
     , decodeFullDecoder
     , fromCBOR
     , serialize
-    , slice
     , toCBOR
     )
 
@@ -56,7 +55,7 @@ fillInByteString a =
     bytes = serialize a
 
     dec :: Decoder s (f ByteString)
-    dec = fmap (LBS.toStrict . slice bytes) <$> fromCBOR
+    dec = annotationBytes bytes <$> fromCBOR
 
 -- | Variant of 'goldenTestCBOR' that does not use the @'ToCBOR' (f ())@
 -- instance, but the @'ToCBOR' (f ByteString)@ instance. The latter instance

@@ -15,7 +15,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
@@ -79,7 +78,7 @@ elaborateTxWitsBS elaborateTxId =
  where
   annotateTxAux :: Concrete.TxAux -> Concrete.ATxAux ByteString
   annotateTxAux txAux =
-    map (LBS.toStrict . CBOR.slice bytes)
+    CBOR.annotationBytes bytes
       . fromRight (panic "elaborateTxWitsBS: Error decoding TxAux")
       $ CBOR.decodeFull bytes
     where bytes = CBOR.serialize txAux
