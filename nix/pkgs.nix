@@ -44,12 +44,19 @@ let
           build-tools = [ pkgs.makeWrapper ];
           testFlags = [ "--scenario=ContinuousIntegration" ];
           postInstall = ''
-            makeWrapper \
-              $out/bin/cardano-ledger-test${exe-extension} \
+            wrapProgram \
               $out/bin/cardano-ledger-test${exe-extension} \
               --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
           '';
         };
+	packages.cardano-ledger.components.tests.epoch-validation-normal-form-test = {
+	  build-tools = [ pkgs.makeWrapper ];
+	  postInstall = ''
+            wrapProgram \
+	      $out/bin/epoch-validation-normal-form-test${exe-extension} \
+	      --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
+	  '';
+	};
       }
           ];
       }));
