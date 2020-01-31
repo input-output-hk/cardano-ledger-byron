@@ -20,6 +20,7 @@ let
       (pkgs.haskell-nix.cabalProject {
           src = pkgs.haskell-nix.haskellLib.cleanGit { inherit src; };
           ghc = pkgs.haskell-nix.compiler.${haskellCompiler};
+          configureArgs = "-ftest-normal-form";
           modules = [
       {
         # katip has an version bound of Win32 < 2.6; this however
@@ -44,7 +45,7 @@ let
           testFlags = [ "--scenario=ContinuousIntegration" ];
           postInstall = ''
             makeWrapper \
-              $out/cardano-ledger-*/cardano-ledger-test${exe-extension} \
+              $out/bin/cardano-ledger-test${exe-extension} \
               $out/bin/cardano-ledger-test${exe-extension} \
               --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
           '';
