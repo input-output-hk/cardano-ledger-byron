@@ -1,44 +1,66 @@
-#
-# The default.nix file. This will generate targets for all
-# buildables.  These include anything from stack.yaml
-# (via nix-tools:stack-to-nix) or cabal.project (via
-# nix-tools:plan-to-nix). As well as custom definitions
-# on top.
-#
-# nix-tools stack-to-nix or plan-to-nix will generate
-# the `nix/plan.nix` file. Where further customizations
-# outside of the ones in stack.yaml/cabal.project can
-# be specified as needed for nix/ci.
-#
 
-# We will need to import the local lib, which will
-# give us the iohk-nix tooling, which also includes
-# the nix-tools tooling.
+{ system ? builtins.currentSystem
+, crossSystem ? null
+, config ? {}
+, profiling ? false
+, commonLib ? import ./lib.nix { inherit system crossSystem config profiling; }
+, pkgs ? commonLib.pkgs
+, customConfig ? {}
+, interactive ? false
+, gitrev ? commonLib.iohkNix.commitIdFromGitRepoOrZero ./.git
+, withHoogle ? true
+}:
+
 let
-  localLib = import ./nix/lib.nix;
-in
-# This file needs to export a function that takes
-# the arguments it is passed and forwards them to
-# the default-nix template from iohk-nix. This is
-# important so that the release.nix file can properly
-# parameterize this file when targetting different
-# hosts.
-{ withHoogle ? true
-, ... }@args:
-# We will instantiate the default-nix template with the
-# nix/pkgs.nix file...
-let
-  defaultNix = localLib.nix-tools.default-nix ./nix/pkgs.nix args;
-in defaultNix //
-{
-  shell = defaultNix.nix-tools.shellFor {
-    inherit withHoogle;
-    # env will provide the dependencies of cardano-shell
-    packages = ps: with ps; [ cardano-ledger ];
-    # This adds git to the shell, which is used by stack.
-    buildInputs = [
-      defaultNix.nix-tools._raw.cabal-install.components.exes.cabal
-      localLib.iohkNix.cardano-repo-tool
-    ];
+  lib = commonLib.pkgs.lib;
+  inherit (commonLib) haskellPackages;
+
+  recRecurseIntoAttrs = with pkgs; pred: x: if pred x then recurseIntoAttrs (lib.mapAttrs (n: v: if n == "buildPackages" then v else recRecurseIntoAttrs pred v) x) else x;
+  projectHaskellPackages = recRecurseIntoAttrs (x: with pkgs; lib.isAttrs x && !lib.isDerivation x)
+    # we are only intersted in listing the project packages
+    (pkgs.lib.filterAttrs (with pkgs.haskell-nix.haskellLib; (n: p: p != null && (isLocalPackage p && isProjectPackage p) || n == "shellFor"))
+      haskellPackages);
+
+  self = with commonLib; {
+    haskellPackages = projectHaskellPackages;
+    inherit (iohkNix) check-hydra;
+
+    # `tests` are the test suites which have been built.
+    tests = collectComponents "tests" isCardanoLedger haskellPackages;
+    # `checks` are the result of executing the tests.
+    checks = pkgs.recurseIntoAttrs (getPackageChecks (filterCardanoPackages haskellPackages));
+    # `benchmarks` are only built, not run.
+    benchmarks = collectComponents "benchmarks" isCardanoLedger haskellPackages;
+
+    shell = haskellPackages.shellFor {
+
+      #packages = ps: with ps; [
+      #  haskellPackages.cardano-node
+      #  haskellPackages.cardano-config
+      #];
+
+      # Builds a Hoogle documentation index of all dependencies,
+      # and provides a "hoogle" command to search the index.
+      inherit withHoogle;
+
+      # You might want some extra tools in the shell (optional).
+      buildInputs = (with haskellPackages; [
+        #weeder.components.exes.weeder
+        #hlint.components.exes.hlint
+        #cabal-install.components.exes.cabal
+        #ghcid.components.exes.ghcid
+        pkgs.haskellPackages.terminfo
+      ]) ++ (with pkgs; [
+        pkgconfig
+        sqlite-interactive
+        tmux
+      ]);
+
+      # Prevents cabal from choosing alternate plans, so that
+      # *all* dependencies are provided by Nix.
+      exactDeps = true;
+    };
+
   };
-}
+
+in self

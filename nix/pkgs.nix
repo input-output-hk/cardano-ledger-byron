@@ -1,12 +1,10 @@
-{ pkgs ? import <nixpkgs> {}
-, iohk-extras ? {}
-, iohk-module ? {}
-, haskell
-, ...
+{ pkgs
+, src
+, haskellCompiler ? "ghc865"
+, profiling ? false
 }:
 let
-  # our packages
-  stack-pkgs = import ./.stack.nix;
+  haskell = pkgs.haskell-nix;
 
   # The cardano-mainnet-mirror used during testing
   cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
@@ -14,31 +12,15 @@ let
   exe-extension =
     pkgs.lib.optionalString pkgs.stdenv.targetPlatform.isWindows ".exe";
 
-  # Build the packageset with module support.
-  # We can essentially override anything in the modules
-  # section.
-  #
-  #  packages.cbors.patches = [ ./one.patch ];
-  #  packages.cbors.flags.optimize-gmp = false;
-  #
-  compiler = (stack-pkgs.extras haskell.hackage).compiler.nix-name;
-  pkgSet = haskell.mkStackPkgSet {
-    inherit stack-pkgs;
-    # The overlay allows extension or restriction of the set of
-    # packages we are interested in. By using the stack-pkgs.overlay
-    # we restrict our package set to the ones provided in stack.yaml.
-    pkg-def-extras = [
-      stack-pkgs.extras
-      iohk-extras.${compiler}
-    ];
-    # package customizations
-    modules = [
-      # the iohk-module will supply us with the necessary
-      # cross compilation plumbing to make Template Haskell
-      # work when cross compiling.  For now we need to
-      # list the packages that require template haskell
-      # explicity here.
-      iohk-module
+  recRecurseIntoAttrs = with pkgs; pred: x: if pred x then recurseIntoAttrs (lib.mapAttrs (n: v: if n == "buildPackages" then v else recRecurseIntoAttrs pred v) x) else x;
+  pkgSet = recRecurseIntoAttrs (x: with pkgs; lib.isAttrs x && !lib.isDerivation x)
+    # we are only intersted in listing the project packages
+    (pkgs.lib.filterAttrs (with pkgs.haskell-nix.haskellLib; (n: p: p != null && (isLocalPackage p && isProjectPackage p) || n == "shellFor"))
+      # from our project which is based on a cabal project.
+      (pkgs.haskell-nix.cabalProject {
+          src = pkgs.haskell-nix.haskellLib.cleanGit { inherit src; };
+          ghc = pkgs.haskell-nix.compiler.${haskellCompiler};
+          modules = [
       {
         # katip has an version bound of Win32 < 2.6; this however
         # implies that it's incompatible with ghc-8.6 (on windows).
@@ -68,12 +50,6 @@ let
           '';
         };
       }
-      {
-        packages = {
-          cardano-ledger.src = pkgs.lib.cleanSource ../cardano-ledger;
-        };
-      }
-    ];
-  };
-in
-pkgSet.config.hsPkgs // { _config = pkgSet.config; }
+          ];
+      }));
+ in pkgSet
