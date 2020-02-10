@@ -16,7 +16,6 @@
 module Cardano.Chain.Byron.API (
     -- * Extract info from genesis config
     allowedDelegators
-  , boundaryBlockSlot
     -- * Extract info from chain state
   , getDelegationMap
   , getProtocolParams
@@ -37,14 +36,6 @@ module Cardano.Chain.Byron.API (
   , reAnnotateBoundary
   , reAnnotateUsing
     -- * Headers
-  , ABlockOrBoundaryHdr(..)
-  , aBlockOrBoundaryHdr
-  , fromCBORABlockOrBoundaryHdr
-  , abobHdrFromBlock
-  , abobHdrSlotNo
-  , abobHdrChainDifficulty
-  , abobHdrHash
-  , abobHdrPrevHash
   , abobMatchesBody
   ) where
 
@@ -63,7 +54,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import           Data.Word
-import           GHC.Generics (Generic)
 
 import           Cardano.Binary
 import           Cardano.Crypto.ProtocolMagic
@@ -90,11 +80,6 @@ allowedDelegators :: Gen.Config -> Set CC.KeyHash
 allowedDelegators =
       Gen.unGenesisKeyHashes
     . Gen.configGenesisKeyHashes
-
--- | Compute the slot number assigned to a boundary block
-boundaryBlockSlot :: CC.EpochSlots -> Word64 -> CC.SlotNumber
-boundaryBlockSlot (CC.EpochSlots epochSlots) epoch =
-    CC.SlotNumber $ epochSlots * epoch
 
 {-------------------------------------------------------------------------------
   Extract info from chain state
@@ -305,7 +290,7 @@ validateBoundary cfg blk cvs = do
     -- TODO: For some reason 'updateChainBoundary' does not set the slot when
     -- applying an EBB, so we do it here. Could that cause problems??
     return cvs' {
-        CC.cvsLastSlot = boundaryBlockSlot epochSlots (CC.boundaryEpoch hdr)
+        CC.cvsLastSlot = CC.boundaryBlockSlot epochSlots (CC.boundaryEpoch hdr)
       }
   where
     hdr        = CC.boundaryHeader blk
@@ -565,71 +550,21 @@ reAnnotateUsing encoder decoder =
   The ledger layer defines 'ABlockOrBoundary', but no equivalent for headers.
 -------------------------------------------------------------------------------}
 
-data ABlockOrBoundaryHdr a =
-    ABOBBlockHdr    !(CC.AHeader         a)
-  | ABOBBoundaryHdr !(CC.ABoundaryHeader a)
-  deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
-
-fromCBORABlockOrBoundaryHdr :: CC.EpochSlots
-                            -> Decoder s (ABlockOrBoundaryHdr ByteSpan)
-fromCBORABlockOrBoundaryHdr epochSlots = do
-    enforceSize "ABlockOrBoundaryHdr" 2
-    fromCBOR @Word >>= \case
-      0 -> ABOBBoundaryHdr <$> CC.fromCBORABoundaryHeader
-      1 -> ABOBBlockHdr    <$> CC.fromCBORAHeader epochSlots
-      t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
-
--- | The analogue of 'Data.Either.either'
-aBlockOrBoundaryHdr :: (CC.AHeader         a -> b)
-                    -> (CC.ABoundaryHeader a -> b)
-                    -> ABlockOrBoundaryHdr a -> b
-aBlockOrBoundaryHdr f _ (ABOBBlockHdr    hdr) = f hdr
-aBlockOrBoundaryHdr _ g (ABOBBoundaryHdr hdr) = g hdr
-
-abobHdrFromBlock :: CC.ABlockOrBoundary a -> ABlockOrBoundaryHdr a
-abobHdrFromBlock (CC.ABOBBlock    blk) = ABOBBlockHdr    $ CC.blockHeader    blk
-abobHdrFromBlock (CC.ABOBBoundary blk) = ABOBBoundaryHdr $ CC.boundaryHeader blk
-
--- | Slot number of the header
---
--- NOTE: Epoch slot number calculation must match the one in 'applyBoundary'.
-abobHdrSlotNo :: CC.EpochSlots -> ABlockOrBoundaryHdr a -> CC.SlotNumber
-abobHdrSlotNo epochSlots =
-    aBlockOrBoundaryHdr
-      CC.headerSlot
-      (boundaryBlockSlot epochSlots . CC.boundaryEpoch)
-
-abobHdrChainDifficulty :: ABlockOrBoundaryHdr a -> CC.ChainDifficulty
-abobHdrChainDifficulty =
-    aBlockOrBoundaryHdr
-      CC.headerDifficulty
-      CC.boundaryDifficulty
-
-abobHdrHash :: ABlockOrBoundaryHdr ByteString -> CC.HeaderHash
-abobHdrHash (ABOBBoundaryHdr hdr) = CC.boundaryHeaderHashAnnotated hdr
-abobHdrHash (ABOBBlockHdr    hdr) = CC.headerHashAnnotated         hdr
-
-abobHdrPrevHash :: ABlockOrBoundaryHdr a -> Maybe CC.HeaderHash
-abobHdrPrevHash =
-    aBlockOrBoundaryHdr
-      (Just                        . CC.headerPrevHash)
-      (either (const Nothing) Just . CC.boundaryPrevHash)
-
 -- | Check if a block matches its header
 --
 -- For EBBs, we're currently being more permissive here and not performing any
 -- header-body validation but only checking whether an EBB header and EBB block
 -- were provided. This seems to be fine as it won't cause any loss of consensus
 -- with the old `cardano-sl` nodes.
-abobMatchesBody :: ABlockOrBoundaryHdr ByteString
+abobMatchesBody :: CC.ABlockOrBoundaryHdr ByteString
                 -> CC.ABlockOrBoundary ByteString
                 -> Bool
 abobMatchesBody hdr blk =
     case (hdr, blk) of
-      (ABOBBlockHdr hdr', CC.ABOBBlock blk') -> matchesBody hdr' blk'
-      (ABOBBoundaryHdr _, CC.ABOBBoundary _) -> True
-      (ABOBBlockHdr    _, CC.ABOBBoundary _) -> False
-      (ABOBBoundaryHdr _, CC.ABOBBlock    _) -> False
+      (CC.ABOBBlockHdr hdr', CC.ABOBBlock blk') -> matchesBody hdr' blk'
+      (CC.ABOBBoundaryHdr _, CC.ABOBBoundary _) -> True
+      (CC.ABOBBlockHdr    _, CC.ABOBBoundary _) -> False
+      (CC.ABOBBoundaryHdr _, CC.ABOBBlock    _) -> False
   where
     matchesBody :: CC.AHeader ByteString -> CC.ABlock ByteString -> Bool
     matchesBody hdr' blk' = isRight $
