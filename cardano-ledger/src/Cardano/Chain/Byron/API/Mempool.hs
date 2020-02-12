@@ -91,10 +91,10 @@ applyMempoolPayload validationMode cfg currentSlot payload =
           applyCertificate cfg currentSlot [cert]
       CC.MempoolUpdateProposal proposal ->
         (`wrapError` MempoolUpdateProposalErr) .
-          applyUpdateProposal cfg proposal
+          applyUpdateProposal cfg currentSlot proposal
       CC.MempoolUpdateVote vote ->
         (`wrapError` MempoolUpdateVoteErr) .
-          applyUpdateVote cfg vote
+          applyUpdateVote cfg currentSlot vote
 
 -- | The encoding of the mempool payload (without a 'AMempoolPayload' envelope)
 mempoolPayloadRecoverBytes :: CC.AMempoolPayload ByteString -> ByteString
@@ -154,10 +154,11 @@ mkDelegationEnvironment cfg currentSlot = D.Iface.Environment {
     currentEpoch  = CC.slotNumberEpoch (Gen.configEpochSlots cfg) currentSlot
 
 mkUpdateEnvironment :: Gen.Config
-                    -> CC.ChainValidationState
+                    -> CC.SlotNumber
+                    -> Delegation.Map
                     -> U.Iface.Environment
-mkUpdateEnvironment cfg cvs = U.Iface.Environment {
-      U.Iface.protocolMagic = getAProtocolMagicId protocolMagic
+mkUpdateEnvironment cfg currentSlot delegationMap = U.Iface.Environment
+    { U.Iface.protocolMagic = getAProtocolMagicId protocolMagic
     , U.Iface.k             = k
     , U.Iface.currentSlot   = currentSlot
     , U.Iface.numGenKeys    = numGenKeys
@@ -166,14 +167,8 @@ mkUpdateEnvironment cfg cvs = U.Iface.Environment {
   where
     k             = Gen.configK cfg
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
-    currentSlot   = CC.cvsLastSlot cvs
     numGenKeys    = toNumGenKeys $ Set.size (allowedDelegators cfg)
-    delegationMap = getDelegationMap cvs
 
-    -- TODO: This function comes straight from cardano-ledger, which however
-    -- does not export it. We should either export it, or -- preferably -- when
-    -- all of the functions in this module are moved to cardano-ledger, the
-    -- function can just be used directly.
     toNumGenKeys :: Int -> Word8
     toNumGenKeys n
       | n > fromIntegral (maxBound :: Word8) = panic $
@@ -207,24 +202,26 @@ applyCertificate cfg currentSlot certs cvs =
 
 applyUpdateProposal :: MonadError U.Iface.Error m
                     => Gen.Config
+                    -> CC.SlotNumber
                     -> Update.AProposal ByteString
                     -> CC.ChainValidationState -> m CC.ChainValidationState
-applyUpdateProposal cfg proposal cvs =
+applyUpdateProposal cfg currentSlot proposal cvs =
     (`setUpdateState` cvs) <$>
       U.Iface.registerProposal updateEnv updateState proposal
   where
-    updateEnv   = mkUpdateEnvironment cfg cvs
+    updateEnv   = mkUpdateEnvironment cfg currentSlot (getDelegationMap cvs)
     updateState = CC.cvsUpdateState cvs
 
 applyUpdateVote :: MonadError U.Iface.Error m
                 => Gen.Config
+                -> CC.SlotNumber
                 -> Update.AVote ByteString
                 -> CC.ChainValidationState -> m CC.ChainValidationState
-applyUpdateVote cfg vote cvs =
+applyUpdateVote cfg currentSlot vote cvs =
     (`setUpdateState` cvs) <$>
       U.Iface.registerVote updateEnv updateState vote
   where
-    updateEnv   = mkUpdateEnvironment cfg cvs
+    updateEnv   = mkUpdateEnvironment cfg currentSlot (getDelegationMap cvs)
     updateState = CC.cvsUpdateState cvs
 
 {-------------------------------------------------------------------------------
