@@ -24,7 +24,6 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.ByteString (ByteString)
 
-import           Cardano.Binary
 import           Cardano.Prelude
 
 import Cardano.Chain.Byron.API.Common
@@ -68,9 +67,6 @@ mkBodyState cvs = CC.BodyState {
     , CC.delegationState = CC.cvsDelegationState cvs
     }
 
--- TODO: Unlike 'mkEpochEnvironment' and 'mkDelegationEnvironment', for the
--- body processing we set 'currentEpoch' to the epoch of the block rather than
--- the current epoch (in the state). Is that deliberate?
 mkBodyEnvironment :: Gen.Config
                   -> Update.ProtocolParameters
                   -> CC.SlotNumber
@@ -151,14 +147,6 @@ validateBlock :: MonadError CC.ChainValidationError m
               -> CC.ChainValidationState -> m CC.ChainValidationState
 validateBlock cfg validationMode block blkHash cvs = do
 
-    -- TODO: How come this check isn't done in 'updateBlock'
-    -- (but it /is/ done in 'updateChainBoundary')?
-    --
-    -- TODO: It could be argued that hash checking isn't part of consensus /or/
-    -- the ledger. If we take that point of view serious, we should think about
-    -- what that third thing is precisely and what its responsibilities are.
-    validatePrevHashMatch block cvs
-
     validateHeader validationMode updState (CC.blockHeader block)
     bodyState' <- validateBody validationMode block bodyEnv bodyState
     return cvs {
@@ -176,19 +164,6 @@ validateBlock cfg validationMode block blkHash cvs = do
                   (CC.blockSlot block)
     bodyState = mkBodyState cvs
 
-validatePrevHashMatch :: MonadError CC.ChainValidationError m
-                      => CC.ABlock ByteString
-                      -> CC.ChainValidationState -> m ()
-validatePrevHashMatch block cvs = do
-    case ( CC.cvsPreviousHash cvs
-         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
-         ) of
-      (Left gh, hh) ->
-         throwError $ CC.ChainValidationExpectedGenesisHash gh hh
-      (Right expected, actual) ->
-         unless (expected == actual) $
-           throwError $ CC.ChainValidationInvalidHash expected actual
-
 -- | Apply a boundary block
 --
 -- NOTE: The `cvsLastSlot` calculation must match the one in 'abobHdrSlotNo'.
@@ -200,8 +175,6 @@ validateBoundary cfg blk cvs = do
     -- TODO: Unfortunately, 'updateChainBoundary' doesn't take a hash as an
     -- argument but recomputes it.
     cvs' <- CC.updateChainBoundary cvs blk
-    -- TODO: For some reason 'updateChainBoundary' does not set the slot when
-    -- applying an EBB, so we do it here. Could that cause problems??
     return cvs' {
         CC.cvsLastSlot = CC.boundaryBlockSlot epochSlots (CC.boundaryEpoch hdr)
       }
