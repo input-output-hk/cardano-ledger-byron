@@ -22,12 +22,12 @@ let
 
       # Allow reinstallation of Win32
       { nonReinstallablePkgs =
-        [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple"
+        [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple" "base"
           "deepseq" "array" "ghc-boot-th" "pretty" "template-haskell"
           # ghcjs custom packages
           "ghcjs-prim" "ghcjs-th"
           "ghc-boot"
-          "array" "binary" "bytestring" "containers"
+          "ghc" "array" "binary" "bytestring" "containers"
           "filepath" "ghc-boot" "ghc-compact" "ghc-prim"
           # "ghci" "haskeline"
           "hpc"
@@ -66,6 +66,7 @@ let
         packages.network.components.library.build-tools = lib.mkForce [];
       })
     ];
+    configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
   };
 in
   pkgSet
