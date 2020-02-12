@@ -22,12 +22,12 @@ let
 
       # Allow reinstallation of Win32
       { nonReinstallablePkgs =
-        [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple" "base"
+        [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple"
           "deepseq" "array" "ghc-boot-th" "pretty" "template-haskell"
           # ghcjs custom packages
           "ghcjs-prim" "ghcjs-th"
           "ghc-boot"
-          "ghc" "array" "binary" "bytestring" "containers"
+          "array" "binary" "bytestring" "containers"
           "filepath" "ghc-boot" "ghc-compact" "ghc-prim"
           # "ghci" "haskeline"
           "hpc"
