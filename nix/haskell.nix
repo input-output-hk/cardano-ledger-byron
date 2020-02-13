@@ -55,7 +55,6 @@ let
         packages.cardano-ledger = {
           configureFlags = [ "--ghc-option=-Werror" ];
           preBuild = "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
-          flags.test-normal-form = true;
           components = {
             all.postInstall = pkgs.lib.mkForce "";
             tests.cardano-ledger-test = {
