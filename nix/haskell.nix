@@ -47,6 +47,11 @@ let
         packages.ekg.components.library.enableSeparateDataOutput = true;
         packages.cardano-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cs-ledger.components.tests.doctests.build-tools = [ buildPackages.haskell-nix.haskellPackages.alex ];
+        packages.cardano-ledger.components.tests.cardano-ledger-test = {
+          preCheck = ''
+            cp ${../cardano-ledger/mainnet-genesis.json} ./mainnet-genesis.json
+          '';
+        };
         enableLibraryProfiling = profiling;
       }
       (lib.optionalAttrs stdenv.hostPlatform.isWindows {
