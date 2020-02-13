@@ -54,21 +54,15 @@ let
         packages.cs-ledger.components.tests.doctests.build-tools = [ buildPackages.haskell-nix.haskellPackages.alex ];
         packages.cardano-ledger = {
           configureFlags = [ "--ghc-option=-Werror" ];
-          preBuild = "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
           components = {
             all.postInstall = pkgs.lib.mkForce "";
             tests.cardano-ledger-test = {
               preCheck = ''
+                export CARDANO_MAINNET_MIRROR="${cardano-mainnet-mirror}/epochs"
                 cp ${../cardano-ledger/mainnet-genesis.json} ./mainnet-genesis.json
               '';
               build-tools = [ pkgs.makeWrapper ];
               testFlags = [ "--scenario=ContinuousIntegration" ];
-              postInstall = ''
-                makeWrapper \
-                  $out/cardano-ledger-*/cardano-ledger-test${exe-extension} \
-                  $out/bin/cardano-ledger-test${exe-extension} \
-                  --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
-              '';
             };
           };
         };
