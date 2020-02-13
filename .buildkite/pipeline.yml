@@ -1,5 +1,5 @@
 steps:
-  - label: 'check-hydra-eval'
+  - label: 'hydra-eval-errors'
     command: 'nix-build ./nix -A iohkNix.hydraEvalErrors && ./result/bin/hydra-eval-errors.py'
     agents:
       system: x86_64-linux

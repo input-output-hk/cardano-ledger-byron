@@ -3,6 +3,7 @@
 ############################################################################
 { lib
 , stdenv
+, pkgs
 , haskell-nix
 , buildPackages
 , config ? {}
@@ -12,6 +13,11 @@
 , profiling ? config.haskellNix.profiling or false
 }:
 let
+  # The cardano-mainnet-mirror used during testing
+  cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
+
+  exe-extension =
+    pkgs.lib.optionalString pkgs.stdenv.targetPlatform.isWindows ".exe";
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
@@ -45,12 +51,27 @@ let
 
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
-        packages.cardano-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cs-ledger.components.tests.doctests.build-tools = [ buildPackages.haskell-nix.haskellPackages.alex ];
-        packages.cardano-ledger.components.tests.cardano-ledger-test = {
-          preCheck = ''
-            cp ${../cardano-ledger/mainnet-genesis.json} ./mainnet-genesis.json
-          '';
+        packages.cardano-ledger = {
+          configureFlags = [ "--ghc-option=-Werror" ];
+          preBuild = "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
+          flags.test-normal-form = true;
+          components = {
+            all.postInstall = pkgs.lib.mkForce "";
+            tests.cardano-ledger-test = {
+              preCheck = ''
+                cp ${../cardano-ledger/mainnet-genesis.json} ./mainnet-genesis.json
+              '';
+              build-tools = [ pkgs.makeWrapper ];
+              testFlags = [ "--scenario=ContinuousIntegration" ];
+              postInstall = ''
+                makeWrapper \
+                  $out/cardano-ledger-*/cardano-ledger-test${exe-extension} \
+                  $out/bin/cardano-ledger-test${exe-extension} \
+                  --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
+              '';
+            };
+          };
         };
         enableLibraryProfiling = profiling;
       }
