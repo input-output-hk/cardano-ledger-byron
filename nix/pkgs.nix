@@ -5,6 +5,7 @@ pkgs: _: with pkgs; {
     inherit config
       lib
       stdenv
+      pkgs
       haskell-nix
       buildPackages
       ;
