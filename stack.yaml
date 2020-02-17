@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e/snapshot.yaml
 
 packages:
   - cardano-ledger
@@ -15,7 +15,7 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
+    commit: 2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e
     subdirs:
       - .
       - test
@@ -28,7 +28,7 @@ extra-deps:
       - cardano-crypto-class
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+    commit: dc1278816f4889a99776d02fbf3a9e4fb832a610
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
@@ -41,7 +41,7 @@ extra-deps:
   - gray-code-0.3.1
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 479c1718ab85761ae72d13c559b12227c8837748
+    commit: b0bcdcd7d230ada5b78cd2285de40ea809d90ab0
     subdirs:
       - contra-tracer
 

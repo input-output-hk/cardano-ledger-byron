@@ -96,7 +96,7 @@ elaborateInitialUTxO abstractUtxo = foldr
 elaborateAndUpdate
   :: Abstract.UTxOEnv
   -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
-  -> Abstract.TxWits
+  -> Abstract.Tx
   -> Either
        Concrete.UTxOValidationError
        (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
@@ -120,18 +120,18 @@ elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
 
 elaborateTxWitnesses
   :: Map Abstract.TxId Concrete.TxId
-  -> [Abstract.TxWits]
+  -> [Abstract.Tx]
   -> ([Concrete.ATxAux ByteString], Map Abstract.TxId Concrete.TxId)
 elaborateTxWitnesses txIdMap = first reverse . foldl' step ([], txIdMap)
   where step (acc, m) = first (: acc) . elaborateTxWitsBSWithMap m
 
 elaborateTxWitsBSWithMap
   :: Map Abstract.TxId Concrete.TxId
-  -> Abstract.TxWits
+  -> Abstract.Tx
   -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
 elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
  where
-  concreteTxWitness = E.elaborateTxWitsBS
+  concreteTxWitness = E.elaborateTxBS
     (elaborateTxId txIdMap)
     abstractTxWits
 

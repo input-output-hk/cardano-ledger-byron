@@ -22,14 +22,14 @@ allow-newer: katip:Win32
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
-  --sha256: 1q2pz7qx9l4frnifilv0jqz8i4y3q0jwlip4m22z0ldiz5iasmln
+  tag: 2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e
+  --sha256: 04ppqc7n197gk0j9yiqhwdnlxfd2cw7ak4fi03gchyqf9cag5f8k
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
-  --sha256: 1q2pz7qx9l4frnifilv0jqz8i4y3q0jwlip4m22z0ldiz5iasmln
+  tag: 2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e
+  --sha256: 04ppqc7n197gk0j9yiqhwdnlxfd2cw7ak4fi03gchyqf9cag5f8k
   subdir: test
 
 source-repository-package
@@ -62,29 +62,29 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
-  --sha256: 0mb6r0sw1526m5cd4xjml8lc8vrjdql8plvfxhf9v6ifcv2218qz
+  tag: dc1278816f4889a99776d02fbf3a9e4fb832a610
+  --sha256: 03np96z3zyxx2z8xgydsid7yh4rl2375c6cfmk9m7xpw1d18iv1d
   subdir: byron/semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
-  --sha256: 0mb6r0sw1526m5cd4xjml8lc8vrjdql8plvfxhf9v6ifcv2218qz
+  tag: dc1278816f4889a99776d02fbf3a9e4fb832a610
+  --sha256: 03np96z3zyxx2z8xgydsid7yh4rl2375c6cfmk9m7xpw1d18iv1d
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
-  --sha256: 0mb6r0sw1526m5cd4xjml8lc8vrjdql8plvfxhf9v6ifcv2218qz
+  tag: dc1278816f4889a99776d02fbf3a9e4fb832a610
+  --sha256: 03np96z3zyxx2z8xgydsid7yh4rl2375c6cfmk9m7xpw1d18iv1d
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 479c1718ab85761ae72d13c559b12227c8837748
-  --sha256: 090r44w11lapsvbll4diak7zmim1rcy16yjf6mc30fy92185mr4r
+  tag: b0bcdcd7d230ada5b78cd2285de40ea809d90ab0
+  --sha256: 03hqvfpnwi8b5ywlg54jch6wnjpdkvkq29idj2zbhibczkhcravw
   subdir:   contra-tracer
 
 source-repository-package
