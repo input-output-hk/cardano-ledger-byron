@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
@@ -13,7 +14,7 @@ module Test.Cardano.Chain.UTxO.Model
   )
 where
 
-import Cardano.Prelude hiding (trace)
+import Cardano.Prelude hiding (trace, traceM, traceShow)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
@@ -40,7 +41,6 @@ import qualified Ledger.UTxO as Abstract
 import qualified Test.Cardano.Chain.Elaboration.UTxO as E
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
-
 tests :: TSGroup
 tests = $$discoverPropArg
 
@@ -57,7 +57,7 @@ ts_prop_generatedUTxOChainsAreValidated =
 
 
 passConcreteValidation :: MonadTest m => Trace UTXOW -> m ()
-passConcreteValidation tr = void $ evalEither res
+passConcreteValidation !tr = void $ evalEither res
  where
   res = foldM (elaborateAndUpdate abstractEnv) initSt
     $ traceSignals OldestFirst tr
@@ -103,7 +103,7 @@ elaborateAndUpdate
 elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
   (, txIdMap')
     <$> runReaderT
-      (updateUTxOTxWitness
+      ( updateUTxOTxWitness
           (E.elaborateUTxOEnv abstractEnv)
           utxo
           concreteTxWitness
