@@ -494,7 +494,7 @@ registerEpoch env st lastSeenEpoch = do
          , adoptedProtocolParameters = nextProtocolParameters'
          , candidateProtocolUpdates = []
          , registeredProtocolUpdateProposals = M.empty
-         , registeredSoftwareUpdateProposals = M.empty
+         , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals
          , confirmedProposals = M.empty
          , proposalVotes = M.empty
          , registeredEndorsements = S.empty
@@ -520,4 +520,5 @@ registerEpoch env st lastSeenEpoch = do
       , adoptedProtocolVersion
       , adoptedProtocolParameters
       , candidateProtocolUpdates
+      , registeredSoftwareUpdateProposals
       } = st
