@@ -71,7 +71,7 @@ import           Test.Cardano.Crypto.Gen                     (feedPM)
 import           Test.Options                                (TSProperty,
                                                               eachOfTS)
 
-import           Hedgehog       (Gen, Group (..), forAll, property, (===))
+import           Hedgehog       (Gen, Group (..), forAll, property, (===), annotateShow)
 import qualified Hedgehog.Gen   as Gen
 import qualified Hedgehog.Range as Range
 import           Test.Options   (TSGroup, withTestsTS)
@@ -142,8 +142,8 @@ ts_chainTick = withTestsTS 100 . property $ do
   let tick n = applyChainTick config (SlotNumber n)
   (tick n2 . tick n1) cvs === tick n2 cvs
 
--- | A transaction should validate in the mempool when
--- | it validates in a block.
+-- | A transaction should validate in the mempool at a given slot when
+--   it validates in a block issued for that same slot.
 ts_mempoolValidation :: TSProperty
 ts_mempoolValidation = withTestsTS 100 . property $ do
   let traceLength = 10 :: Word64
@@ -158,10 +158,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
       upIdMap = proposalIds abstractToConcreteIdMaps
   genSlot <- forAll $ (slot +) <$> Gen.integral (Range.linear 1 20)
   let nextSlot = Spec.Slot genSlot
-      addAnnotation :: MempoolPayload -> AMempoolPayload ByteString
-      addAnnotation = reAnnotateUsing toCBOR fromCBOR
-
-  let pparams = Spec.protocolParameters upiState
+      pparams = Spec.protocolParameters upiState
       utxoEnv = STS.UTxOEnv utxo0 pparams
   transaction <- forAll $ STS.sigGen @STS.UTXOW utxoEnv utxoState
   let txAux = fst $ elaborateTxWitsBSWithMap txIdMap transaction
@@ -174,7 +171,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
           , Spec._dSEnvK = blockCount
           }
   dcert <- forAll $ head <$> Spec.dcertsGen dsEnv diState
-  mempoolDCert <- forAll $ pure $ addAnnotation . MempoolDlg . elaborateDCert pm <$> dcert
+  let mempoolDCert = addAnnotation . MempoolDlg . elaborateDCert pm <$> dcert
 
   let upiEnv :: Spec.UPIEnv
       upiEnv =
@@ -217,9 +214,16 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
              -> Either ApplyMempoolPayloadErr ChainValidationState
       apply1 c mp = applyMempoolPayload validationMode config (SlotNumber genSlot) mp c
       headerHash = coerce (H.hash (0 :: Int)) :: HeaderHash
-  applyMempoolPayloadResult <- forAll $ pure $ foldM apply1 cvs mempoolPayloads
-  validateBlockResult <- forAll $ pure $
-    (validateBlock config validationMode concreteBlock headerHash cvs
-     :: Either ChainValidationError ChainValidationState)
+      applyMempoolPayloadResult = foldM apply1 cvs mempoolPayloads
+      validateBlockResult =
+        validateBlock config validationMode concreteBlock headerHash cvs
+         :: Either ChainValidationError ChainValidationState
 
+  annotateShow applyMempoolPayloadResult
+  annotateShow validateBlockResult
   isRight validateBlockResult === isRight applyMempoolPayloadResult
+
+  where
+  addAnnotation :: MempoolPayload -> AMempoolPayload ByteString
+  addAnnotation = reAnnotateUsing toCBOR fromCBOR
+
