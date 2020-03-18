@@ -103,7 +103,7 @@ reAnnotateBoundary :: ProtocolMagicId
                    -> CC.ABoundaryBlock ByteString
 reAnnotateBoundary pm =
     reAnnotateUsing
-      (CC.toCBORABoundaryBlock pm)
+      (CC.toCBORABOBBoundary pm)
       CC.fromCBORABoundaryBlock
 
 -- | Generalization of 'reAnnotate'
