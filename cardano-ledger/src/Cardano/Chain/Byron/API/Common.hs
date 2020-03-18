@@ -12,6 +12,8 @@
 {-# LANGUAGE TypeApplications         #-}
 {-# LANGUAGE TypeFamilies             #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Cardano.Chain.Byron.API.Common (
     -- * Extract info from genesis config
     allowedDelegators
@@ -52,6 +54,11 @@ import qualified Cardano.Chain.Genesis                         as Gen
 import qualified Cardano.Chain.Slotting                        as CC
 import qualified Cardano.Chain.Update                          as Update
 import qualified Cardano.Chain.Update.Validation.Interface     as U.Iface
+
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Char8 as Char8
+import Prelude (String)
+import Text.Printf (printf)
 
 {-------------------------------------------------------------------------------
   Extract info from genesis config
@@ -103,8 +110,16 @@ reAnnotateBoundary :: ProtocolMagicId
                    -> CC.ABoundaryBlock ByteString
 reAnnotateBoundary pm =
     reAnnotateUsing
-      (CC.toCBORABOBBoundary pm)
+      encoder
       CC.fromCBORABoundaryBlock
+ where
+   encoder :: CC.ABoundaryBlock a -> Encoding
+   encoder abob =
+     trace (printf "==================================== EBB ====================================\n%s\n==================================== EBB ===================================="
+             $ Char8.unpack $ B64.encode $ CBOR.toStrictByteString encoding
+             :: String)
+           encoding
+    where encoding = CC.toCBORABOBBoundary pm abob
 
 -- | Generalization of 'reAnnotate'
 reAnnotateUsing :: forall f a. Functor f
