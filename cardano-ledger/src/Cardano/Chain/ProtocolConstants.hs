@@ -4,6 +4,7 @@
 
 module Cardano.Chain.ProtocolConstants
   ( kSlotSecurityParam
+  , kUpdateStabilityParam
   , kChainQualityThreshold
   , kEpochSlots
   )
@@ -20,6 +21,12 @@ import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 --   property. It's basically @blkSecurityParam / chainQualityThreshold@.
 kSlotSecurityParam :: BlockCount -> SlotCount
 kSlotSecurityParam = SlotCount . (*) 2 . unBlockCount
+
+-- | Update stability parameter expressed in number of slots. This is the time
+--   between an protocol version update receiving its final endorsement and
+--   being accepted, and is set to double the security param.
+kUpdateStabilityParam :: BlockCount -> SlotCount
+kUpdateStabilityParam = SlotCount . (*) 4 . unBlockCount
 
 -- | Minimal chain quality (number of blocks divided by number of
 --   slots) necessary for security of the system.
