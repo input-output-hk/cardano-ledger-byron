@@ -37,8 +37,10 @@ data WithEpochSlots a = WithEpochSlots
   }
   deriving (Show, Eq)
 
--- | Calculate the first slot in an epoch. Note that this function will fail if
--- Byron is not the first and only era - a more robust method should use
--- 'EpochInfo' from cardano-slotting.
+-- | Calculate the first slot in an epoch.
+--
+-- Note that this function will give an undetermined result if Byron is not the
+-- first and only era - a more robust method should use 'EpochInfo' from
+-- cardano-slotting.
 epochFirstSlot :: EpochSlots -> EpochNumber -> SlotNumber
 epochFirstSlot (EpochSlots n) (EpochNumber k) = SlotNumber $ n * k

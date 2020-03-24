@@ -507,14 +507,14 @@ registerEpoch env st lastSeenEpoch = do
          , proposalRegistrationSlot = M.empty
          }
   where
-    subEnv = PVBump.Environment k firstSlot candidateProtocolUpdates
+    subEnv = PVBump.Environment k firstSlotOfLastSeenEpoch candidateProtocolUpdates
 
     subSt =
       PVBump.State
         adoptedProtocolVersion
         adoptedProtocolParameters
 
-    firstSlot = epochFirstSlot (kEpochSlots k) lastSeenEpoch
+    firstSlotOfLastSeenEpoch = epochFirstSlot (kEpochSlots k) lastSeenEpoch
 
     Environment
       { k

@@ -34,7 +34,10 @@ data State = State
 
 -- | Change the protocol version when an epoch change is detected, and there is
 -- a candidate protocol update that was confirmed at least @4 * k@ slots before
--- the start of the epoch, where @k@ is the chain security parameter.
+-- the start of the new epoch, where @k@ is the chain security parameter.
+--
+-- For a full history of why this is required, see
+-- https://github.com/input-output-hk/cardano-ledger-specs/issues/1288
 --
 -- This corresponds to the @PVBUMP@ rules in the Byron ledger specification.
 tryBumpVersion
