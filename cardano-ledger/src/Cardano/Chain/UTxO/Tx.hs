@@ -127,7 +127,7 @@ type TxAttributes = Attributes ()
 data TxIn
   -- | TxId = Which transaction's output is used
   -- | Word32 = Index of the output in transaction's outputs
-  = TxInUtxo TxId Word32
+  = TxInUtxo !TxId !Word32
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass NFData
 

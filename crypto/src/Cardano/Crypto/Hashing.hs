@@ -66,6 +66,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import qualified Data.Text as Text
+import Data.String (IsString(..))
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
 
@@ -96,6 +98,12 @@ instance Show (AbstractHash algo a) where
                         . ByteArray.convertToBase ByteArray.Base16
                         . SBS.fromShort
                         $ h
+
+instance HashAlgorithm algo => IsString (AbstractHash algo a) where
+  fromString s =
+    case decodeAbstractHash (Text.pack s) of
+      Right h -> h
+      Left _  -> panic ("AbstractHash.fromString: invalid hash: " <> show s)
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
   readsPrec _ s = case parseBase16 $ toS s of
