@@ -2,9 +2,11 @@ module Cardano.Chain.Common.AddressHash
   ( AddressHash
   , addressHash
   , unsafeAddressHash
+  , addressHashSize
   )
 where
 
+import qualified Prelude
 import Cardano.Prelude
 
 import Crypto.Hash (Blake2b_224, Digest, SHA3_256)
@@ -15,6 +17,9 @@ import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromDigest)
 
 -- | Hash used to identify address.
 type AddressHash = AbstractHash Blake2b_224
+
+addressHashSize :: Int
+addressHashSize = CryptoHash.hashDigestSize (Prelude.undefined :: Blake2b_224)
 
 unsafeAddressHash :: ToCBOR a => a -> AddressHash b
 unsafeAddressHash = abstractHashFromDigest . secondHash . firstHash

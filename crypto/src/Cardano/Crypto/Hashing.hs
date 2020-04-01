@@ -25,7 +25,9 @@ module Cardano.Crypto.Hashing
   , abstractHashFromDigest
   , abstractHashFromBytes
   , unsafeAbstractHashFromBytes
+  , unsafeAbstractHashFromBytesShort
   , abstractHashToBytes
+  , abstractHashToBytesShort
     -- ** Parsing and printing
   , decodeAbstractHash
 
@@ -38,7 +40,9 @@ module Cardano.Crypto.Hashing
     -- ** Conversion
   , hashFromBytes
   , unsafeHashFromBytes
+  , unsafeHashFromBytesShort
   , hashToBytes
+  , hashToBytesShort
     -- ** Parsing and printing
   , decodeHash
   , hashHexF
@@ -220,10 +224,16 @@ abstractHashFromBytes bs
 unsafeAbstractHashFromBytes :: ByteString -> AbstractHash algo a
 unsafeAbstractHashFromBytes = AbstractHash . SBS.toShort
 
+unsafeAbstractHashFromBytesShort :: SBS.ShortByteString -> AbstractHash algo a
+unsafeAbstractHashFromBytesShort = AbstractHash
+
 -- | The bytes representation of the hash value.
 --
 abstractHashToBytes :: AbstractHash algo a -> ByteString
 abstractHashToBytes (AbstractHash h) = SBS.fromShort h
+
+abstractHashToBytesShort :: AbstractHash algo a -> SBS.ShortByteString
+abstractHashToBytesShort (AbstractHash h) = h
 
 
 --------------------------------------------------------------------------------
@@ -254,10 +264,16 @@ hashFromBytes = abstractHashFromBytes
 unsafeHashFromBytes :: ByteString -> Hash a
 unsafeHashFromBytes = unsafeAbstractHashFromBytes
 
+unsafeHashFromBytesShort :: SBS.ShortByteString -> Hash a
+unsafeHashFromBytesShort = unsafeAbstractHashFromBytesShort
+
 -- | The bytes representation of the hash value.
 --
 hashToBytes :: AbstractHash algo a -> ByteString
 hashToBytes = abstractHashToBytes
+
+hashToBytesShort :: AbstractHash algo a -> SBS.ShortByteString
+hashToBytesShort = abstractHashToBytesShort
 
 -- | Parses given hash in base16 form.
 decodeHash :: Text -> Either Text (Hash a)

@@ -289,6 +289,7 @@ test-suite cardano-ledger-test
                        -fno-warn-safe
                        -fno-warn-unsafe
                        "-with-rtsopts=-K5M -M500M"
+                       -threaded
 
   if (!flag(development))
     ghc-options:         -Werror
