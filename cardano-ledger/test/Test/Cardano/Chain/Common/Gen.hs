@@ -10,6 +10,7 @@ module Test.Cardano.Chain.Common.Gen
   , genAddrType
   , genAddrSpendingData
   , genAttributes
+  , genAttributesNoUnparsedFields
   , genBlockCount
   , genCanonicalTxFeePolicy
   , genChainDifficulty
@@ -30,6 +31,8 @@ module Test.Cardano.Chain.Common.Gen
 where
 
 import Cardano.Prelude
+import Data.ByteString.Lazy as LBS
+import qualified Data.Map as Map
 import Test.Cardano.Prelude (gen32Bytes)
 
 import Formatting (build, sformat)
@@ -45,7 +48,8 @@ import Cardano.Chain.Common
   , AddrSpendingData(..)
   , AddrType(..)
   , Address(..)
-  , Attributes
+  , Address'(..)
+  , Attributes(..)
   , BlockCount(..)
   , ChainDifficulty(..)
   , CompactAddress
@@ -58,10 +62,11 @@ import Cardano.Chain.Common
   , KeyHash
   , TxFeePolicy(..)
   , TxSizeLinear(..)
+  , UnparsedFields(..)
+  , addressHash
+  , addrSpendingDataToType
   , rationalToLovelacePortion
-  , makeAddress
   , maxLovelaceVal
-  , mkAttributes
   , mkLovelace
   , mkMerkleTree
   , hashKey
@@ -83,11 +88,27 @@ genHDAddressPayload :: Gen HDAddressPayload
 genHDAddressPayload = HDAddressPayload <$> gen32Bytes
 
 genAddress :: Gen Address
-genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes
+genAddress = makeAddress <$> genAddrSpendingData
+                         <*> genAddrAttributes
+                         <*> genUnparsedFields
 
 genAddressWithNM :: NetworkMagic -> Gen Address
 genAddressWithNM nm = makeAddress <$> genAddrSpendingData
                                   <*> genAddrAttributesWithNM nm
+                                  <*> genUnparsedFields
+
+-- The normal makeAddress does not let one specify the UnparsedFields
+makeAddress :: AddrSpendingData -> AddrAttributes -> UnparsedFields -> Address
+makeAddress spendingData attributesUnwrapped unparsedFields =
+    Address {
+      addrRoot       = addressHash address'
+    , addrAttributes = attributes
+    , addrType       = addrType'
+    }
+  where
+    addrType'  = addrSpendingDataToType spendingData
+    attributes = Attributes attributesUnwrapped unparsedFields
+    address'   = Address' (addrType', spendingData, attributes)
 
 genAddrType :: Gen AddrType
 genAddrType = Gen.choice [pure ATVerKey, pure ATRedeem]
@@ -97,7 +118,12 @@ genAddrSpendingData =
   Gen.choice [VerKeyASD <$> genVerificationKey, RedeemASD <$> genRedeemVerificationKey]
 
 genAttributes :: Gen a -> Gen (Attributes a)
-genAttributes genA = mkAttributes <$> genA
+genAttributes genA = Attributes <$> genA <*> genUnparsedFields
+
+-- | Same as 'genAttributes' but do not include any extra 'UnparsedFields'.
+genAttributesNoUnparsedFields :: Gen a -> Gen (Attributes a)
+genAttributesNoUnparsedFields genA =
+  Attributes <$> genA  <*> pure (UnparsedFields Map.empty)
 
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
@@ -200,3 +226,13 @@ genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genMultiplier
 -- | Generate multipliers for the TxSizeLinear.
 genMultiplier :: Gen Rational
 genMultiplier = fromIntegral <$> Gen.word16 (Range.constant 0 1000)
+
+genUnparsedFields :: Gen UnparsedFields
+genUnparsedFields = UnparsedFields <$> Gen.map (Range.linear 0 5)
+                                               genUnparsedField
+  where
+    -- Range of unparsed attrs has to be 3 or above, 1 and 2 are known attrs
+    genUnparsedField :: Gen (Word8, LBS.ByteString)
+    genUnparsedField = (,) <$> Gen.word8 (Range.constant 3 255)
+                           <*> (LBS.fromStrict <$> Gen.bytes (Range.linear 0 10))
+

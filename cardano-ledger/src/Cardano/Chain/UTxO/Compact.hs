@@ -33,10 +33,11 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
-import Data.Binary.Get (Get, getWord64le, runGet)
-import Data.Binary.Put (Put, putWord64le, runPut)
-import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
+import Cardano.Crypto.Hashing (hashToBytesShort, unsafeHashFromBytesShort)
+import qualified Data.ByteString.Short.Internal as SBS
+import           Data.Primitive.PrimArray
+                   ( PrimArray(..), indexPrimArray, newPrimArray
+                   , writePrimArray, unsafeFreezePrimArray )
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Compact
@@ -154,26 +155,41 @@ instance ToCBOR CompactTxId where
       <> toCBOR c
       <> toCBOR d
 
-getCompactTxId :: Get CompactTxId
-getCompactTxId =
-  CompactTxId <$> getWord64le
-              <*> getWord64le
-              <*> getWord64le
-              <*> getWord64le
-
-putCompactTxId :: CompactTxId -> Put
-putCompactTxId (CompactTxId a b c d) =
-  putWord64le a >> putWord64le b
-                >> putWord64le c
-                >> putWord64le d
-
 toCompactTxId :: TxId -> CompactTxId
-toCompactTxId =
-  runGet getCompactTxId . BSL.fromStrict . hashToBytes
+toCompactTxId txid =
+    -- This is a little bit cunning. We extract the ByteArray# from the
+    -- ShortByteString representation of the TxId Hash, and using the primitive
+    -- package we make a PrimArray Word64 which we can then use to read the
+    -- four words. So this should mean the cost is just 4 memory reads & writes.
+    CompactTxId
+      (indexPrimArray arr 0)
+      (indexPrimArray arr 1)
+      (indexPrimArray arr 2)
+      (indexPrimArray arr 3)
+  where
+    arr :: PrimArray Word64
+    arr = toPrimArray (hashToBytesShort txid)
+
+    toPrimArray :: SBS.ShortByteString -> PrimArray Word64
+    toPrimArray (SBS.SBS ba) = PrimArray ba
 
 fromCompactTxId :: CompactTxId -> TxId
-fromCompactTxId =
-  unsafeHashFromBytes . BSL.toStrict . runPut . putCompactTxId
+fromCompactTxId (CompactTxId w0 w1 w2 w3) =
+    unsafeHashFromBytesShort
+  . fromPrimArray
+  $ runST mkByteArray
+  where
+    mkByteArray :: ST s (PrimArray Word64)
+    mkByteArray = do
+      arr <- newPrimArray 4
+      writePrimArray arr 0 w0
+      writePrimArray arr 1 w1
+      writePrimArray arr 2 w2
+      writePrimArray arr 3 w3
+      unsafeFreezePrimArray arr
+
+    fromPrimArray :: PrimArray Word64 -> SBS.ShortByteString
+    fromPrimArray (PrimArray ba) = SBS.SBS ba
 
 --------------------------------------------------------------------------------
 -- Compact TxOut
@@ -183,7 +199,7 @@ fromCompactTxId =
 --
 -- Convert using 'toCompactTxOut' and 'fromCompactTxOut'.
 --
-data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
+data CompactTxOut = CompactTxOut                !CompactAddress
                                  {-# UNPACK #-} !Lovelace
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData, NoUnexpectedThunks)

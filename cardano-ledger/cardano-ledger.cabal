@@ -152,6 +152,7 @@ library
                      , megaparsec
                      , memory
                      , mtl
+                     , primitive
                      , resourcet
                      , streaming
                      , streaming-binary
@@ -288,6 +289,7 @@ test-suite cardano-ledger-test
                        -fno-warn-safe
                        -fno-warn-unsafe
                        "-with-rtsopts=-K5M -M500M"
+                       -threaded
 
   if (!flag(development))
     ghc-options:         -Werror
@@ -339,3 +341,14 @@ test-suite epoch-validation-normal-form-test
 
   if (!flag(development))
     ghc-options:         -Werror
+
+benchmark cardano-ledger-bench
+  hs-source-dirs:      bench
+  main-is:             Benchmarks.hs
+  type:                exitcode-stdio-1.0
+  build-depends:       base
+                     , cardano-crypto-wrapper
+                     , cardano-ledger
+                     , criterion
+  default-language:    Haskell2010
+

@@ -63,6 +63,7 @@ import Test.Cardano.Chain.Common.Gen
   , genAddrSpendingData
   , genAddrType
   , genAttributes
+  , genAttributesNoUnparsedFields
   , genBlockCount
   , genChainDifficulty
   , genLovelace
@@ -316,11 +317,11 @@ sizeEstimates =
         [ ("Lovelace"             , check genLovelace)
         , ("BlockCount"           , check genBlockCount)
         , ("Attributes ()"        , sizeTest $ scfg
-              { gen = genAttributes (pure ())
+              { gen = genAttributesNoUnparsedFields (pure ())
               , addlCtx = M.fromList [ attrUnitSize ]
               })
         , ("Attributes AddrAttributes", sizeTest $ scfg
-              { gen = genAttributes genAddrAttributes
+              { gen = genAttributesNoUnparsedFields genAddrAttributes
               , addlCtx = M.fromList [ attrAddrSize ]
               })
         , ("Address"              , sizeTest $ scfg
