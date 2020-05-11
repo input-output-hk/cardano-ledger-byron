@@ -64,6 +64,9 @@ instance FromCBOR SoftforkRule where
     enforceSize "SoftforkRule" 3
     SoftforkRule <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
+instance CanonicalExamples SoftforkRule
+instance CanonicalExamplesSized SoftforkRule
+
 instance Monad m => ToJSON m SoftforkRule where
   toJSON sr = mkObject
     [ ("initThd"     , toJSON $ srInitThd sr)

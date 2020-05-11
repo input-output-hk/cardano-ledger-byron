@@ -73,6 +73,9 @@ instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
   fromObjectKey =
     fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
 
+instance CanonicalExamples RedeemVerificationKey
+instance CanonicalExamplesSized RedeemVerificationKey
+
 instance ToJSONKey RedeemVerificationKey where
   toJSONKey = ToJSONKeyText render (A.text . render)
     where render = sformat redeemVKB64UrlF

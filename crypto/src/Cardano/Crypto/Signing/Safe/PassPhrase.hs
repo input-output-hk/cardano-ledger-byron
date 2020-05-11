@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TypeApplications           #-}
@@ -20,11 +21,12 @@ import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 
 newtype PassPhrase =
   PassPhrase ScrubbedBytes
-  deriving (Eq, Ord, Semigroup, Monoid, NFData, ByteArray, ByteArrayAccess)
+  deriving (Eq, Ord, Generic, Semigroup, Monoid, NFData, ByteArray, ByteArrayAccess)
 
 passphraseLength :: Int
 passphraseLength = 32
@@ -57,6 +59,8 @@ instance FromCBOR PassPhrase where
         ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
         passphraseLength
         bl
+
+instance CanonicalExamples PassPhrase
 
 {-instance Monoid PassPhrase where
     mempty = PassPhrase mempty

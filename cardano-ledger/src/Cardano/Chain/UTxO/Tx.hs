@@ -79,6 +79,9 @@ instance B.Buildable Tx where
       | attributesAreKnown attrs = mempty
       | otherwise                = bprint (", attributes: " . build) attrs
 
+instance CanonicalExamples Tx where
+instance CanonicalExamplesSized Tx where
+
 -- Used for debugging purposes only
 instance ToJSON Tx where
 
@@ -154,6 +157,9 @@ instance FromCBOR TxIn where
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
 
+instance CanonicalExamples TxIn
+instance CanonicalExamplesSized TxIn
+
 instance HeapWords TxIn where
   heapWords (TxInUtxo txid w32) = heapWords2 txid w32
 
@@ -189,6 +195,9 @@ instance FromCBOR TxOut where
   fromCBOR = do
     enforceSize "TxOut" 2
     TxOut <$> fromCBOR <*> fromCBOR
+
+instance CanonicalExamples TxOut
+instance CanonicalExamplesSized TxOut
 
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address

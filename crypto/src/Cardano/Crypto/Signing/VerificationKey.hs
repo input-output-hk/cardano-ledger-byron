@@ -35,7 +35,7 @@ import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary
   (Decoder, Encoding, FromCBOR(..), ToCBOR(..), decodeBytesCanonical)
-
+import Cardano.Crypto.Orphans ()
 
 -- | Wrapper around 'CC.XPub'.
 newtype VerificationKey = VerificationKey
@@ -62,6 +62,10 @@ instance ToCBOR VerificationKey where
 
 instance FromCBOR VerificationKey where
   fromCBOR = fmap VerificationKey fromCBORXPub
+
+instance CanonicalExamples VerificationKey
+instance CanonicalExamplesSized VerificationKey
+
 
 toCBORXPub :: CC.XPub -> Encoding
 toCBORXPub a = toCBOR $ CC.unXPub a

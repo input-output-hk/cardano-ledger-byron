@@ -28,6 +28,7 @@ module Cardano.Chain.Common.Attributes
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 import qualified Prelude
 
 import Data.Aeson (ToJSON(..))
@@ -64,6 +65,8 @@ newtype UnparsedFields =
 instance ToJSON UnparsedFields where
     toJSON (UnparsedFields map') = toJSON $ M.map LChar8.unpack map'
 
+instance CanonicalExamples UnparsedFields
+instance CanonicalExamplesSized UnparsedFields
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -117,6 +120,10 @@ instance ToCBOR (Attributes ()) where
 
 instance FromCBOR (Attributes ()) where
   fromCBOR = fromCBORAttributes () $ \_ _ _ -> pure Nothing
+
+instance (Typeable h, CanonicalExamples h) => CanonicalExamples (Attributes h)
+instance (Typeable h, CanonicalExamplesSized h) =>
+    CanonicalExamplesSized (Attributes h)
 
 instance HeapWords h => HeapWords (Attributes h) where
   heapWords (Attributes dat unparsed) = heapWords2 dat unparsed

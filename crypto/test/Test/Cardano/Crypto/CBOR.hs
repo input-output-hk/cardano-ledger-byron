@@ -17,7 +17,9 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import Cardano.Crypto.Wallet (xprv, xpub)
+import Codec.CBOR.FlatTerm (TermToken (..))
 import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
+import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
 
@@ -41,8 +43,13 @@ import Cardano.Crypto
   )
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
+import Test.Cardano.Binary.Helpers.CanonicalTestable
+  ( CanonicalTestable (..)
+  , TypeTerm (..)
+  )
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( deprecatedGoldenDecode
+  ( goldenTestCBORCanonicalAll
+  , deprecatedGoldenDecode
   , goldenTestCBOR
   , roundTripsCBORBuildable
   )
@@ -295,6 +302,30 @@ sizeEstimates =
     , ( "RedeemSignature VerificationKey"
       , testPrecise (genRedeemSignature (ProtocolMagicId 0) genVerificationKey)
       )
+    ]
+
+--------------------------------------------------------------------------------
+-- Canonical Examples
+--------------------------------------------------------------------------------
+
+goldenAll = goldenTestCBORCanonicalAll Nothing
+    [ WithCBOR (Proxy :: Proxy (AbstractHash Blake2b_224 VerificationKey))
+    , WithCBOR (Proxy :: Proxy (AbstractHash Blake2b_256 VerificationKey))
+    , WithCBOR (Proxy :: Proxy (AbstractHash Blake2b_384 VerificationKey))
+    , WithCBOR (Proxy :: Proxy (AbstractHash Blake2b_512 VerificationKey))
+    , WithCBOR (Proxy :: Proxy (AbstractHash SHA1 VerificationKey))
+    , WithCBOR (Proxy :: Proxy Ed25519.PublicKey)
+    , WithCBOR (Proxy :: Proxy PassPhrase)
+    , WithCBOR (Proxy :: Proxy SigningKey)
+    ]
+    [ TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes ";j'\188\206\182\164-b\163\168\208*o\rse2\NAKw\GS\226C\166:\192H\161\139Y\218)"]]
+    , TypeTerm [[ TkBytes "\0\128\255"]]
+    , TypeTerm [[ TkBytes "\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL"]]
     ]
 
 --------------------------------------------------------------------------------

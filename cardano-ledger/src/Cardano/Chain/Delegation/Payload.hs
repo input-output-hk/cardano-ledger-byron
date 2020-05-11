@@ -67,3 +67,9 @@ instance FromCBOR (APayload ByteSpan) where
   fromCBOR = do
     (Annotated p a) <- annotatedDecoder fromCBOR
     pure (UnsafeAPayload p a)
+
+instance (Typeable a, CanonicalExamples a)
+    => CanonicalExamples (APayload a)
+
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (APayload a) where

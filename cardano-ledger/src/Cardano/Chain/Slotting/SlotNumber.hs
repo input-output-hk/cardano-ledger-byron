@@ -15,6 +15,7 @@ module Cardano.Chain.Slotting.SlotNumber
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)
@@ -45,6 +46,9 @@ instance ToCBOR SlotNumber where
 
 instance FromCBOR SlotNumber where
   fromCBOR = SlotNumber <$> fromCBOR
+
+instance CanonicalExamples SlotNumber
+instance CanonicalExamplesSized SlotNumber
 
 instance Monad m => ToJSON m SlotNumber where
   toJSON = toJSON . unSlotNumber

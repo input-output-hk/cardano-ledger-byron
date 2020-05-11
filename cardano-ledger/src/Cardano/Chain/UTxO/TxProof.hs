@@ -66,6 +66,9 @@ instance FromCBOR TxProof where
     enforceSize "TxProof" 3
     TxProof <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
+instance CanonicalExamples TxProof
+instance CanonicalExamplesSized TxProof
+
 -- | Construct 'TxProof' which proves given 'TxPayload'
 --
 --   This will construct a Merkle tree, which can be very expensive. Use with

@@ -62,6 +62,9 @@ instance ToCBOR Body where
 instance FromCBOR Body where
   fromCBOR = void <$> fromCBOR @(ABody ByteSpan)
 
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (ABody a)
+
 instance FromCBOR (ABody ByteSpan) where
   fromCBOR = do
     enforceSize "Body" 4

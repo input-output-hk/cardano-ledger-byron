@@ -60,7 +60,7 @@ data Environment = Environment
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation)
   , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR State where
   fromCBOR = do
@@ -79,7 +79,7 @@ data ScheduledDelegation = ScheduledDelegation
   { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR ScheduledDelegation where
   fromCBOR = do
@@ -113,7 +113,7 @@ data Error
   | WrongEpoch EpochNumber EpochNumber
   -- ^ This delegation is for a past or for a too future epoch
 
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, CanonicalExamples)
 
 instance ToCBOR Error where
   toCBOR err = case err of

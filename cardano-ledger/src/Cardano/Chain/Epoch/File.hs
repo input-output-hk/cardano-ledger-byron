@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,6 +12,7 @@ module Cardano.Chain.Epoch.File
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Control.Monad (guard)
 import Control.Monad.Except (MonadError(..), runExceptT)
@@ -51,7 +53,9 @@ data ParseError
   -- ^ The CBOR is invalid
   | ParseErrorBinary !FilePath !B.ByteOffset !Text
   | ParseErrorMissingHeader !FilePath
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
+instance CanonicalExamples ParseError
 
 loadFileWithHeader
   :: FilePath -> LBS.ByteString -> SBS.ByteString (ExceptT ParseError ResIO) ()

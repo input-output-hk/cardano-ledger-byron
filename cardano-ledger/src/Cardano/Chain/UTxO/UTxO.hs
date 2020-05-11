@@ -63,12 +63,12 @@ newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   } deriving (Eq, Show, Generic)
     deriving newtype (HeapWords, FromCBOR, ToCBOR)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoUnexpectedThunks, CanonicalExamples)
 
 data UTxOError
   = UTxOMissingInput TxIn
   | UTxOOverlappingUnion
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR UTxOError where
   toCBOR = \case
@@ -85,6 +85,8 @@ instance FromCBOR UTxOError where
       0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> fromCBOR
       1 -> matchSize "UTxOError" 1 len $> UTxOOverlappingUnion
       _ -> cborError $ DecoderErrorUnknownTag "UTxOError" tag
+
+instance CanonicalExamples UTxOError
 
 empty :: UTxO
 empty = UTxO mempty

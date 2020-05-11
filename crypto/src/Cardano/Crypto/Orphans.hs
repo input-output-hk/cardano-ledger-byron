@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -7,6 +9,7 @@ module Cardano.Crypto.Orphans
 where
 
 import Cardano.Prelude
+import Prelude (error)
 
 import Crypto.Error (CryptoFailable(..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -23,6 +26,8 @@ import Cardano.Binary
   , encodeBytes
   , withWordSize
   )
+import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 
 fromByteStringToBytes :: ByteString -> BA.Bytes
@@ -65,12 +70,18 @@ instance ToJSON Ed25519.Signature where
 
 instance ToCBOR Ed25519.PublicKey where
   toCBOR = encodeBytes . toByteString
-  encodedSizeExpr _ _ = bsSize 32
+  encodedSizeExpr _ _ = bsSize Ed25519.secretKeySize
 
 instance FromCBOR Ed25519.PublicKey where
   fromCBOR = do
     res <- Ed25519.publicKey . fromByteStringToBytes <$> fromCBOR
     toCborError $ fromCryptoFailable "fromCBOR Ed25519.PublicKey" res
+
+instance CanonicalExamples Ed25519.PublicKey where
+  canonicalExamples = fmap Ed25519.toPublic <$> canonicalExamples
+
+instance CanonicalExamplesSized Ed25519.PublicKey where
+  canonicalExamplesSized = fmap Ed25519.toPublic <$> canonicalExamplesSized
 
 instance ToCBOR Ed25519.SecretKey where
   encodedSizeExpr _ _ = bsSize 64
@@ -86,6 +97,21 @@ instance FromCBOR Ed25519.SecretKey where
       <$> fromCBOR
     toCborError $ fromCryptoFailable "fromCBOR Ed25519.SecretKey" res
 
+instance CanonicalExamples Ed25519.SecretKey where
+  canonicalExamples = return $ case Ed25519.secretKey bs of
+      CryptoFailed err -> error (show err)
+      CryptoPassed a   -> [a]
+    where
+      bs = BS.pack $ replicate Ed25519.secretKeySize 0
+
+instance CanonicalExamplesSized Ed25519.SecretKey where
+  canonicalExamplesSized = return $ case Ed25519.secretKey bs of
+      CryptoFailed err -> error (show err)
+      CryptoPassed a   -> [a]
+    where
+      bs = BS.pack $ replicate Ed25519.secretKeySize 0
+
+
 instance ToCBOR Ed25519.Signature where
   encodedSizeExpr _ _ = bsSize 64
   toCBOR = encodeBytes . toByteString
@@ -94,6 +120,44 @@ instance FromCBOR Ed25519.Signature where
   fromCBOR = do
     res <- Ed25519.signature . fromByteStringToBytes <$> fromCBOR
     toCborError $ fromCryptoFailable "fromCBOR Ed25519.Signature" res
+
+instance CanonicalExamples Ed25519.Signature where
+  canonicalExamples = do
+    secret <- canonicalExamples
+    public <- canonicalExamples
+    bs <- canonicalExamples
+    return $ Ed25519.sign <$> secret <*> public <*> (bs :: [BS.ByteString])
+
+instance CanonicalExamplesSized Ed25519.Signature where
+  canonicalExamplesSized = do
+    secret <- canonicalExamplesSized
+    public <- canonicalExamplesSized
+    bs <- canonicalExamplesSized
+    return $ Ed25519.sign <$> secret <*> public <*> (bs :: [BS.ByteString])
+
+instance CanonicalExamples CC.XPub
+instance CanonicalExamplesSized CC.XPub
+deriving instance Generic CC.ChainCode
+instance CanonicalExamples CC.ChainCode
+instance CanonicalExamplesSized CC.ChainCode
+
+-- Can't derive Generic because it's opaque
+instance CanonicalExamples CC.XPrv where
+  canonicalExamples = return $ case CC.xprv $ BS.replicate 128 0 of
+    Left e -> error $ show e
+    Right xprv -> [xprv]
+
+-- Can't derive Generic because it's opaque
+instance CanonicalExamples CC.XSignature where
+  canonicalExamples = return $  case CC.xsignature $ BS.replicate 64 0 of
+    Left e -> error $ show e
+    Right xSignature -> [xSignature]
+
+instance CanonicalExamplesSized CC.XSignature where
+  canonicalExamplesSized = return $  case CC.xsignature $ BS.replicate 64 0 of
+    Left e -> error $ show e
+    Right xSignature -> [xSignature]
+
 
 -- Helper for encodedSizeExpr in ToCBOR instances
 bsSize :: Int -> Size

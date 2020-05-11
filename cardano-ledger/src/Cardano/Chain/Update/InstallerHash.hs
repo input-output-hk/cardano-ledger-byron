@@ -54,3 +54,6 @@ instance FromCBOR InstallerHash where
     dropBytes
     dropBytes
     pure $ InstallerHash h
+
+instance CanonicalExamples InstallerHash
+instance CanonicalExamplesSized InstallerHash

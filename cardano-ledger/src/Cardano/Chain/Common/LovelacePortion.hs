@@ -14,6 +14,7 @@ module Cardano.Chain.Common.LovelacePortion
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import qualified Data.Aeson as Aeson
 import Control.Monad (fail)
@@ -66,6 +67,9 @@ instance FromCBOR LovelacePortion where
     when (nominator > lovelacePortionDenominator) $
       fail "LovelacePortion: value out of bounds [0..1e15]"
     return (LovelacePortion nominator)
+
+instance CanonicalExamples LovelacePortion
+instance CanonicalExamplesSized LovelacePortion
 
 -- The canonical JSON instance for LovelacePortion uses only the nominator in
 -- the external representation,  rather than a real in the range [0,1].

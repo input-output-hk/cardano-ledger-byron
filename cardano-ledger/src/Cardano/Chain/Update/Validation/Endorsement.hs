@@ -64,7 +64,7 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
   , cpuProtocolVersion    :: !ProtocolVersion
   , cpuProtocolParameters :: !ProtocolParameters
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR CandidateProtocolUpdate where
   fromCBOR = do
@@ -85,7 +85,7 @@ data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion
   , endorsementKeyHash         :: !KeyHash
   } deriving (Eq, Show, Ord, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR Endorsement where
   fromCBOR = do
@@ -104,7 +104,7 @@ data Error
   = MultipleProposalsForProtocolVersion ProtocolVersion
   -- ^ Multiple proposals were found, which propose an update to the same
   -- protocol version.
-  deriving (Eq, Show)
+  deriving (Eq, Show,Generic)
 
 instance ToCBOR Error where
   toCBOR (MultipleProposalsForProtocolVersion protocolVersion) =
@@ -119,6 +119,8 @@ instance FromCBOR Error where
     case tag of
       0 -> MultipleProposalsForProtocolVersion <$> fromCBOR
       _ -> cborError   $  DecoderErrorUnknownTag "Endorsement.Error" tag
+
+instance CanonicalExamples Error
 
 -- | Register an endorsement.
 --

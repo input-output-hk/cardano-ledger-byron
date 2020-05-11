@@ -12,6 +12,7 @@ module Cardano.Chain.Common.AddrAttributes
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Data.Aeson (ToJSON(..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8
@@ -122,6 +123,9 @@ instance FromCBOR (Attributes AddrAttributes) where
                 (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
       _ -> pure Nothing
 
+instance CanonicalExamples AddrAttributes
+instance CanonicalExamplesSized AddrAttributes
+
 
 -- | Passphrase is a hash of root verification key.
 data HDPassphrase = HDPassphrase !ByteString
@@ -152,3 +156,6 @@ instance ToJSON HDAddressPayload where
 
 instance FromCBOR HDAddressPayload where
   fromCBOR = HDAddressPayload <$> decodeBytesCanonical
+
+instance CanonicalExamples HDAddressPayload
+instance CanonicalExamplesSized HDAddressPayload

@@ -26,6 +26,7 @@ import Data.Aeson ((.:), (.=))
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
 import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 
 -- | Magic number which should differ for different clusters. It's
@@ -36,7 +37,7 @@ import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
 -- order to pipe configuration to functions which must generate & verify
 -- Addresses (which now must be aware of `NetworkMagic`).
 data AProtocolMagic a = AProtocolMagic
-  { getAProtocolMagicId      :: !(Annotated ProtocolMagicId a)
+  { getAProtocolMagicId     :: !(Annotated ProtocolMagicId a)
   , getRequiresNetworkMagic :: !RequiresNetworkMagic
   } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
@@ -53,6 +54,9 @@ instance A.ToJSON ProtocolMagicId where
 
 instance A.FromJSON ProtocolMagicId where
   parseJSON v = ProtocolMagicId <$> A.parseJSON v
+
+instance CanonicalExamples ProtocolMagicId
+instance CanonicalExamplesSized ProtocolMagicId
 
 getProtocolMagicId :: AProtocolMagic a -> ProtocolMagicId
 getProtocolMagicId = unAnnotated . getAProtocolMagicId
@@ -89,7 +93,7 @@ instance MonadError SchemaError m => FromJSON m ProtocolMagicId where
 data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic
-  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.

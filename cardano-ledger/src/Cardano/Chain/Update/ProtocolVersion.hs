@@ -10,6 +10,7 @@ module Cardano.Chain.Update.ProtocolVersion
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Data.Aeson (ToJSON)
 import Formatting (bprint, shown)
@@ -51,3 +52,6 @@ instance FromCBOR ProtocolVersion where
   fromCBOR = do
     enforceSize "ProtocolVersion" 3
     ProtocolVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
+
+instance CanonicalExamples ProtocolVersion
+instance CanonicalExamplesSized ProtocolVersion

@@ -202,6 +202,12 @@ instance FromCBOR (ACertificate ByteSpan) where
         <*> fromCBOR
     pure $ UnsafeACertificate e ivk dvk sig byteSpan
 
+instance (Typeable a, CanonicalExamples a)
+    => CanonicalExamples (ACertificate a)
+
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (ACertificate a)
+
 instance Decoded (ACertificate ByteString) where
   type BaseType (ACertificate ByteString) = Certificate
   recoverBytes = annotation

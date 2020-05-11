@@ -68,6 +68,10 @@ instance Decoded (ATxAux ByteString) where
   type BaseType (ATxAux ByteString) = ATxAux ()
   recoverBytes = aTaAnnotation
 
+instance (CanonicalExamples a, Typeable a) => CanonicalExamples (ATxAux a)
+instance (CanonicalExamplesSized a, Typeable a) =>
+    CanonicalExamplesSized (ATxAux a)
+
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ATxAux a) where
 

@@ -43,7 +43,7 @@ import Cardano.Chain.Delegation.Certificate
 --
 newtype GenesisDelegation = UnsafeGenesisDelegation
   { unGenesisDelegation :: Map KeyHash Certificate
-  } deriving (Show, Eq, NoUnexpectedThunks)
+  } deriving (Show, Eq, NoUnexpectedThunks, CanonicalExamples)
 
 instance Monad m => ToJSON m GenesisDelegation where
   toJSON = toJSON . unGenesisDelegation

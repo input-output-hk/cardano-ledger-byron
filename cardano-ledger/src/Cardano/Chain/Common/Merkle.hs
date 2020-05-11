@@ -76,6 +76,9 @@ instance ToCBOR a => ToCBOR (MerkleRoot a) where
 instance FromCBOR a => FromCBOR (MerkleRoot a) where
   fromCBOR = MerkleRoot <$> fromCBOR
 
+instance CanonicalExamples (MerkleRoot a)
+instance Typeable a => CanonicalExamplesSized (MerkleRoot a)
+
 merkleRootToBuilder :: MerkleRoot a -> Builder
 merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
 

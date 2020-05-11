@@ -63,7 +63,7 @@ data Environment = Environment
 data State = State
   { schedulingState :: !Scheduling.State
   , activationState :: !Activation.State
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR State where
   fromCBOR = do

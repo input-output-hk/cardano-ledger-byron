@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Block.Block
   (
@@ -181,6 +182,9 @@ data ABlock a = ABlock
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABlock a) where
+
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (ABlock a)
 
 --------------------------------------------------------------------------------
 -- Block Constructors
@@ -529,6 +533,9 @@ data ABlockOrBoundaryHdr a =
     ABOBBlockHdr    !(AHeader         a)
   | ABOBBoundaryHdr !(ABoundaryHeader a)
   deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+
+instance (Typeable a, CanonicalExamples a, CanonicalExamples (ABoundaryHeader a))
+    => CanonicalExamples (ABlockOrBoundaryHdr a)
 
 fromCBORABlockOrBoundaryHdr :: EpochSlots
                             -> Decoder s (ABlockOrBoundaryHdr ByteSpan)

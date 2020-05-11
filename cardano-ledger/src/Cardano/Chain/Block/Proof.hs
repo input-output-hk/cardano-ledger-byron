@@ -66,6 +66,9 @@ instance FromCBOR Proof where
     enforceSize "Proof" 4
     Proof <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
+instance CanonicalExamples Proof
+instance CanonicalExamplesSized Proof
+
 mkProof :: Body -> Proof
 mkProof body = Proof
   { proofUTxO        = mkTxProof $ bodyTxPayload body
@@ -92,4 +95,6 @@ data ProofValidationError
   -- ^ The UTxO payload proof did not match
   | UpdateProofValidationError
   -- ^ The update payload proof did not match
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
+instance CanonicalExamples ProofValidationError

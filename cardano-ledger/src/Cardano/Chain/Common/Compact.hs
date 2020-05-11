@@ -30,7 +30,7 @@ import Cardano.Chain.Common.Address (Address(..))
 --
 newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype HeapWords
+  deriving newtype (HeapWords, CanonicalExamples)
   deriving anyclass NFData
   deriving NoUnexpectedThunks via UseIsNormalForm ShortByteString
 

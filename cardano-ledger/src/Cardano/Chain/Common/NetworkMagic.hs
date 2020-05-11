@@ -10,6 +10,7 @@ module Cardano.Chain.Common.NetworkMagic
        ) where
 
 import Cardano.Prelude hiding ((%))
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import           Data.Aeson (ToJSON)
 import           Formatting (bprint, build, (%))
@@ -56,6 +57,9 @@ instance FromCBOR NetworkMagic where
       0 -> matchSize "NetworkMagic" 1 len $> NetworkMainOrStage
       1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" tag
+
+instance CanonicalExamples NetworkMagic
+instance CanonicalExamplesSized NetworkMagic
 
 makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of

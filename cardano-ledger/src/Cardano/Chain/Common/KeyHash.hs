@@ -37,6 +37,7 @@ newtype KeyHash = KeyHash
              , ToCBOR
              , HeapWords
              , NoUnexpectedThunks
+             , CanonicalExamples
              )
 
 instance Monad m => ToObjectKey m KeyHash where

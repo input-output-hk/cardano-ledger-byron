@@ -21,7 +21,7 @@ data UTxOConfiguration = UTxOConfiguration
   { -- | Set of source address which are asset-locked. Transactions which
     -- use these addresses as transaction inputs will be deemed invalid.
     tcAssetLockedSrcAddrs :: !(Set CompactAddress)
-  } deriving (Eq,Show,Generic,NoUnexpectedThunks)
+  } deriving (Eq,Show,Generic,NoUnexpectedThunks,CanonicalExamples)
 
 defaultUTxOConfiguration :: UTxOConfiguration
 defaultUTxOConfiguration =

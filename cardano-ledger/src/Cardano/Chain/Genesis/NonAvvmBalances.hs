@@ -36,7 +36,7 @@ import Cardano.Chain.Common
 -- | Predefined balances of non avvm entries.
 newtype GenesisNonAvvmBalances = GenesisNonAvvmBalances
   { unGenesisNonAvvmBalances :: Map Address Lovelace
-  } deriving (Show, Eq, NoUnexpectedThunks)
+  } deriving (Show, Eq, NoUnexpectedThunks, CanonicalExamples)
 
 instance B.Buildable GenesisNonAvvmBalances where
   build (GenesisNonAvvmBalances m) =

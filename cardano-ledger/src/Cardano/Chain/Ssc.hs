@@ -63,6 +63,9 @@ instance FromCBOR SscPayload where
     dropSscPayload
     pure SscPayload
 
+instance CanonicalExamples SscPayload
+instance CanonicalExamplesSized SscPayload
+
 dropSscPayload :: Dropper s
 dropSscPayload = do
   actualLen <- decodeListLen
@@ -122,6 +125,9 @@ instance FromCBOR SscProof where
   fromCBOR = do
     dropSscProof
     pure SscProof
+
+instance CanonicalExamples SscProof
+instance CanonicalExamplesSized SscProof
 
 dropSscProof :: Dropper s
 dropSscProof = do

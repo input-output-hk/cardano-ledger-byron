@@ -48,6 +48,7 @@ data CompactRedeemVerificationKey =
   deriving (Eq, Generic, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm CompactRedeemVerificationKey
   deriving anyclass NFData
+  deriving anyclass CanonicalExamples
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey
 getCompactRedeemVerificationKey =

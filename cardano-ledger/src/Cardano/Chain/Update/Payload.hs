@@ -85,3 +85,6 @@ instance FromCBOR (APayload ByteSpan) where
       enforceSize "Update.Payload" 2
       (,) <$> fromCBOR <*> fromCBOR
     pure $ APayload proposal votes byteSpan
+
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (APayload a)

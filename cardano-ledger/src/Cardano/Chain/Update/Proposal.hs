@@ -88,7 +88,7 @@ data AProposal a = AProposal
   , signature  :: !(Signature ProposalBody)
   , annotation :: !a
   } deriving (Eq, Show, Generic, Functor)
-    deriving anyclass NFData
+    deriving anyclass (NFData, CanonicalExamples)
 
 type Proposal = AProposal ()
 
@@ -176,6 +176,8 @@ instance Decoded (AProposal ByteString) where
   type BaseType (AProposal ByteString) = Proposal
   recoverBytes = annotation
 
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (AProposal a)
 
 --------------------------------------------------------------------------------
 -- Proposal Formatting
@@ -217,7 +219,7 @@ data ProposalBody = ProposalBody
   , metadata                 :: !(Map SystemTag InstallerHash)
   -- ^ InstallerHash for each system which this update affects
   } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, CanonicalExamples)
 
 -- Used for debugging purposes only
 instance ToJSON ProposalBody where
@@ -245,6 +247,8 @@ instance FromCBOR ProposalBody where
       <*> fromCBOR
       <*> fromCBOR
       <*  dropEmptyAttributes
+
+instance CanonicalExamplesSized ProposalBody
 
 -- | Prepend byte corresponding to `encodeListLen 5`, which was used during
 --   signing

@@ -54,6 +54,8 @@ instance FromCBOR EpochAndSlotCount where
     enforceSize "EpochAndSlotCount" 2
     EpochAndSlotCount <$> fromCBOR <*> fromCBOR
 
+instance CanonicalExamples EpochAndSlotCount where
+
 -- | Flatten 'EpochAndSlotCount' into a single absolute 'SlotNumber'
 toSlotNumber :: EpochSlots -> EpochAndSlotCount -> SlotNumber
 toSlotNumber es eas = SlotNumber $ pastSlots + slots

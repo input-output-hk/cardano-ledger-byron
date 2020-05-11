@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -89,7 +90,7 @@ data TxValidationError
   | TxValidationTxTooLarge Natural Natural
   | TxValidationUnknownAddressAttributes
   | TxValidationUnknownAttributes
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR TxValidationError where
   toCBOR = \case
@@ -153,6 +154,8 @@ instance FromCBOR TxValidationError where
       7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
       8 -> checkSize 1 $> TxValidationUnknownAttributes
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
+
+instance CanonicalExamples TxValidationError
 
 -- | Validate that:
 --
@@ -311,7 +314,7 @@ data Environment = Environment
 data UTxOValidationError
   = UTxOValidationTxValidationError TxValidationError
   | UTxOValidationUTxOError UTxOError
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR UTxOValidationError where
   toCBOR = \case
@@ -327,6 +330,8 @@ instance FromCBOR UTxOValidationError where
       0   -> UTxOValidationTxValidationError <$> fromCBOR
       1   -> UTxOValidationUTxOError <$> fromCBOR
       tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag
+
+instance CanonicalExamples UTxOValidationError
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx

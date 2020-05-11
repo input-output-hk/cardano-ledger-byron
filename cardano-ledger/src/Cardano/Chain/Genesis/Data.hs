@@ -62,7 +62,7 @@ data GenesisData = GenesisData
     , gdK                  :: !BlockCount
     , gdProtocolMagicId    :: !ProtocolMagicId
     , gdAvvmDistr          :: !GenesisAvvmBalances
-    } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+    } deriving (Show, Eq, Generic, NoUnexpectedThunks, CanonicalExamples)
 
 instance Monad m => ToJSON m GenesisData where
   toJSON gd = mkObject

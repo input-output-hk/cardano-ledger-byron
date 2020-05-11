@@ -67,9 +67,12 @@ instance FromCBOR SoftwareVersion where
     enforceSize "SoftwareVersion" 2
     SoftwareVersion <$> fromCBOR <*> fromCBOR
 
+instance CanonicalExamples SoftwareVersion
+instance CanonicalExamplesSized SoftwareVersion
+
 data SoftwareVersionError =
   SoftwareVersionApplicationNameError ApplicationNameError
-  deriving (Data, Eq, Show)
+  deriving (Data, Eq, Show, Generic)
 
 instance ToCBOR SoftwareVersionError where
   toCBOR (SoftwareVersionApplicationNameError applicationNameError) =
@@ -84,6 +87,8 @@ instance FromCBOR SoftwareVersionError where
     case tag of
       0 -> SoftwareVersionApplicationNameError <$> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
+
+instance CanonicalExamples SoftwareVersionError
 
 instance B.Buildable SoftwareVersionError where
   build = \case

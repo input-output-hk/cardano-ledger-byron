@@ -20,6 +20,7 @@ module Cardano.Chain.Update.SystemTag
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson (ToJSON, ToJSONKey)
@@ -62,13 +63,16 @@ instance ToCBOR SystemTag where
 instance FromCBOR SystemTag where
   fromCBOR = SystemTag <$> fromCBOR
 
+instance CanonicalExamples SystemTag
+instance CanonicalExamplesSized SystemTag
+
 systemTagMaxLength :: Integral i => i
 systemTagMaxLength = 10
 
 data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text
-  deriving (Eq, Show, Data)
+  deriving (Eq, Show, Data, Generic)
 
 instance ToCBOR SystemTagError where
   toCBOR err = case err of
@@ -91,6 +95,8 @@ instance FromCBOR SystemTagError where
       0  -> checkSize 2 >> SystemTagNotAscii <$> fromCBOR
       1  -> checkSize 2 >> SystemTagTooLong <$> fromCBOR
       _  -> cborError   $  DecoderErrorUnknownTag "SystemTagError" tag
+
+instance CanonicalExamples SystemTagError
 
 instance B.Buildable SystemTagError where
   build = \case

@@ -134,7 +134,7 @@ data ChainValidationState = ChainValidationState
   , cvsUtxo            :: !UTxO
   , cvsUpdateState     :: !UPI.State
   , cvsDelegationState :: !DI.State
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR ChainValidationState where
   fromCBOR = do
@@ -257,7 +257,7 @@ data ChainValidationError
   | ChainValidationProofValidationError ProofValidationError
   -- ^ A payload proof did not match.
 
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, CanonicalExamples)
 
 
 --------------------------------------------------------------------------------
@@ -580,7 +580,7 @@ updateBlock config cvs b = do
 data Error
   = ErrorParseError ParseError
   | ErrorUTxOValidationError EpochAndSlotCount UTxO.UTxOValidationError
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, CanonicalExamples)
 
 -- | Fold transaction validation over a 'Stream' of 'Block's
 foldUTxO

@@ -8,6 +8,7 @@ module Cardano.Chain.Common.BlockCount
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Formatting.Buildable (Buildable)
 
@@ -16,7 +17,7 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 newtype BlockCount = BlockCount
   { unBlockCount :: Word64
-  } deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance ToCBOR BlockCount where
   toCBOR = toCBOR . unBlockCount

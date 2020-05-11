@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -19,6 +20,7 @@ import qualified GHC.Show
 import Formatting (bprint)
 
 import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
+import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerificationKeyHexF)
 
 
@@ -27,6 +29,7 @@ newtype SigningKey = SigningKey
   { unSigningKey :: CC.XPrv
   } deriving newtype (NFData)
     deriving NoUnexpectedThunks via UseIsNormalForm CC.XPrv
+    deriving Generic
 
 -- Note that there is deliberately no Eq instance. The cardano-crypto library
 -- does not define one for XPrv.
@@ -56,3 +59,5 @@ instance ToCBOR SigningKey where
 
 instance FromCBOR SigningKey where
   fromCBOR = fmap SigningKey fromCBORXPrv
+
+instance CanonicalExamples SigningKey

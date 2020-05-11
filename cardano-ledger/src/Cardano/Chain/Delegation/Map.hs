@@ -48,6 +48,9 @@ instance NoUnexpectedThunks Map where
                               . Bimap.toList
                               . unMap
 
+instance CanonicalExamples Map where
+    canonicalExamples = fmap (Map . Bimap.fromList) <$> canonicalExamples
+
 --------------------------------------------------------------------------------
 -- Query
 --------------------------------------------------------------------------------

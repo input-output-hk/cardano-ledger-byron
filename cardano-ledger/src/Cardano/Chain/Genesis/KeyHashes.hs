@@ -28,7 +28,7 @@ import Cardano.Chain.Common (KeyHash)
 --   and proposals in the Byron era
 newtype GenesisKeyHashes = GenesisKeyHashes
   { unGenesisKeyHashes :: Set KeyHash
-  } deriving (Show, Eq, Semigroup, Monoid, NoUnexpectedThunks)
+  } deriving (Show, Eq, Semigroup, Monoid, NoUnexpectedThunks, CanonicalExamples)
 
 instance Buildable GenesisKeyHashes where
   build (GenesisKeyHashes m) =

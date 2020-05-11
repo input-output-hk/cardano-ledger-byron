@@ -51,6 +51,7 @@ module Cardano.Chain.Common.Lovelace
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
@@ -97,6 +98,9 @@ instance FromCBOR Lovelace where
       . first (DecoderErrorCustom "Lovelace" . sformat build)
       $ mkLovelace l
 
+instance CanonicalExamples Lovelace
+instance CanonicalExamplesSized Lovelace
+
 instance Monad m => Canonical.ToJSON m Lovelace where
   toJSON = Canonical.toJSON . unsafeGetLovelace
 
@@ -108,7 +112,7 @@ data LovelaceError
   | LovelaceTooLarge Integer
   | LovelaceTooSmall Integer
   | LovelaceUnderflow Word64 Word64
-  deriving (Data, Eq, Show)
+  deriving (Data, Eq, Show, Generic)
 
 instance B.Buildable LovelaceError where
   build = \case
@@ -150,6 +154,8 @@ instance FromCBOR LovelaceError where
       2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
       3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+
+instance CanonicalExamples LovelaceError
 
 -- | Maximal possible value of 'Lovelace'
 maxLovelaceVal :: Word64

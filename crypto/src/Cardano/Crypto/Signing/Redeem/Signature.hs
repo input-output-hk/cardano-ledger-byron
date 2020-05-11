@@ -40,6 +40,9 @@ newtype RedeemSignature a =
 instance B.Buildable (RedeemSignature a) where
   build _ = "<redeem signature>"
 
+instance CanonicalExamples (RedeemSignature a)
+instance Typeable a => CanonicalExamplesSized (RedeemSignature a)
+
 deriveJSON defaultOptions ''RedeemSignature
 
 -- | Encode something with 'ToCBOR' and sign it

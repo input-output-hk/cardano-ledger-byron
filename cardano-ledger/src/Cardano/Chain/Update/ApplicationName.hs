@@ -15,6 +15,7 @@ module Cardano.Chain.Update.ApplicationName
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson (ToJSON)
@@ -52,10 +53,13 @@ instance ToCBOR ApplicationName where
 instance FromCBOR ApplicationName where
   fromCBOR = ApplicationName <$> fromCBOR
 
+instance CanonicalExamples ApplicationName
+instance CanonicalExamplesSized ApplicationName
+
 data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text
-  deriving (Data, Eq, Show)
+  deriving (Data, Eq, Show, Generic)
 
 -- Used for debugging purposes only
 instance ToJSON ApplicationName where
@@ -81,6 +85,8 @@ instance FromCBOR ApplicationNameError where
       0  -> checkSize 2 >> ApplicationNameTooLong <$> fromCBOR
       1  -> checkSize 2 >> ApplicationNameNotAscii <$> fromCBOR
       _  -> cborError   $  DecoderErrorUnknownTag "ApplicationNameError" tag
+
+instance CanonicalExamples ApplicationNameError
 
 instance B.Buildable ApplicationNameError where
   build = \case

@@ -81,6 +81,9 @@ instance FromCBOR TxFeePolicy where
             0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
             _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag
 
+instance CanonicalExamples TxFeePolicy
+instance CanonicalExamplesSized TxFeePolicy
+
 instance Monad m => ToJSON m TxFeePolicy where
   -- We multiply by 1e9 to keep compatibility with 'Nano' coefficients
   toJSON (TxFeePolicyTxSizeLinear (TxSizeLinear summand multiplier)) = mkObject

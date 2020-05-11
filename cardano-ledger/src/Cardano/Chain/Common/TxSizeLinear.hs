@@ -69,6 +69,9 @@ instance FromCBOR TxSizeLinear where
     wrapLovelaceError =
       toCborError . first (DecoderErrorCustom "TxSizeLinear" . sformat build)
 
+instance CanonicalExamples TxSizeLinear
+instance CanonicalExamplesSized TxSizeLinear
+
 calculateTxSizeLinear
   :: TxSizeLinear -> Natural -> Either LovelaceError Lovelace
 calculateTxSizeLinear (TxSizeLinear a b) sz

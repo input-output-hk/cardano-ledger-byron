@@ -33,6 +33,7 @@ library
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
+                     , cborg
                      , cryptonite
                      , hedgehog
                      , memory

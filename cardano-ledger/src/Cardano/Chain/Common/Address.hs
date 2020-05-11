@@ -143,6 +143,9 @@ instance FromCBOR Address where
       , addrType       = addrType'
       }
 
+instance CanonicalExamples Address
+instance CanonicalExamplesSized Address
+
 instance B.Buildable [Address] where
   build = bprint listJson
 

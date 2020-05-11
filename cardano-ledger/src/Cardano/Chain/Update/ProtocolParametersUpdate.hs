@@ -124,6 +124,11 @@ instance FromCBOR ProtocolParametersUpdate where
       <*> fromCBOR
       <*> fromCBOR
 
+instance CanonicalExamplesSized ProtocolParametersUpdate
+-- TODO(kde)
+instance CanonicalExamples ProtocolParametersUpdate where
+  canonicalExamples = return []
+
 empty :: ProtocolParametersUpdate
 empty = ProtocolParametersUpdate
   { ppuScriptVersion    = Nothing

@@ -52,6 +52,11 @@ instance ToCBOR TxPayload where
 instance FromCBOR TxPayload where
   fromCBOR = void <$> fromCBOR @(ATxPayload ByteSpan)
 
+instance (Typeable a, CanonicalExamples a)
+    => CanonicalExamples (ATxPayload a)
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (ATxPayload a)
+
 instance FromCBOR (ATxPayload ByteSpan) where
   fromCBOR = ATxPayload <$> fromCBOR
 

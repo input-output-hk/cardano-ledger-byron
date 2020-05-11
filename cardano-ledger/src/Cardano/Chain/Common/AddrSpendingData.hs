@@ -96,6 +96,8 @@ instance FromCBOR AddrType where
     2   -> pure ATRedeem
     tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag
 
+instance CanonicalExamples AddrType
+instance CanonicalExamplesSized AddrType
 
 instance HeapWords AddrType where
   heapWords = \case

@@ -79,6 +79,9 @@ instance B.Buildable TxInWitness where
   build (RedeemWitness key sig) =
     bprint ("VKWitness: key = " . build . ", sig = " . build) key sig
 
+instance CanonicalExamples TxInWitness
+instance CanonicalExamplesSized TxInWitness
+
 -- Used for debugging purposes only
 instance ToJSON TxInWitness where
 
@@ -136,6 +139,8 @@ instance ToCBOR TxSigData where
 
 instance FromCBOR TxSigData where
   fromCBOR = TxSigData <$> fromCBOR
+
+instance CanonicalExamples TxSigData
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData

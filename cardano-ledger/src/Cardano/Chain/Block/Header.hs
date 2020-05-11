@@ -171,6 +171,10 @@ data AHeader a = AHeader
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (AHeader a) where
 
+instance (Typeable a, CanonicalExamples a) => CanonicalExamples (AHeader a)
+instance (Typeable a, CanonicalExamplesSized a) =>
+    CanonicalExamplesSized (AHeader a)
+
 --------------------------------------------------------------------------------
 -- Header Constructors
 --------------------------------------------------------------------------------
@@ -490,7 +494,7 @@ data ABoundaryHeader a = UnsafeABoundaryHeader
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
   , boundaryHeaderAnnotation :: !a
-  } deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks, CanonicalExamples)
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABoundaryHeader a) where
@@ -665,6 +669,10 @@ instance FromCBOR (ABlockSignature ByteSpan) where
           <*> fromCBOR
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
+instance (Typeable a, CanonicalExamples a)
+    => CanonicalExamples (ABlockSignature a)
+instance (Typeable a, CanonicalExamplesSized a)
+    => CanonicalExamplesSized (ABlockSignature a)
 
 --------------------------------------------------------------------------------
 -- ToSign

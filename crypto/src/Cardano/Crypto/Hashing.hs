@@ -79,6 +79,7 @@ import Cardano.Binary
   , serialize
   , withWordSize
   )
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 
 --------------------------------------------------------------------------------
@@ -140,6 +141,10 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo)
     return (AbstractHash bs)
     where
       expectedSize = hashDigestSize (Prelude.undefined :: algo)
+
+instance CanonicalExamples (AbstractHash algo a)
+instance (Typeable algo, Typeable a)
+    => CanonicalExamplesSized (AbstractHash algo a)
 
 instance HeapWords (AbstractHash algo a) where
   heapWords _

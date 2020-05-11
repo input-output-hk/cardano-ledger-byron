@@ -3,6 +3,13 @@ index-state: 2020-01-31T00:00:00Z
 packages:
   cardano-ledger     cardano-ledger/test
   crypto crypto/test
+  -- TODO(kde)
+  ../cardano-prelude
+  ../cardano-prelude/test
+  ../cardano-base/binary
+  ../cardano-base/cardano-crypto-class
+  ../cardano-base/binary/test
+  ../cardano-base/slotting
 
 package cardano-ledger
   tests: True
@@ -18,40 +25,6 @@ constraints:
   cborg == 0.2.2.*
 
 allow-newer: katip:Win32
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: 3ac22a2fda11ca7131a011a9ea48fcbfdc26d6b3
-  --sha256: 1qlmz3alrlzx6fzsxc5zp9qqx15qapywrc7a9bvxz70yfzc7b5j4
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: 3ac22a2fda11ca7131a011a9ea48fcbfdc26d6b3
-  --sha256: 1qlmz3alrlzx6fzsxc5zp9qqx15qapywrc7a9bvxz70yfzc7b5j4
-  subdir: test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
-  subdir: binary
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
-  subdir: cardano-crypto-class
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
-  subdir: binary/test
 
 source-repository-package
   type: git

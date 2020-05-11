@@ -99,6 +99,9 @@ data AVote a = UnsafeVote
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (AVote a) where
 
+instance (Typeable a, CanonicalExamples a) => CanonicalExamples (AVote a)
+instance (Typeable a, CanonicalExamplesSized a) =>
+    CanonicalExamplesSized (AVote a)
 
 --------------------------------------------------------------------------------
 -- Vote Constructors

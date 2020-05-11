@@ -15,6 +15,7 @@ module Cardano.Chain.Slotting.EpochNumber
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
@@ -57,6 +58,9 @@ instance ToCBOR EpochNumber where
 
 instance FromCBOR EpochNumber where
   fromCBOR = EpochNumber <$> fromCBOR
+
+instance CanonicalExamples EpochNumber
+instance CanonicalExamplesSized EpochNumber
 
 -- Note that it will be encoded as string, because 'EpochNumber' doesn't
 -- necessary fit into JS number.

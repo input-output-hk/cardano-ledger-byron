@@ -79,7 +79,7 @@ data Error
   | VotingProposalNotRegistered UpId
   | VotingVoterNotDelegate KeyHash
   | VotingVoteAlreadyCast KeyHash
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR Error where
   toCBOR err = case err of
@@ -112,6 +112,7 @@ instance FromCBOR Error where
       3 -> checkSize 2 >> VotingVoteAlreadyCast <$> fromCBOR
       _ -> cborError   $  DecoderErrorUnknownTag "Voting.Error" tag
 
+instance CanonicalExamples Error
 
 -- | Register a vote and confirm the corresponding proposal if it passes the
 --   voting threshold. This corresponds to the @UPVOTE@ rules in the spec.

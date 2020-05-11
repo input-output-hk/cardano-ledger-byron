@@ -77,6 +77,9 @@ newtype Signature a =
 instance B.Buildable (Signature a) where
   build _ = "<signature>"
 
+instance CanonicalExamples (Signature a)
+instance Typeable a => CanonicalExamplesSized (Signature a)
+
 instance FromJSON (Signature w) where
   parseJSON v = parseJSON v >>= toAesonError . parseFullSignature
 

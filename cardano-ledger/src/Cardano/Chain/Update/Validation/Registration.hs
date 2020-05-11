@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -116,7 +117,7 @@ data Error
   | ProposalTooLarge (TooLarge Natural)
   | SoftwareVersionError SoftwareVersionError
   | SystemTagError SystemTagError
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR Error where
   toCBOR err = case err of
@@ -196,10 +197,12 @@ instance FromCBOR Error where
       12 -> checkSize 2 >> SystemTagError <$> fromCBOR
       _  -> cborError   $  DecoderErrorUnknownTag "Registration.Error" tag
 
+instance CanonicalExamples Error
+
 data TooLarge n = TooLarge
   { tlActual   :: n
   , tlMaxBound :: n
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic)
 
 instance (ToCBOR n) => ToCBOR (TooLarge n) where
   toCBOR TooLarge{ tlActual, tlMaxBound } =
@@ -212,9 +215,11 @@ instance (FromCBOR n) => FromCBOR (TooLarge n) where
     enforceSize "TooLarge" 2
     TooLarge <$> fromCBOR <*> fromCBOR
 
+instance (Typeable a, CanonicalExamples a) => CanonicalExamples (TooLarge a)
+
 newtype Adopted = Adopted ProtocolVersion
   deriving (Eq, Show)
-  deriving newtype (ToCBOR, FromCBOR)
+  deriving newtype (ToCBOR, FromCBOR, CanonicalExamples)
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.

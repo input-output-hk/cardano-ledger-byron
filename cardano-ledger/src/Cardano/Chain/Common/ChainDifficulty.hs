@@ -10,6 +10,7 @@ module Cardano.Chain.Common.ChainDifficulty
 where
 
 import Cardano.Prelude
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import Data.Aeson (ToJSON)
 import Formatting.Buildable (Buildable)
@@ -36,6 +37,9 @@ instance FromCBOR ChainDifficulty where
     fromCBOR = do
         enforceSize "ChainDifficulty" 1
         ChainDifficulty <$> fromCBOR
+
+instance CanonicalExamples ChainDifficulty
+instance CanonicalExamplesSized ChainDifficulty
 
 dropChainDifficulty :: Dropper s
 dropChainDifficulty = do

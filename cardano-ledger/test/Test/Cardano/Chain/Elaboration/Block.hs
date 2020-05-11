@@ -85,6 +85,8 @@ data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
   deriving Semigroup via GenericSemigroup AbstractToConcreteIdMaps
   deriving Monoid via GenericMonoid AbstractToConcreteIdMaps
 
+instance CanonicalExamples AbstractToConcreteIdMaps
+
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate
   :: AbstractToConcreteIdMaps

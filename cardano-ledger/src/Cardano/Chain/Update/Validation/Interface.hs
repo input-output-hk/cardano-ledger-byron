@@ -33,6 +33,7 @@ module Cardano.Chain.Update.Validation.Interface
 where
 
 import Cardano.Prelude hiding (State)
+import Cardano.Prelude.CanonicalExamples.Orphans ()
 
 import qualified Data.Map.Strict as M
 import Data.Set (union)
@@ -129,7 +130,7 @@ data State = State
   , proposalRegistrationSlot          :: !(Map UpId SlotNumber)
     -- ^ Slot at which an update proposal was registered
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoUnexpectedThunks, CanonicalExamples)
 
 instance FromCBOR State where
   fromCBOR = do
@@ -167,7 +168,7 @@ data Error
   | Voting Voting.Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance ToCBOR Error where
   toCBOR err = case err of
@@ -201,6 +202,7 @@ instance FromCBOR Error where
       3 -> checkSize 2 >> NumberOfGenesisKeysTooLarge <$> fromCBOR
       _ -> cborError   $  DecoderErrorUnknownTag "Interface.Error" tag
 
+instance CanonicalExamples Error
 
 -- | Signal combining signals from various rules
 data Signal = Signal
