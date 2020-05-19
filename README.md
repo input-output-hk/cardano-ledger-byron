@@ -9,6 +9,8 @@
   </a>
 </p>
 
+ATTENTION: this repository has now been merged into [`cardano-ledger-specs`](https://github.com/input-output-hk/cardano-ledger-specs)! Please see the code there.
+
 A re-implementation of the Cardano ledger layer, designed to ease transition between the Byron and Shelley eras.
 
 The formal specifications and associated executable specifications can be found
